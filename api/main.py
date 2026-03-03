@@ -34,8 +34,8 @@ DB_SECRET = os.getenv("DB_SECRET")
 
 # زانیاری خاوەن
 OWNER_ID = 5977475208 
-admins_list = {OWNER_ID} # ئەدمینەکان لێرە سەیڤ دەبن (کاتی)
-forced_channels = []  # چەناڵەکان لێرە سەیڤ دەبن (کاتی)
+admins_list = {OWNER_ID} 
+forced_channels = []  
 blocked_users = set()
 
 SESSION_EXPIRE = 600
@@ -104,6 +104,20 @@ async def get_user_data(user_id: int):
         if not data or int(time.time()) - data.get("timestamp", 0) > SESSION_EXPIRE: return None
         return data
 
+# --- ناردنی ئاگادارکردنەوە بۆ ئەدمین ---
+async def notify_admin_new_user(context, user):
+    msg = (
+        f"🔔 <b>بەکارهێنەرێکی نوێ هات!</b>\n\n"
+        f"👤 <b>ناو:</b> {html.escape(user.first_name)}\n"
+        f"🆔 <b>ئایدی:</b> <code>{user.id}</code>\n"
+        f"🔗 <b>یوزەر:</b> @{user.username if user.username else 'نییە'}\n"
+        f"🕐 <b>کات:</b> {get_current_time()}"
+    )
+    try:
+        await context.bot.send_message(chat_id=OWNER_ID, text=msg, parse_mode=ParseMode.HTML)
+    except:
+        pass
+
 # --- کیبۆردەکان ---
 def get_main_keyboard(user_id):
     keyboard = [
@@ -133,12 +147,17 @@ def get_admin_keyboard(user_id):
 
 # ---------------- فەرمانەکان ---------------- #
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    first_name = update.effective_user.first_name
+    user = update.effective_user
+    user_id = user.id
+    first_name = user.first_name
     
     if is_blocked(user_id):
         await update.message.reply_text("⛔ <b>تۆ بلۆک کراویت.</b>", parse_mode=ParseMode.HTML)
         return
+
+    # ئاگادارکردنەوەی ئەدمین (ئەگەر یوزەرەکە خۆی ئەدمین نەبوو)
+    if not is_admin(user_id):
+        asyncio.create_task(notify_admin_new_user(context, user))
 
     if not is_admin(user_id) and forced_channels:
         is_sub, not_joined = await check_user_subscription(user_id, context)
@@ -158,6 +177,10 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"   👋 <b>بەخێربێیت {html.escape(first_name)} {admin_tag}</b>\n"
         f"╚═══════════════════╝\n\n"
         f"🤖 <b>من باشترین بۆتی تیکتۆکم!</b>\n\n"
+        f"📥 دەتوانیت ڤیدیۆ و وێنەکان دابەزێنیت:\n"
+        f"   • 🎥 بێ لۆگۆ (No Watermark)\n"
+        f"   • 📸 وێنە (Slideshow)\n"
+        f"   • 🎵 گۆرانی (MP3)\n\n"
         f"👇 <b>لینک بنێرە یان دوگمە دابگرە:</b>"
     )
     
@@ -221,13 +244,33 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.answer("⏳ ناردنی ڤیدیۆ...", show_alert=False)
                 media = InputMediaVideo(media=d["video"]["play"], caption=caption, parse_mode=ParseMode.HTML)
                 await query.message.edit_media(media, reply_markup=InlineKeyboardMarkup(buttons))
+            
+            elif action == "photos":
+                await query.answer("⏳ ناردنی وێنەکان...", show_alert=False)
+                images = d.get("images", [])
+                if not images:
+                    await query.answer("❌ هیچ وێنەیەک نییە.", show_alert=True)
+                    return
+                
+                # ناردنی وێنەکان وەک ئەلبووم (تا ١٠ دانە)
+                media_group = [InputMediaPhoto(media=img) for img in images[:10]]
+                # دانانی کەپشن بۆ یەکەم وێنە
+                media_group[0].caption = caption
+                media_group[0].parse_mode = ParseMode.HTML
+                
+                await query.message.delete() # سڕینەوەی نامەی کۆن
+                await context.bot.send_media_group(chat_id=user_id, media=media_group)
+                
             elif action == "audio":
                 await query.answer("⏳ ناردنی گۆرانی...", show_alert=False)
                 media = InputMediaAudio(media=d["audio"]["play"], caption=caption, parse_mode=ParseMode.HTML, title=title, performer=creator)
                 await query.message.edit_media(media, reply_markup=InlineKeyboardMarkup(buttons))
-        except Exception:
-            link_btn = [[InlineKeyboardButton("🔗 دابەزاندن بە لینک", url=d["video"]["play"])], [InlineKeyboardButton("🗑 سڕینەوە", callback_data="close")]]
-            await query.message.edit_caption("⚠️ <b>بە لینک دایبەزێنە.</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(link_btn))
+
+        except Exception as e:
+            # ئەگەر کێشەیەک هەبوو، لینک بنێرە
+            dl_url = d["video"]["play"] if action != "audio" else d["audio"]["play"]
+            link_btn = [[InlineKeyboardButton("🔗 دابەزاندن بە لینک", url=dl_url)], [InlineKeyboardButton("🗑 سڕینەوە", callback_data="close")]]
+            await query.message.edit_caption("⚠️ <b>قەبارەی گەورەیە، بە لینک دایبەزێنە.</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(link_btn))
         return
 
     # --- بەشی ئەدمین ---
@@ -249,7 +292,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         back = [[InlineKeyboardButton("🔙 گەڕانەوە", callback_data="admin_panel")]]
         await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(back))
 
-    # --- ناردنی گشتی ---
     elif data == "admin_broadcast_ask":
         await query.message.reply_text(
             "📢 <b>تکایە ئەو پەیامە بنێرە کە دەتەوێت بۆ هەمووانی بنێریت:</b>",
@@ -279,7 +321,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "list_admins":
         keyboard = []
         for admin in admins_list:
-            # دوگمە بۆ هەر ئەدمینێک
             keyboard.append([InlineKeyboardButton(f"👤 ID: {admin}", callback_data=f"sel_admin_{admin}")])
         keyboard.append([InlineKeyboardButton("🔙 گەڕانەوە", callback_data="manage_admins_menu")])
         await query.edit_message_text("📋 <b>لیستی ئەدمینەکان:</b>\nکلیک لە ئایدی بکە بۆ سڕینەوە.", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -301,7 +342,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if target_id in admins_list:
             admins_list.remove(target_id)
             await query.answer("✅ سڕایەوە!", show_alert=True)
-            # گەڕانەوە بۆ لیست
             keyboard = []
             for admin in admins_list:
                 keyboard.append([InlineKeyboardButton(f"👤 ID: {admin}", callback_data=f"sel_admin_{admin}")])
@@ -351,7 +391,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if target_ch in forced_channels:
             forced_channels.remove(target_ch)
             await query.answer("✅ سڕایەوە!", show_alert=True)
-            # Refresh list
             if not forced_channels:
                 keyboard = [[InlineKeyboardButton("🔙 گەڕانەوە", callback_data="manage_channels_menu")]]
                 await query.edit_message_text("✅ <b>سڕایەوە. ئێستا لیست بەتاڵە.</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -364,7 +403,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await query.answer("⚠️ بوونی نەماوە.", show_alert=True)
 
-# ---------------- وەرگرتنی نامەکان (Reply Handling) ---------------- #
+# ---------------- وەرگرتنی نامەکان ---------------- #
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.text: return
     user_id = update.effective_user.id
@@ -399,7 +438,6 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 3. ناردنی گشتی
         if "تکایە ئەو پەیامە بنێرە" in original_text:
             if not is_admin(user_id): return
-            # لێرە تەنها پەیامێکی وەهمی دەنێرین چونکە برۆدکاستی ڕاستەقینە لە Vercel کێشەیە
             await update.message.reply_text(f"✅ <b>پەیامەکەت نێردرا:</b>\n\n{msg_text}", parse_mode=ParseMode.HTML)
             return
 
@@ -407,14 +445,13 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_blocked(user_id): return
     if "tiktok.com" not in msg_text: return 
 
-    # پشکنینی جۆینی ناچاری پێش دابەزاندن
     if not is_admin(user_id) and forced_channels:
         is_sub, _ = await check_user_subscription(user_id, context)
         if not is_sub:
             await update.message.reply_text("⚠️ تکایە سەرەتا جۆینی چەناڵەکان بکە (بنێرە /start)")
             return
 
-    status_msg = await update.message.reply_text("<b>🔍 دەگەڕێم بەدوای ڤیدیۆکەدا...</b>", parse_mode=ParseMode.HTML)
+    status_msg = await update.message.reply_text("<b>🔍 دەگەڕێم بەدوای لینکەکەدا...</b>", parse_mode=ParseMode.HTML)
 
     async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
         try:
@@ -422,27 +459,45 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             res = r.json()
             
             if not res.get("ok"):
-                await status_msg.edit_text("<b>❌ ڤیدیۆکە نەدۆزرایەوە!</b>")
+                await status_msg.edit_text("<b>❌ نەدۆزرایەوە!</b>")
                 return
 
             video = res["data"]
             details = video["details"]
             
+            # پشکنین بۆ ئەوەی بزانین وێنەیە (Slideshow) یان ڤیدیۆ
+            images = details.get("images")
+            is_slideshow = images and len(images) > 0
+            
+            # سەیڤکردنی داتا
             await save_user_data(user_id, {"creator": video["creator"], "details": details})
 
             title = clean_title(details.get('title', ''))
             
             caption = (
-                f"🎬 <b>{html.escape(title)}</b>\n"
-                f"👤 <b>{html.escape(video['creator'])}</b>\n\n"
-                f"🤖 <b>@{context.bot.username}</b>"
+                f"╔═══════════════════╗\n"
+                f"   ✅ <b>دۆزرایەوە!</b>\n"
+                f"╚═══════════════════╝\n\n"
+                f"📝 <b>ناونیشان:</b> {html.escape(title)}\n"
+                f"👤 <b>خاوەن:</b> {html.escape(video['creator'])}\n\n"
+                f"📊 <b>ئامارەکان:</b>\n"
+                f"👁 {format_number(details.get('views'))} | ❤️ {format_number(details.get('like'))}\n\n"
+                f"👇 <b>فۆرماتێک هەڵبژێرە:</b>"
             )
 
-            keyboard = [
-                [InlineKeyboardButton("🎥 ڤیدیۆ (بێ لۆگۆ)", callback_data="dl_video")],
-                [InlineKeyboardButton("🎵 گۆرانی (MP3)", callback_data="dl_audio")],
-                [InlineKeyboardButton("🗑 سڕینەوە", callback_data="close")]
-            ]
+            # گۆڕینی دوگمەکان بەپێی جۆری پۆستەکە
+            if is_slideshow:
+                keyboard = [
+                    [InlineKeyboardButton(f"📸 وێنەکان ({len(images)})", callback_data="dl_photos")],
+                    [InlineKeyboardButton("🎵 گۆرانی (MP3)", callback_data="dl_audio")],
+                    [InlineKeyboardButton("🗑 سڕینەوە", callback_data="close")]
+                ]
+            else:
+                keyboard = [
+                    [InlineKeyboardButton("🎥 ڤیدیۆ (بێ لۆگۆ)", callback_data="dl_video")],
+                    [InlineKeyboardButton("🎵 گۆرانی (MP3)", callback_data="dl_audio")],
+                    [InlineKeyboardButton("🗑 سڕینەوە", callback_data="close")]
+                ]
 
             await status_msg.edit_media(
                 InputMediaPhoto(details["cover"]["cover"], caption=caption, parse_mode=ParseMode.HTML), 
