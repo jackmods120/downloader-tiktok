@@ -26,7 +26,7 @@ from telegram.constants import ParseMode
 
 TOKEN = os.getenv("BOT_TOKEN")
 API_URL = "https://www.api.hyper-bd.site/Tiktok/?url="
-CHANNEL_URL = "https://t.me/J4CK_721"
+CHANNEL_URL = "https://t.me/Hyper_10_Squad"
 DB_URL = os.getenv("DB_URL")
 DB_SECRET = os.getenv("DB_SECRET")
 
