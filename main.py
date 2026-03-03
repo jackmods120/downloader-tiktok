@@ -25,7 +25,7 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 
 # ⚠️ TOKEN و DB_URL پێویستە لە environment variables بێت — ئەمەیان بگۆڕە
-TOKEN = os.getenv("8281519434:AAG84I5qM_gOMKY1Mm13p-mQA6WEnGei290")
+TOKEN = os.getenv("BOT_TOKEN")
 API_URL = "https://www.api.hyper-bd.site/Tiktok/?url="
 CHANNEL_URL = "https://t.me/J4CK_721"
 DB_URL = os.getenv("DB_URL")
