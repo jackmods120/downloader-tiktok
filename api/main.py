@@ -24,21 +24,22 @@ from telegram.ext import (
 )
 from telegram.constants import ParseMode
 
-# زانیارییەکان لە Environment Variables وەردەگیرێن
+# --- زانیارییەکان ---
 TOKEN = os.getenv("BOT_TOKEN")
 API_URL = "https://www.api.hyper-bd.site/Tiktok/?url="
-CHANNEL_URL = "https://t.me/jack_721_mod"
+CHANNEL_URL = "https://t.me/jack_721_mod"  # لێرە لینکی کەناڵی خۆت دابنێ
 DB_URL = os.getenv("DB_URL")
 DB_SECRET = os.getenv("DB_SECRET")
 
-SESSION_EXPIRE = 600
+SESSION_EXPIRE = 600  # کاتی مانەوەی زانیارییەکان (١٠ خولەک)
 API_TIMEOUT = 60
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
-# --- Functions ---
+# --- فەنکشنە یاریدەدەرەکان ---
 def format_number(num):
+    """ژمارەکان کورت دەکاتەوە (١٠٠٠ -> 1K)"""
     if not num: return "0"
     num = int(num)
     if num >= 1_000_000: return f"{num/1_000_000:.1f}M"
@@ -46,23 +47,22 @@ def format_number(num):
     return str(num)
 
 def clean_title(title):
+    """ناونیشانەکە پاک دەکاتەوە لە هێمای زیادە"""
     if not title: return "TikTok_Video"
-    return re.sub(r'[\\/*?:"<>|]', '', title)[:50]
-
-def process_caption(text):
-    if not text: return ""
-    text = re.sub(r'(@\w+|#\w+)', '', text)
-    return html.escape(re.sub(r'\s+', ' ', text).strip())
+    safe_title = re.sub(r'[\\/*?:"<>|]', '', title)
+    return safe_title[:50]
 
 def firebase_url(path: str):
     return f"{DB_URL}/{path}.json?auth={DB_SECRET}"
 
 async def save_user_data(user_id: int, data: dict):
+    """زانیاری بەکارهێنەر کاتی سەیڤ دەکات"""
     data["timestamp"] = int(time.time())
     async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
         await client.put(firebase_url(f"users/{user_id}"), json=data)
 
 async def get_user_data(user_id: int):
+    """وەرگرتنەوەی زانیارییەکان"""
     async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
         r = await client.get(firebase_url(f"users/{user_id}"))
         if r.status_code != 200: return None
@@ -70,15 +70,21 @@ async def get_user_data(user_id: int):
         if not data or int(time.time()) - data.get("timestamp", 0) > SESSION_EXPIRE: return None
         return data
 
-# --- Handlers ---
+# --- فەرمانەکان (Commands) ---
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        "<b>👋 Welcome to Premium TikTok Downloader!</b>\n\n"
-        "I can download No-Watermark videos and HQ audio.\n\n"
-        "Tap <b>Download Now</b> to begin."
+        "<b>👋 سڵاو بەڕێزم! بەخێربێیت بۆ بۆتی تیکتۆک.</b>\n\n"
+        "من دەتوانم ڤیدیۆکانی تیکتۆک بەبێ لۆگۆ (Watermark) و بە کوالێتی بەرز بۆت دابەزێنم.\n\n"
+        "<b>🚀 تایبەتمەندییەکان:</b>\n"
+        "🎥 دابەزاندنی ڤیدیۆ بەبێ لۆگۆ\n"
+        "🎵 دابەزاندنی گۆرانی (MP3)\n"
+        "📊 پیشاندانی ئامارەکان (لایک و ڤیو)\n\n"
+        "👇 <b>بۆ دەستپێکردن لینکێک بنێرە یان دوگمەی خوارەوە دابگرە:</b>"
     )
-    keyboard = [[InlineKeyboardButton("📥 Download Tiktok Video", callback_data="cmd_download")],
-                [InlineKeyboardButton("❓ Help", callback_data="cmd_help"), InlineKeyboardButton("🔥 Update", url=CHANNEL_URL)]]
+    keyboard = [
+        [InlineKeyboardButton("📥 دابەزاندنی ڤیدیۆ", callback_data="cmd_download")],
+        [InlineKeyboardButton("ℹ️ ڕێنمایی", callback_data="cmd_help"), InlineKeyboardButton("📢 کەناڵی بۆت", url=CHANNEL_URL)]
+    ]
     
     if update.callback_query:
         await update.callback_query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -86,13 +92,21 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = "<b>📚 How to use:</b>\n1. Copy TikTok link.\n2. Paste it here.\n3. Choose Video or Audio."
-    keyboard = [[InlineKeyboardButton("📥 Download Now", callback_data="cmd_download"), InlineKeyboardButton("🔙 Back", callback_data="cmd_start")]]
+    text = (
+        "<b>📚 ڕێنمایی بەکارهێنان:</b>\n\n"
+        "1️⃣ بڕۆ ناو تیکتۆک و لینکەکە کۆپی بکە (Copy Link).\n"
+        "2️⃣ لینکەکە بنێرە بۆ ئەم بۆتە.\n"
+        "3️⃣ هەڵبژێرە کە ڤیدیۆت دەوێت یان گۆرانی.\n\n"
+        "<i>تێبینی: دڵنیابە لەوەی ئەکاونتەکە پرایڤت (Private) نییە.</i>"
+    )
+    keyboard = [[InlineKeyboardButton("📥 ئێستا دایبەزێنە", callback_data="cmd_download"), InlineKeyboardButton("🔙 گەڕانەوە", callback_data="cmd_start")]]
+    
     if update.callback_query:
         await update.callback_query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
     else:
         await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
 
+# --- بەڕێوەبردنی دوگمەکان ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
@@ -101,51 +115,111 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "cmd_start": await start_command(update, context)
     elif data == "cmd_help": await help_command(update, context)
     elif data == "cmd_download":
-        await query.message.reply_text("<b>🔗 Please send me the TikTok URL.</b>", parse_mode=ParseMode.HTML, reply_markup=ForceReply(selective=True))
-    elif data == "close": await query.message.delete()
+        await query.message.reply_text("<b>🔗 فەرموو لینکەکەم بۆ بنێرە:</b>", parse_mode=ParseMode.HTML, reply_markup=ForceReply(selective=True))
+    elif data == "close": 
+        await query.answer("داخرا 🗑")
+        await query.message.delete()
+    
     elif data.startswith("dl_"):
         action = data.split("_")[1]
         user_data = await get_user_data(user_id)
+        
         if not user_data:
-            await query.answer("⚠️ Session expired.", show_alert=True)
+            await query.answer("⚠️ کاتەکەت بەسەرچوو، تکایە لینکەکە بنێرەوە.", show_alert=True)
             return
         
-        d, creator = user_data["details"], user_data["creator"]
+        d = user_data["details"]
+        creator = user_data["creator"]
         title = clean_title(d.get('title', ''))
-        caption = f"🎬 <b>{html.escape(title)}</b>\n👤 <b>{html.escape(creator)}</b>"
+        
+        # دروستکردنی کەپشنێکی جوان
+        caption = (
+            f"🎬 <b>{html.escape(title)}</b>\n\n"
+            f"👤 <b>خاوەنی ڤیدیۆ:</b> {html.escape(creator)}\n"
+            f"👁 <b>بینەر:</b> {format_number(d.get('views'))} | ❤️ <b>لایک:</b> {format_number(d.get('like'))}\n"
+            f"🤖 <i>Downloaded by @{context.bot.username}</i>"
+        )
 
-        if action == "video":
-            media = InputMediaVideo(media=d["video"]["play"], caption=caption, parse_mode=ParseMode.HTML)
-            await query.message.edit_media(media)
-        elif action == "audio":
-            media = InputMediaAudio(media=d["audio"]["play"], caption=caption, parse_mode=ParseMode.HTML)
-            await query.message.edit_media(media)
+        buttons = [[InlineKeyboardButton("🗑 سڕینەوە", callback_data="close")]]
 
+        try:
+            if action == "video":
+                await query.answer("⏳ کەمێک بۆستە، ڤیدیۆکە دەنێردرێت...", show_alert=False)
+                await query.message.edit_caption("<b>🚀 خەریکی ناردنی ڤیدیۆکەم...</b>", parse_mode=ParseMode.HTML)
+                
+                media = InputMediaVideo(media=d["video"]["play"], caption=caption, parse_mode=ParseMode.HTML)
+                await query.message.edit_media(media, reply_markup=InlineKeyboardMarkup(buttons))
+            
+            elif action == "audio":
+                await query.answer("⏳ کەمێک بۆستە، گۆرانییەکە دەنێردرێت...", show_alert=False)
+                await query.message.edit_caption("<b>🚀 خەریکی ناردنی گۆرانییەکەم...</b>", parse_mode=ParseMode.HTML)
+                
+                media = InputMediaAudio(media=d["audio"]["play"], caption=caption, parse_mode=ParseMode.HTML, title=title, performer=creator)
+                await query.message.edit_media(media, reply_markup=InlineKeyboardMarkup(buttons))
+        
+        except Exception as e:
+            # ئەگەر قەبارەی ڤیدیۆکە گەورە بوو یان کێشە هەبوو
+            link_btn = [[InlineKeyboardButton("🔗 دابەزاندن بە لینک", url=d["video"]["play"])], [InlineKeyboardButton("🗑 سڕینەوە", callback_data="close")]]
+            await query.message.edit_caption(
+                caption=f"⚠️ <b>نەتوانرا ڤیدیۆکە ڕاستەوخۆ بنێردرێت (قەبارەی گەورەیە).</b>\nتکایە لە ڕێگەی لینکەکەوە دایبەزێنە.\n\n{caption}",
+                parse_mode=ParseMode.HTML,
+                reply_markup=InlineKeyboardMarkup(link_btn)
+            )
+
+# --- وەرگرتنی نامە و لینک ---
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message.text or "tiktok.com" not in update.message.text: return
+    if not update.message.text: return
     
-    status_msg = await update.message.reply_text("<b>🔍 Searching...</b>", parse_mode=ParseMode.HTML)
+    msg_text = update.message.text.strip()
+    
+    # پشکنین بۆ ئەوەی بزانین لینکەکە تیکتۆکە یان نا
+    if "tiktok.com" not in msg_text:
+        return # ئەگەر تیکتۆک نەبوو وەڵام ناداتەوە (بۆ ئەوەی لە گرووپ بێزارکەر نەبێت)
+
+    status_msg = await update.message.reply_text("<b>🔍 دەگەڕێم بەدوای ڤیدیۆکەدا، تکایە بۆستە...</b>", parse_mode=ParseMode.HTML, reply_to_message_id=update.message.message_id)
+
     async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
         try:
-            r = await client.get(API_URL + update.message.text.strip())
+            r = await client.get(API_URL + msg_text)
             res = r.json()
+            
             if not res.get("ok"):
-                await status_msg.edit_text("❌ Video not found.")
+                await status_msg.edit_text("<b>❌ ڤیدیۆکە نەدۆزرایەوە!</b>\nدڵنیابەوە لینکەکە ڕاستە یان ڤیدیۆکە سڕاوەتەوە.")
                 return
 
             video = res["data"]
-            await save_user_data(update.message.from_user.id, {"creator": video["creator"], "details": video["details"]})
+            details = video["details"]
+            
+            # سەیڤکردنی زانیاری بۆ بەکارهێنان لە دوگمەکان
+            await save_user_data(update.message.from_user.id, {"creator": video["creator"], "details": details})
 
-            caption = f"🎬 <b>{html.escape(clean_title(video['details'].get('title', '')))}</b>\n👤 <b>User:</b> {video['creator']}"
-            keyboard = [[InlineKeyboardButton("🎥 Video", callback_data="dl_video"), InlineKeyboardButton("🎵 Audio", callback_data="dl_audio")],
-                        [InlineKeyboardButton("❌ Close", callback_data="close")]]
+            title = clean_title(details.get('title', ''))
+            
+            caption = (
+                f"✅ <b>ڤیدیۆکە دۆزرایەوە!</b>\n\n"
+                f"📝 <b>ناونیشان:</b> {html.escape(title)}\n"
+                f"👤 <b>خاوەن:</b> {html.escape(video['creator'])}\n\n"
+                f"📊 <b>ئامارەکان:</b>\n"
+                f"👁 {format_number(details.get('views'))} | ❤️ {format_number(details.get('like'))} | 💬 {format_number(details.get('comment'))}\n\n"
+                "👇 <b>فۆرماتێک هەڵبژێرە بۆ دابەزاندن:</b>"
+            )
 
-            await status_msg.edit_media(InputMediaPhoto(video["details"]["cover"]["cover"], caption=caption, parse_mode=ParseMode.HTML), 
-                                        reply_markup=InlineKeyboardMarkup(keyboard))
-        except:
-            await status_msg.edit_text("❌ Error occurred.")
+            keyboard = [
+                [InlineKeyboardButton("🎥 ڤیدیۆ (بێ لۆگۆ)", callback_data="dl_video")],
+                [InlineKeyboardButton("🎵 گۆرانی (MP3)", callback_data="dl_audio")],
+                [InlineKeyboardButton("🗑 سڕینەوە", callback_data="close")]
+            ]
 
-# --- Setup Bot ---
+            await status_msg.edit_media(
+                InputMediaPhoto(details["cover"]["cover"], caption=caption, parse_mode=ParseMode.HTML), 
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+
+        except Exception as e:
+            logging.error(f"Error: {e}")
+            await status_msg.edit_text("❌ کێشەیەک ڕوویدا، تکایە دواتر هەوڵ بدەرەوە.")
+
+# --- ڕێکخستنی بۆت ---
 ptb_app = ApplicationBuilder().token(TOKEN).build()
 ptb_app.add_handler(CommandHandler("start", start_command))
 ptb_app.add_handler(CommandHandler("help", help_command))
@@ -164,4 +238,4 @@ async def webhook(req: Request):
 
 @app.get("/api/main")
 async def health():
-    return {"status": "active"}
+    return {"status": "active", "dev": "Kurdish Developer"}
