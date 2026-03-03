@@ -200,7 +200,7 @@ def is_vip(user_id): return user_id in vip_users or is_owner(user_id)
 
 async def check_user_subscription(user_id, context):
     if not forced_channels: return True, []
-    not_joined =[]
+    not_joined = []
     for channel in forced_channels:
         try:
             member = await context.bot.get_chat_member(chat_id=channel, user_id=user_id)
@@ -339,13 +339,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     lang = await get_user_lang(user_id)
     
-    # ------------------ دوگمە بنەڕەتییەکان ------------------
     if data == "check_sub_start" or data == "cmd_start": await start_command(update, context); return
     elif data == "cmd_help": await help_command(update, context); return
     elif data == "cmd_download": await query.message.reply_text(t(lang, "download_prompt"), parse_mode=ParseMode.HTML, reply_markup=ForceReply(selective=True)); return
     elif data == "close": await query.message.delete(); return
 
-    # ------------------ مینیوی بەکارهێنەر ------------------
     if data == "menu_profile":
         text = (f"╔═══════════════════╗\n   {t(lang, 'profile_title')}\n╚═══════════════════╝\n\n"
                 f"{t(lang, 'profile_id', id=user_id)}\n{t(lang, 'profile_name', name=html.escape(query.from_user.first_name))}\n"
@@ -371,7 +369,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await start_command(update, context)
         return
 
-    # ------------------ بەشی داونلۆد و پرۆسێس ------------------
     if data.startswith("dl_"):
         action = data.split("_")[1]
         user_data = await get_user_session_data(user_id)
@@ -424,7 +421,20 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"⚙️ <b>سیستەم:</b>\n├ دۆخی چاکسازی: {'بەڵێ 🔴' if bot_settings_global['maintenance_mode'] else 'نەخێر 🟢'}\n├ کاتی کارکردن: {get_uptime()}\n\n🕐 {get_current_time()}")
         await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(t(lang, 'btn_back'), callback_data='admin_panel_main')]]))
     
-    # ... (کۆدی پانێڵەکانی تر لێرە بەردەوام دەبێت)
+    elif data == "admin_broadcast_ask":
+        await query.message.reply_text("📢 تکایە نامەکە بنێرە:", reply_markup=ForceReply(selective=True))
+
+    elif data == "admin_toggle_maintenance":
+        if not is_owner(user_id): await query.answer(t(lang, "error_owner_only"), show_alert=True); return
+        bot_settings_global["maintenance_mode"] = not bot_settings_global["maintenance_mode"]
+        await save_settings()
+        status = "چالاک کرا 🔴" if bot_settings_global["maintenance_mode"] else "ناچالاک کرا 🟢"
+        await query.answer(f"دۆخی چاکسازی {status}", show_alert=True)
+        await query.edit_message_text(f"✅ دۆخی چاکسازی گۆڕدرا.\nئێستا: {status}", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(t(lang, 'btn_back'), callback_data='admin_panel_main')]]))
+
+    # ... (کۆدی تەواوی پانێڵەکانی تر لێرە بەردەوام دەبێت)
+    # وەک بەڕێوەبردنی ئەدمین، چەناڵ، بلۆک، VIP
+    # ...
 
 # ==============================================================================
 # --------------------- وەرگرتنی نامە و ڕیپلەی (MESSAGE HANDLER) ------------------
@@ -436,14 +446,13 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = await get_user_lang(user_id)
     
     if update.message.reply_to_message and is_admin(user_id):
-        # ... (کۆدی ڕیپلەی ئەدمین لێرە دادەنرێت)
+        # ... (کۆدی وەڵامدانەوەی ئەدمین)
         pass
 
     if is_blocked(user_id) or "tiktok.com" not in msg: return 
     
     if bot_settings_global["maintenance_mode"] and not is_admin(user_id):
-        await update.message.reply_text(t(lang, "error_maintenance"), parse_mode=ParseMode.HTML)
-        return
+        await update.message.reply_text(t(lang, "error_maintenance"), parse_mode=ParseMode.HTML); return
     
     is_sub, _ = await check_user_subscription(user_id, context)
     if not is_sub and not is_admin(user_id) and not is_vip(user_id): 
@@ -459,7 +468,8 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             video = res["data"]; details = video["details"]; images = details.get("images", [])
             await save_user_session_data(user_id, {"creator": video["creator"], "details": details})
             
-            caption = (f"✅ <b>{t(lang, 'download_found')}</b>\n\n📝 <b>{t(lang, 'download_title', title=html.escape(clean_title(details.get('title'))))}</b>\n"
+            caption = (f"✅ <b>{t(lang, 'download_found')}</b>\n\n"
+                       f"📝 <b>{t(lang, 'download_title', title=html.escape(clean_title(details.get('title'))))}</b>\n"
                        f"👤 <b>{t(lang, 'download_owner', owner=html.escape(video['creator']))}</b>")
             
             if images:
