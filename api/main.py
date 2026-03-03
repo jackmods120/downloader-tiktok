@@ -34,8 +34,10 @@ DB_SECRET = os.getenv("DB_SECRET")
 
 # زانیاری خاوەن
 OWNER_ID = 5977475208 
+
+# لیستەکان (ئێستا لە داتابەیسەوە وەردەگیرێن)
 admins_list = {OWNER_ID} 
-forced_channels = []  
+forced_channels =[]  
 blocked_users = set()
 
 SESSION_EXPIRE = 600
@@ -73,34 +75,62 @@ def is_admin(user_id):
 def is_blocked(user_id):
     return user_id in blocked_users
 
+# ---------------- سەیڤکردن لە داتابەیس (بۆ چارەسەری کێشەی سڕینەوە) ---------------- #
+async def load_settings():
+    global admins_list, forced_channels, blocked_users
+    async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
+        try:
+            r = await client.get(firebase_url("bot_settings"))
+            if r.status_code == 200 and r.json():
+                data = r.json()
+                admins_list = set(data.get("admins", [OWNER_ID]))
+                forced_channels = data.get("channels",[])
+                blocked_users = set(data.get("blocked",[]))
+            else:
+                admins_list = {OWNER_ID}
+                forced_channels =[]
+                blocked_users = set()
+        except Exception as e:
+            logging.error(f"Error loading settings: {e}")
+
+async def save_settings():
+    settings = {
+        "admins": list(admins_list),
+        "channels": forced_channels,
+        "blocked": list(blocked_users)
+    }
+    async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
+        try:
+            await client.put(firebase_url("bot_settings"), json=settings)
+        except Exception as e:
+            logging.error(f"Error saving settings: {e}")
+
 # --- پشکنینی جۆینی ناچاری ---
 async def check_user_subscription(user_id, context):
     if not forced_channels:
         return True, []
     
-    not_joined = []
+    not_joined =[]
     for channel in forced_channels:
         try:
             channel_username = channel.replace('@', '') if channel.startswith('@') else channel
             member = await context.bot.get_chat_member(chat_id=f"@{channel_username}", user_id=user_id)
-            if member.status in [ChatMemberStatus.LEFT, ChatMemberStatus.BANNED]:
+            if member.status in[ChatMemberStatus.LEFT, ChatMemberStatus.BANNED]:
                 not_joined.append(channel)
         except Exception:
             pass 
     
     return len(not_joined) == 0, not_joined
 
-# --- داتابەیس (Firebase) ---
+# --- داتابەیس بۆ یوزەرەکان ---
 async def save_user_data(user_id: int, data: dict):
     data["timestamp"] = int(time.time())
     async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
         await client.put(firebase_url(f"users/{user_id}"), json=data)
 
-# فەنکشنێک بۆ پشکنین کە ئایا یوزەر کۆنە یان نوێ (بەبێ سەیرکردنی کات)
 async def is_user_exist(user_id: int):
     async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
         r = await client.get(firebase_url(f"users/{user_id}"))
-        # ئەگەر داتا هەبوو (واتە NULL نەبوو)، کەواتە یوزەرەکە کۆنە
         return r.status_code == 200 and r.json() is not None
 
 async def get_user_data(user_id: int):
@@ -127,9 +157,7 @@ async def notify_admin_new_user(context, user):
 
 # --- کیبۆردەکان ---
 def get_main_keyboard(user_id):
-    keyboard = [
-        [InlineKeyboardButton("📥 دابەزاندنی ڤیدیۆ", callback_data="cmd_download")],
-        [
+    keyboard = [[InlineKeyboardButton("📥 دابەزاندنی ڤیدیۆ", callback_data="cmd_download")],[
             InlineKeyboardButton("ℹ️ ڕێنمایی", callback_data="cmd_help"),
             InlineKeyboardButton("📢 کەناڵی بۆت", url=CHANNEL_URL)
         ]
@@ -139,16 +167,13 @@ def get_main_keyboard(user_id):
     return InlineKeyboardMarkup(keyboard)
 
 def get_admin_keyboard(user_id):
-    keyboard = [
-        [
+    keyboard = [[
             InlineKeyboardButton("📊 ئامارەکان", callback_data="admin_stats"),
             InlineKeyboardButton("📢 ناردنی گشتی", callback_data="admin_broadcast_ask")
-        ],
-        [
+        ],[
             InlineKeyboardButton("📢 چەناڵەکان", callback_data="manage_channels_menu"),
             InlineKeyboardButton("👥 ئەدمینەکان", callback_data="manage_admins_menu")
-        ],
-        [InlineKeyboardButton("🔙 گەڕانەوە", callback_data="cmd_start")]
+        ],[InlineKeyboardButton("🔙 گەڕانەوە", callback_data="cmd_start")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -163,11 +188,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # --- پشکنینی یوزەری نوێ ---
-    # تەنها ئەگەر ئەدمین نەبوو و لە داتابەیس نەبوو
     if not is_admin(user_id):
         user_exists = await is_user_exist(user_id)
         if not user_exists:
-            # یوزەری نوێیە: ئاگادارکردنەوە بنێرە و تۆماری بکە
             asyncio.create_task(notify_admin_new_user(context, user))
             await save_user_data(user_id, {"joined": True, "name": first_name})
 
@@ -259,12 +282,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             elif action == "photos":
                 await query.answer("⏳ ناردنی وێنەکان...", show_alert=False)
-                images = d.get("images", [])
+                images = d.get("images",[])
                 if not images:
                     await query.answer("❌ هیچ وێنەیەک نییە.", show_alert=True)
                     return
                 
-                media_group = [InputMediaPhoto(media=img) for img in images[:10]]
+                media_group =[InputMediaPhoto(media=img) for img in images[:10]]
                 media_group[0].caption = caption
                 media_group[0].parse_mode = ParseMode.HTML
                 
@@ -313,10 +336,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not is_owner(user_id):
             await query.answer("⛔ تەنیا خاوەن!", show_alert=True)
             return
-        keyboard = [
-            [InlineKeyboardButton("➕ زیادکردنی ئەدمین", callback_data="add_admin_ask")],
-            [InlineKeyboardButton("📋 لیستی ئەدمینەکان (سڕینەوە)", callback_data="list_admins")],
-            [InlineKeyboardButton("🔙 گەڕانەوە", callback_data="admin_panel")]
+        keyboard = [[InlineKeyboardButton("➕ زیادکردنی ئەدمین", callback_data="add_admin_ask")],[InlineKeyboardButton("📋 لیستی ئەدمینەکان (سڕینەوە)", callback_data="list_admins")],[InlineKeyboardButton("🔙 گەڕانەوە", callback_data="admin_panel")]
         ]
         await query.edit_message_text("👥 <b>بەڕێوەبردنی ئەدمینەکان</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -328,7 +348,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data == "list_admins":
-        keyboard = []
+        keyboard =[]
         for admin in admins_list:
             keyboard.append([InlineKeyboardButton(f"👤 ID: {admin}", callback_data=f"sel_admin_{admin}")])
         keyboard.append([InlineKeyboardButton("🔙 گەڕانەوە", callback_data="manage_admins_menu")])
@@ -340,9 +360,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("⚠️ خاوەن ناسڕدرێتەوە!", show_alert=True)
             return
         
-        keyboard = [
-            [InlineKeyboardButton("🗑 بەڵێ، بیسڕەوە", callback_data=f"del_admin_{target_id}")],
-            [InlineKeyboardButton("❌ نەخێر", callback_data="list_admins")]
+        keyboard = [[InlineKeyboardButton("🗑 بەڵێ، بیسڕەوە", callback_data=f"del_admin_{target_id}")],[InlineKeyboardButton("❌ نەخێر", callback_data="list_admins")]
         ]
         await query.edit_message_text(f"⚠️ <b>ئایە دڵنیایت ئەدمینی {target_id} دەسڕیتەوە؟</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -350,8 +368,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         target_id = int(data.split("_")[2])
         if target_id in admins_list:
             admins_list.remove(target_id)
+            await save_settings() # <--- سەیڤکردن لە داتابەیس
             await query.answer("✅ سڕایەوە!", show_alert=True)
-            keyboard = []
+            keyboard =[]
             for admin in admins_list:
                 keyboard.append([InlineKeyboardButton(f"👤 ID: {admin}", callback_data=f"sel_admin_{admin}")])
             keyboard.append([InlineKeyboardButton("🔙 گەڕانەوە", callback_data="manage_admins_menu")])
@@ -361,9 +380,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # --- بەڕێوەبردنی چەناڵەکان ---
     elif data == "manage_channels_menu":
-        keyboard = [
-            [InlineKeyboardButton("➕ زیادکردنی چەناڵ", callback_data="add_channel_ask")],
-            [InlineKeyboardButton("📋 لیستی چەناڵەکان (سڕینەوە)", callback_data="list_channels")],
+        keyboard = [[InlineKeyboardButton("➕ زیادکردنی چەناڵ", callback_data="add_channel_ask")],[InlineKeyboardButton("📋 لیستی چەناڵەکان (سڕینەوە)", callback_data="list_channels")],
             [InlineKeyboardButton("🔙 گەڕانەوە", callback_data="admin_panel")]
         ]
         await query.edit_message_text("📢 <b>بەڕێوەبردنی چەناڵەکان</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -381,7 +398,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("❌ <b>هیچ چەناڵێک نییە.</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
             return
 
-        keyboard = []
+        keyboard =[]
         for ch in forced_channels:
             keyboard.append([InlineKeyboardButton(f"📢 {ch}", callback_data=f"sel_channel_{ch}")])
         keyboard.append([InlineKeyboardButton("🔙 گەڕانەوە", callback_data="manage_channels_menu")])
@@ -389,9 +406,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("sel_channel_"):
         target_ch = data.replace("sel_channel_", "")
-        keyboard = [
-            [InlineKeyboardButton("🗑 بەڵێ، بیسڕەوە", callback_data=f"del_channel_{target_ch}")],
-            [InlineKeyboardButton("❌ نەخێر", callback_data="list_channels")]
+        keyboard = [[InlineKeyboardButton("🗑 بەڵێ، بیسڕەوە", callback_data=f"del_channel_{target_ch}")],[InlineKeyboardButton("❌ نەخێر", callback_data="list_channels")]
         ]
         await query.edit_message_text(f"⚠️ <b>ئایە چەناڵی {target_ch} دەسڕیتەوە؟</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -399,6 +414,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         target_ch = data.replace("del_channel_", "")
         if target_ch in forced_channels:
             forced_channels.remove(target_ch)
+            await save_settings() # <--- سەیڤکردن لە داتابەیس
             await query.answer("✅ سڕایەوە!", show_alert=True)
             if not forced_channels:
                 keyboard = [[InlineKeyboardButton("🔙 گەڕانەوە", callback_data="manage_channels_menu")]]
@@ -428,6 +444,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 new_id = int(msg_text)
                 admins_list.add(new_id)
+                await save_settings() # <--- سەیڤکردن لە داتابەیس
                 await update.message.reply_text(f"✅ <b>پیرۆزە!</b> ئایدی {new_id} کرا بە ئەدمین.", parse_mode=ParseMode.HTML)
             except:
                 await update.message.reply_text("❌ <b>هەڵە!</b> تکایە تەنها ژمارە بنێرە.", parse_mode=ParseMode.HTML)
@@ -439,6 +456,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ch_name = msg_text if msg_text.startswith("@") else f"@{msg_text}"
             if ch_name not in forced_channels:
                 forced_channels.append(ch_name)
+                await save_settings() # <--- سەیڤکردن لە داتابەیس
                 await update.message.reply_text(f"✅ <b>سەرکەوتوو بوو!</b> چەناڵی {ch_name} زیادکرا.", parse_mode=ParseMode.HTML)
             else:
                 await update.message.reply_text("⚠️ ئەم چەناڵە پێشتر هەیە.", parse_mode=ParseMode.HTML)
@@ -474,11 +492,9 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             video = res["data"]
             details = video["details"]
             
-            # پشکنین بۆ ئەوەی بزانین وێنەیە (Slideshow) یان ڤیدیۆ
             images = details.get("images")
             is_slideshow = images and len(images) > 0
             
-            # سەیڤکردنی داتا
             await save_user_data(user_id, {"creator": video["creator"], "details": details})
 
             title = clean_title(details.get('title', ''))
@@ -494,17 +510,13 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"👇 <b>فۆرماتێک هەڵبژێرە:</b>"
             )
 
-            # گۆڕینی دوگمەکان بەپێی جۆری پۆستەکە
             if is_slideshow:
-                keyboard = [
-                    [InlineKeyboardButton(f"📸 وێنەکان ({len(images)})", callback_data="dl_photos")],
+                keyboard =[[InlineKeyboardButton(f"📸 وێنەکان ({len(images)})", callback_data="dl_photos")],
                     [InlineKeyboardButton("🎵 گۆرانی (MP3)", callback_data="dl_audio")],
                     [InlineKeyboardButton("🗑 سڕینەوە", callback_data="close")]
                 ]
             else:
-                keyboard = [
-                    [InlineKeyboardButton("🎥 ڤیدیۆ (بێ لۆگۆ)", callback_data="dl_video")],
-                    [InlineKeyboardButton("🎵 گۆرانی (MP3)", callback_data="dl_audio")],
+                keyboard = [[InlineKeyboardButton("🎥 ڤیدیۆ (بێ لۆگۆ)", callback_data="dl_video")],[InlineKeyboardButton("🎵 گۆرانی (MP3)", callback_data="dl_audio")],
                     [InlineKeyboardButton("🗑 سڕینەوە", callback_data="close")]
                 ]
 
@@ -528,6 +540,10 @@ ptb_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_hand
 async def webhook(req: Request):
     if not ptb_app.running:
         await ptb_app.initialize()
+    
+    # لێرەدا هەمووجارێک زانیارییەکان لە داتابەیسەوە دەهێنێتەوە
+    await load_settings()
+
     data = await req.json()
     update = Update.de_json(data, ptb_app.bot)
     await ptb_app.process_update(update)
@@ -535,4 +551,4 @@ async def webhook(req: Request):
 
 @app.get("/api/main")
 async def health():
-    return {"status": "active", "version": "Ultimate 3.0"}
+    return {"status": "active", "version": "Ultimate Database Synced 4.0"}
