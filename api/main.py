@@ -96,6 +96,13 @@ async def save_user_data(user_id: int, data: dict):
     async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
         await client.put(firebase_url(f"users/{user_id}"), json=data)
 
+# فەنکشنێک بۆ پشکنین کە ئایا یوزەر کۆنە یان نوێ (بەبێ سەیرکردنی کات)
+async def is_user_exist(user_id: int):
+    async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
+        r = await client.get(firebase_url(f"users/{user_id}"))
+        # ئەگەر داتا هەبوو (واتە NULL نەبوو)، کەواتە یوزەرەکە کۆنە
+        return r.status_code == 200 and r.json() is not None
+
 async def get_user_data(user_id: int):
     async with httpx.AsyncClient(timeout=API_TIMEOUT) as client:
         r = await client.get(firebase_url(f"users/{user_id}"))
@@ -155,9 +162,14 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⛔ <b>تۆ بلۆک کراویت.</b>", parse_mode=ParseMode.HTML)
         return
 
-    # ئاگادارکردنەوەی ئەدمین (ئەگەر یوزەرەکە خۆی ئەدمین نەبوو)
+    # --- پشکنینی یوزەری نوێ ---
+    # تەنها ئەگەر ئەدمین نەبوو و لە داتابەیس نەبوو
     if not is_admin(user_id):
-        asyncio.create_task(notify_admin_new_user(context, user))
+        user_exists = await is_user_exist(user_id)
+        if not user_exists:
+            # یوزەری نوێیە: ئاگادارکردنەوە بنێرە و تۆماری بکە
+            asyncio.create_task(notify_admin_new_user(context, user))
+            await save_user_data(user_id, {"joined": True, "name": first_name})
 
     if not is_admin(user_id) and forced_channels:
         is_sub, not_joined = await check_user_subscription(user_id, context)
@@ -252,13 +264,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await query.answer("❌ هیچ وێنەیەک نییە.", show_alert=True)
                     return
                 
-                # ناردنی وێنەکان وەک ئەلبووم (تا ١٠ دانە)
                 media_group = [InputMediaPhoto(media=img) for img in images[:10]]
-                # دانانی کەپشن بۆ یەکەم وێنە
                 media_group[0].caption = caption
                 media_group[0].parse_mode = ParseMode.HTML
                 
-                await query.message.delete() # سڕینەوەی نامەی کۆن
+                await query.message.delete()
                 await context.bot.send_media_group(chat_id=user_id, media=media_group)
                 
             elif action == "audio":
@@ -267,7 +277,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.edit_media(media, reply_markup=InlineKeyboardMarkup(buttons))
 
         except Exception as e:
-            # ئەگەر کێشەیەک هەبوو، لینک بنێرە
             dl_url = d["video"]["play"] if action != "audio" else d["audio"]["play"]
             link_btn = [[InlineKeyboardButton("🔗 دابەزاندن بە لینک", url=dl_url)], [InlineKeyboardButton("🗑 سڕینەوە", callback_data="close")]]
             await query.message.edit_caption("⚠️ <b>قەبارەی گەورەیە، بە لینک دایبەزێنە.</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(link_btn))
