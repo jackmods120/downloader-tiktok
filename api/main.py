@@ -1,6 +1,6 @@
 # ==============================================================================
 # ==                                                                          ==
-# ==           TIKTOK DOWNLOADER BOT - V11.0 ULTRA PRO MAX (GOD MODE)         ==
+# ==           TIKTOK DOWNLOADER BOT - V12.0 ULTRA PRO MAX (GOD MODE)         ==
 # ==           Developed exclusively for: @j4ck_721s                          ==
 # ==           Features: Super Panel, Auto-Fallback, Live Error Notifier      ==
 # ==                                                                          ==
@@ -24,25 +24,23 @@ from telegram.error import BadRequest, Forbidden, TelegramError
 # ==============================================================================
 # ── 1. CONFIGURATION & SECURE ENV LOADING ─────────────────────────────────────
 # ==============================================================================
-# بەکارهێنانی DUMMY بۆ ئەوەی ئەگەر لە Vercel لەبیرت چوو دایبنێیت، پڕۆژەکە کڕاش نەکات
 TOKEN              = os.getenv("BOT_TOKEN") or "DUMMY_TOKEN"
 DB_URL             = os.getenv("DB_URL") or ""
 DB_SECRET          = os.getenv("DB_SECRET") or ""
-OWNER_ID           = 5977475208  # ئایدی خاوەنی سەرەکی
+OWNER_ID           = 5977475208
 DEV                = "@j4ck_721s"
 CHANNEL_URL        = "https://t.me/jack_721_mod"
 
 START_TIME         = time.time()
-SESSION_TTL        = 1800  # 30 خولەک مانەوەی زانیاری ڤیدیۆکان
+SESSION_TTL        = 1800
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 log = logging.getLogger(__name__)
 app = FastAPI()
 
-# داتابەیسی کاتی (خێراکردنی بۆت)
 super_admins_set: set = {OWNER_ID}
 admins_set      : set = {OWNER_ID}
-channels_list   : list =[]
+channels_list   : list = []
 blocked_set     : set = set()
 vip_set         : set = set()
 waiting_state   : dict = {}
@@ -62,7 +60,7 @@ CFG: dict = {
     "total_audio"     : 0,
     "total_photo"     : 0,
     "total_users"     : 0,
-    "active_api"      : "auto" # auto, tikwm, hyper, backup
+    "active_api"      : "auto"
 }
 
 # ==============================================================================
@@ -70,20 +68,20 @@ CFG: dict = {
 # ==============================================================================
 L = {
 "ku": {
-    "welcome": "👋 <b>سڵاو {name} {badge}</b>\n\n🤖 <b>بەخێربێیت بۆ پێشکەوتووترین بۆتی تیکتۆک</b>\n📥 لێرە دەتوانیت ڤیدیۆ (بێ لۆگۆ)، وێنەکان و گۆرانی دابەزێنیت بە بەرزترین خێرایی.\n\n━━━━━━━━━━━━━━━━━━━\n👇 <b>تەنیا لینکی تیکتۆکەکە بنێرە بۆم:</b>",
-    "help": "📚 <b>ڕێنمایی بەکارهێنان</b>\n\n1️⃣ بڕۆ ناو تیکتۆک و لینکی ڤیدیۆکە کۆپی بکە.\n2️⃣ لینکەکە لێرە (پەیست) بکە و بینێرە.\n3️⃣ بۆتەکە زانیارییەکانت پێ دەدات، دوگمەی مەبەست هەڵبژێرە!\n\n🎥 <b>ڤیدیۆ:</b> بەبێ هیچ لۆگۆ و نیشانەیەک.\n📸 <b>وێنە:</b> هەموو وێنەکانی پۆستەکە بە کوالێتی بەرز.\n🎵 <b>گۆرانی:</b> دەنگی ڤیدیۆکە بە فۆرماتی MP3.\n\n💎 <b>بەشی VIP:</b> بێ جۆین چەناڵ و خێرایی زۆرتر.\n📩 <b>پەیوەندی:</b> {dev}",
-    "profile": "👤 <b>کارتی پرۆفایلەکەت</b>\n\n🆔 ئایدی: <code>{id}</code>\n👤 ناو: <b>{name}</b>\n🔗 یوزەرنەیم: @{user}\n📅 تۆماربوون: {date}\n💎 دۆخی VIP: <b>{vip}</b>\n📥 کۆی دابەزاندنەکانت: <b>{dl}</b> جار",
-    "vip_info": "💎 <b>تایبەتمەندییەکانی VIP</b>\n\n✅ هیچ چەناڵێکی ناچاریت نایەتە پێش.\n✅ خێرایی دابەزاندنت خێراتر دەبێت لە ئاسایی.\n✅ دەتوانیت وێنەی بێسنوور دابەزێنیت.\n\nبۆ کڕینی VIP نامە بنێرە بۆ: {dev}",
-    "lang_title": "🌍 <b>تکایە زمانێک هەڵبژێرە:</b>",
-    "force_join": "🔒 <b>جۆینی ناچاری</b>\nبۆ بەکارهێنان، تکایە سەرەتا جۆینی ئەم چەناڵانەی خوارەوە بکە، پاشان کلیک لە '✅ جۆینم کرد' بکە:",
-    "processing": "🔍 <b>دەگەڕێم بۆ لینکەکە...</b>\n<i>تکایە چەند چرکەیەک چاوەڕێبە ⏳</i>",
-    "found": "✅ <b>سەرکەوتوو بوو! دۆزرایەوە!</b>\n\n📝 <b>سەردێڕ:</b> {title}\n👤 <b>خاوەن:</b> {owner}\n\n📊 <b>ئامارەکان:</b>\n👁 بینەر: <b>{views}</b>\n❤️ لایک: <b>{likes}</b>\n💬 کۆمێنت: <b>{comments}</b>\n\n👇 <i>جۆری دابەزاندن هەڵبژێرە:</i>",
-    "sending_photos": "📸 <b>وێنەکان ئامادە دەکرێن...</b>",
-    "blocked_msg": "⛔ <b>ببورە!</b> تۆ لەلایەن بەڕێوەبەرایەتییەوە بلۆک کراویت.",
-    "maintenance_msg": "🛠 <b>چاکسازی کاتی!</b>\nبۆتەکەمان لە ئێستادا لەژێر پەرەپێدانە. تکایە دواتر هەوڵبدەرەوە.",
-    "session_expired": "⚠️ <b>کات بەسەرچوو!</b> لینکەکە سەرلەنوێ بنێرەوە لێرە.",
-    "invalid_link": "❌ <b>لینکەکە هەڵەیە یان نادۆزرێتەوە!</b>",
-    "dl_fail": "❌ <b>هەڵەیەک ڕوویدا!</b> ناتوانرێت ئەم پۆستە دابەزێنرێت، سێرڤەر جەنجاڵە.",
+    "welcome": "👋 سڵاو {name} {badge}\n\n🤖 بەخێربێیت بۆ پێشکەوتووترین بۆتی تیکتۆک\n📥 لێرە دەتوانیت ڤیدیۆ (بێ لۆگۆ)، وێنەکان و گۆرانی دابەزێنیت بە بەرزترین خێرایی.\n\n━━━━━━━━━━━━━━━━━━━\n👇 تەنیا لینکی تیکتۆکەکە بنێرە بۆم:",
+    "help": "📚 ڕێنمایی بەکارهێنان\n\n1️⃣ بڕۆ ناو تیکتۆک و لینکی ڤیدیۆکە کۆپی بکە.\n2️⃣ لینکەکە لێرە (پەیست) بکە و بینێرە.\n3️⃣ بۆتەکە زانیارییەکانت پێ دەدات، دوگمەی مەبەست هەڵبژێرە!\n\n🎥 ڤیدیۆ: بەبێ هیچ لۆگۆ و نیشانەیەک.\n📸 وێنە: هەموو وێنەکانی پۆستەکە بە کوالێتی بەرز.\n🎵 گۆرانی: دەنگی ڤیدیۆکە بە فۆرماتی MP3.\n\n💎 بەشی VIP: بێ جۆین چەناڵ و خێرایی زۆرتر.\n📩 پەیوەندی: {dev}",
+    "profile": "👤 کارتی پرۆفایلەکەت\n\n🆔 ئایدی: {id}\n👤 ناو: {name}\n🔗 یوزەرنەیم: @{user}\n📅 تۆماربوون: {date}\n💎 دۆخی VIP: {vip}\n📥 کۆی دابەزاندنەکانت: {dl} جار",
+    "vip_info": "💎 تایبەتمەندییەکانی VIP\n\n✅ هیچ چەناڵێکی ناچاریت نایەتە پێش.\n✅ خێرایی دابەزاندنت خێراتر دەبێت لە ئاسایی.\n✅ دەتوانیت وێنەی بێسنوور دابەزێنیت.\n\nبۆ کڕینی VIP نامە بنێرە بۆ: {dev}",
+    "lang_title": "🌍 تکایە زمانێک هەڵبژێرە:",
+    "force_join": "🔒 جۆینی ناچاری\nبۆ بەکارهێنان، تکایە سەرەتا جۆینی ئەم چەناڵانەی خوارەوە بکە، پاشان کلیک لە '✅ جۆینم کرد' بکە:",
+    "processing": "🔍 دەگەڕێم بۆ لینکەکە...\nتکایە چەند چرکەیەک چاوەڕێبە ⏳",
+    "found": "✅ سەرکەوتوو بوو! دۆزرایەوە!\n\n📝 سەردێڕ: {title}\n👤 خاوەن: {owner}\n\n📊 ئامارەکان:\n👁 بینەر: {views}\n❤️ لایک: {likes}\n💬 کۆمێنت: {comments}\n\n👇 جۆری دابەزاندن هەڵبژێرە:",
+    "sending_photos": "📸 وێنەکان ئامادە دەکرێن...",
+    "blocked_msg": "⛔ ببورە! تۆ لەلایەن بەڕێوەبەرایەتییەوە بلۆک کراویت.",
+    "maintenance_msg": "🛠 چاکسازی کاتی!\n\n⚙️ ئێستا بۆتەکەمان لە ژێر نوێکردنەوەی گەورەیەکدایە بۆ ئەوەی باشتر و خێراتر بێت بۆت.\n\n⏳ تکایە کەمێک چاوەڕێبە، زووترین کاتێکدا دەگەڕێینەوە!\n\nبۆ زانیاری زیاتر: {dev}",
+    "session_expired": "⚠️ کات بەسەرچوو! لینکەکە سەرلەنوێ بنێرەوە لێرە.",
+    "invalid_link": "❌ لینکەکە هەڵەیە یان نادۆزرێتەوە!",
+    "dl_fail": "❌ هەڵەیەک ڕوویدا! ناتوانرێت ئەم پۆستە دابەزێنرێت، سێرڤەر جەنجاڵە.",
     "no_photo": "❌ ئەم پۆستە هیچ وێنەیەکی تێدا نییە!",
     "no_video": "❌ ڤیدیۆکە نەدۆزرایەوە!",
     "no_audio": "❌ دەنگی ئەم ڤیدیۆیە بەردەست نییە!",
@@ -94,14 +92,14 @@ L = {
     "done": "✅ ئەنجامدرا بە سەرکەوتوویی!",
     "setting_saved": "✅ ڕێکخستنەکان پاشەکەوت کران!",
     "user_not_found": "⚠️ بەکارهێنەر لە داتابەیس نەدۆزرایەوە.",
-    "broadcast_done": "📢 <b>برۆدکاست تەواو بوو</b>\n✅ گەیشت بە: <b>{ok}</b>\n❌ نەگەیشت: <b>{fail}</b>",
+    "broadcast_done": "📢 برۆدکاست تەواو بوو\n✅ گەیشت بە: {ok}\n❌ نەگەیشت: {fail}",
     "no_users": "📭 هیچ بەکارهێنەرێک نییە.",
-    "backup_caption": "💾 <b>باکئەپی داتابەیس</b>\n📅 کات: {time}",
+    "backup_caption": "💾 باکئەپی داتابەیس\n📅 کات: {time}",
     "welcome_set": "✅ نامەی بەخێرهاتن گۆڕدرا.",
     "msg_sent": "✅ نامەکە نێردرا.",
-    "write_msg": "✍️ <b>نامەکەت بنووسە:</b>",
-    "write_welcome": "✍️ <b>نامەی بەخێرهاتن بنووسە (تێکستی HTML):</b>",
-    "confirm_del": "⚠️ <b>ئایا بەتەواوی دڵنیایت؟</b>",
+    "write_msg": "✍️ نامەکەت بنووسە:",
+    "write_welcome": "✍️ نامەی بەخێرهاتن بنووسە (تێکستی HTML):",
+    "confirm_del": "⚠️ ئایا بەتەواوی دڵنیایت؟",
     "stats_reset": "✅ هەموو ئامارەکانی دابەزاندن سفر کرانەوە.",
     "users_deleted": "✅ هەموو بەکارهێنەرەکان سڕانەوە!",
     "b_dl": "📥 دابەزاندنی نوێ",
@@ -131,9 +129,10 @@ L = {
     "badge_vip": "💎 (VIP)",
     "vip_yes": "بەڵێ، چالاکە 💎",
     "vip_no": "نەخێر",
+    "write_id": "✍️ ئایدی کەسەکە بنووسە و بینێرە:",
+    "write_ch": "✍️ یوزەرنەیمی چەناڵەکە بنووسە (نمونە: @mychannel) و بینێرە:",
 }
 }
-# زمانەکانی تر (ئینگلیزی و عەرەبی) دەتوانیت دواتر خۆت زیادیان بکەیت. لێرەدا تەنها کوردیم هێشتۆتەوە بۆ خێرایی و کەمی کێشی فایلەکە.
 
 def tx(lang: str, key: str, **kw) -> str:
     base = L.get(lang, L["ku"])
@@ -167,21 +166,20 @@ def is_vip(uid):   return uid in vip_set or is_super(uid)
 def is_blocked(uid): return uid in blocked_set
 
 async def check_join(uid, ctx) -> tuple[bool, list]:
-    if not channels_list: return True,[]
-    missing =[]
+    if not channels_list: return True, []
+    missing = []
     for ch in channels_list:
         try:
             m = await ctx.bot.get_chat_member(ch, uid)
-            if m.status in[ChatMemberStatus.LEFT, ChatMemberStatus.BANNED]: missing.append(ch)
+            if m.status in [ChatMemberStatus.LEFT, ChatMemberStatus.BANNED]: missing.append(ch)
         except BadRequest as e:
-            # پاراستنی بۆت لە وەستان ئەگەر بۆتەکە ئەدمین نەبوو لە چەناڵەکە! (شۆڕشی چارەسەرەکان)
             log.warning(f"Bot is not admin in {ch} or channel invalid: {e}")
         except Exception: pass
     return len(missing) == 0, missing
 
 def bypass_join(uid): return (is_admin(uid) and CFG.get("admin_bypass", True)) or (is_vip(uid) and CFG.get("vip_bypass", True))
 
-# --- DB METHODS (Protected) ---
+# --- DB METHODS ---
 async def db_get(path):
     if not DB_URL: return None
     async with httpx.AsyncClient(timeout=10) as c:
@@ -210,9 +208,9 @@ async def load_cfg(force=False):
     if d:
         super_admins_set = set(d.get("super_admins", [OWNER_ID]))
         admins_set       = set(d.get("admins", [OWNER_ID]))
-        channels_list    = d.get("channels",[])
+        channels_list    = d.get("channels", [])
         blocked_set      = set(d.get("blocked", []))
-        vip_set          = set(d.get("vips",[]))
+        vip_set          = set(d.get("vips", []))
         CFG.update(d.get("cfg", {}))
         last_cfg_load = time.time()
 
@@ -239,7 +237,7 @@ async def session_get(uid) -> dict | None:
     return None
 
 # ==============================================================================
-# ── 4. ADVANCED TIKTOK SCRAPER (3 APIs Fallback System) ───────────────────────
+# ── 4. ADVANCED TIKTOK SCRAPER (2 APIs Fallback System) ───────────────────────
 # ==============================================================================
 async def fetch_tiktok(url: str) -> dict | None:
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -247,20 +245,18 @@ async def fetch_tiktok(url: str) -> dict | None:
     active = CFG.get("active_api", "auto")
 
     async with httpx.AsyncClient(timeout=timeout, headers=headers, follow_redirects=True) as c:
-        # 1. TikWM
         if active in ("auto", "tikwm"):
             try:
                 r = await c.post("https://www.tikwm.com/api/", data={"url": url, "hd": 1})
                 if r.status_code == 200 and r.json().get("code") == 0: return _parse_tikwm(r.json()["data"])
             except: pass
 
-        # 2. Hyper API
         if active in ("auto", "hyper"):
             try:
                 r = await c.get(f"https://www.api.hyper-bd.site/Tiktok/?url={url}")
                 if r.status_code == 200 and r.json().get("ok"): return _parse_hyper(r.json().get("data", {}))
             except: pass
-            
+
     return None
 
 def _parse_tikwm(d: dict) -> dict:
@@ -285,30 +281,24 @@ def _parse_hyper(d: dict) -> dict:
 # ==============================================================================
 # ── 5. UI COMPONENTS ──────────────────────────────────────────────────────────
 # ==============================================================================
-def numpad(action: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[InlineKeyboardButton(str(i), callback_data=f"np_{action}_{i}") for i in range(1,4)],[InlineKeyboardButton(str(i), callback_data=f"np_{action}_{i}") for i in range(4,7)],[InlineKeyboardButton(str(i), callback_data=f"np_{action}_{i}") for i in range(7,10)],[InlineKeyboardButton("⌫", callback_data=f"np_{action}_back"), InlineKeyboardButton("0", callback_data=f"np_{action}_0"), InlineKeyboardButton("✅", callback_data=f"np_{action}_ok")],[InlineKeyboardButton("❌ هەڵوەشاندنەوە", callback_data="np_cancel")]
-    ])
-
-def ch_pad() -> InlineKeyboardMarkup:
-    l = "abcdefghijklmnopqrstuvwxyz"
-    r = [[InlineKeyboardButton(c, callback_data=f"chi_{c}") for c in l[i:i+5]] for i in range(0, 25, 5)]
-    r.append([InlineKeyboardButton("z", callback_data="chi_z"), InlineKeyboardButton("⌫", callback_data="chi_back"), InlineKeyboardButton("_", callback_data="chi__"), InlineKeyboardButton("✅ تەواو", callback_data="chi_ok")])
-    r.append([InlineKeyboardButton("❌ Cancel", callback_data="np_cancel")])
-    return InlineKeyboardMarkup(r)
-
 async def render_main_menu(uid: int, lang: str, name: str) -> tuple[str, InlineKeyboardMarkup]:
     badge = tx(lang, "badge_owner") if is_owner(uid) else tx(lang, "badge_super") if is_super(uid) else tx(lang, "badge_admin") if is_admin(uid) else tx(lang, "badge_vip") if is_vip(uid) else ""
     wm = CFG.get("welcome_msg", "")
     text = wm.replace("{name}", html.escape(name)).replace("{badge}", badge) if wm and not is_admin(uid) else tx(lang, "welcome", name=html.escape(name), badge=badge, div=DIV)
-    
-    kb = [[InlineKeyboardButton(tx(lang, "b_dl"), callback_data="ask_link")],[InlineKeyboardButton(tx(lang, "b_profile"), callback_data="show_profile"), InlineKeyboardButton(tx(lang, "b_vip"), callback_data="show_vip")],[InlineKeyboardButton(tx(lang, "b_settings"), callback_data="show_settings"), InlineKeyboardButton(tx(lang, "b_help"), callback_data="show_help")],[InlineKeyboardButton(tx(lang, "b_channel"), url=CHANNEL_URL)]]
-    
-    ar =[]
+
+    kb = [
+        [InlineKeyboardButton(tx(lang, "b_dl"), callback_data="ask_link")],
+        [InlineKeyboardButton(tx(lang, "b_profile"), callback_data="show_profile"), InlineKeyboardButton(tx(lang, "b_vip"), callback_data="show_vip")],
+        [InlineKeyboardButton(tx(lang, "b_settings"), callback_data="show_settings"), InlineKeyboardButton(tx(lang, "b_help"), callback_data="show_help")],
+        [InlineKeyboardButton(tx(lang, "b_channel"), url=CHANNEL_URL)]
+    ]
+
+    ar = []
     if is_admin(uid): ar.append(InlineKeyboardButton(tx(lang, "b_admin"), callback_data="panel_admin"))
     if is_super(uid): ar.append(InlineKeyboardButton(tx(lang, "b_super"), callback_data="panel_super"))
     if ar: kb.append(ar)
     if is_owner(uid): kb.append([InlineKeyboardButton(tx(lang, "b_owner"), callback_data="panel_owner")])
-    
+
     return text, InlineKeyboardMarkup(kb)
 
 # ==============================================================================
@@ -320,12 +310,26 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     if is_blocked(uid): return
     if CFG["maintenance"] and not is_admin(uid):
-        await update.message.reply_text(tx(lang, "maintenance_msg")); return
+        await update.message.reply_text(tx(lang, "maintenance_msg", dev=DEV)); return
 
-    if not await user_exists(uid):
-        CFG["total_users"] = CFG.get("total_users", 0) + 1
+    is_new = not await user_exists(uid)
+    if is_new:
+        user_count = CFG.get("total_users", 0) + 1
+        CFG["total_users"] = user_count
         await user_put(uid, {"name": user.first_name, "user": user.username or "", "date": now_str(), "vip": False, "dl": 0})
-        try: await ctx.bot.send_message(OWNER_ID, f"🔔 <b>بەکارهێنەری نوێ:</b>\n👤 {html.escape(user.first_name)}\n🆔 <code>{uid}</code>", parse_mode="HTML")
+        username_str = f"@{user.username}" if user.username else "ندارێت"
+        lang_str = user.language_code or "نادیار"
+        notify_text = (
+            f"🔔 بەکارهێنەری نوێ!\n\n"
+            f"🔢 ژمارە: #{user_count}\n"
+            f"👤 ناو: {html.escape(user.first_name)}\n"
+            f"🔗 یوزەرنەیم: {username_str}\n"
+            f"🆔 ئایدی: {uid}\n"
+            f"🌐 زمانی ئەپ: {lang_str}\n"
+            f"📅 کاتی تۆماربوون: {now_str()}"
+        )
+        try:
+            await ctx.bot.send_message(OWNER_ID, notify_text, parse_mode="HTML")
         except: pass
 
     ok_sub, missing = await check_join(uid, ctx)
@@ -337,9 +341,8 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode="HTML", reply_markup=markup)
 
 async def cmd_ping(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    # فەرمانێکی نهێنی بۆ زانینی ئەوەی بۆتەکە بەباشی کاردەکات!
     if is_owner(update.effective_user.id):
-        await update.message.reply_text("✅ <b>PONG!</b> بۆتەکە کاردەکات و وەبەهوک بەستراوەتەوە.", parse_mode="HTML")
+        await update.message.reply_text("✅ PONG! بۆتەکە کاردەکات و وەبەهوک بەستراوەتەوە.")
 
 async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; data = q.data; uid = q.from_user.id; lang = CFG.get("default_lang", "ku")
@@ -381,11 +384,11 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if data.startswith("dl_"):
         sess = await session_get(uid)
         if not sess: await q.answer(tx(lang, "session_expired"), show_alert=True); return
-        cap = f"🎬 <b>{html.escape(sess.get('title', ''))}</b>\n👤 <b>{html.escape(sess.get('creator', ''))}</b>\n\n🤖 @{ctx.bot.username}"
+        cap = f"🎬 {html.escape(sess.get('title', ''))}\n👤 {html.escape(sess.get('creator', ''))}\n\n🤖 @{ctx.bot.username}"
         del_kb = InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_delete"), callback_data="close")]])
 
         if data == "dl_photo":
-            imgs = sess.get("images",[])
+            imgs = sess.get("images", [])
             if not imgs: await q.answer(tx(lang, "no_photo"), show_alert=True); return
             try: await q.message.delete()
             except: pass
@@ -425,89 +428,210 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await user_field(uid, "dl", ud.get("dl", 0) + 1)
         return
 
-    # ADMIN PANEL
+    # ── ADMIN PANEL ────────────────────────────────────────────────────────────
     if data.startswith("panel_admin") or data.startswith("adm_"):
         if not is_admin(uid): return
         if data == "panel_admin":
-            kb = [[InlineKeyboardButton("📊 ئامارەکان", callback_data="adm_stats"), InlineKeyboardButton("📢 برۆدکاست", callback_data="adm_broadcast")],[InlineKeyboardButton("🚫 بلۆککردن", callback_data="adm_block"), InlineKeyboardButton("👤 زانیاری کەس", callback_data="adm_userinfo")], *back(lang)]
-            await q.edit_message_text(f"🛡 <b>پانێڵی ئەدمین</b>\n\n👥 بەکارهێنەران: <b>{len(await all_uids())}</b>\n🕐 کات: {now_str()}", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+            kb = [
+                [InlineKeyboardButton("📊 ئامارەکان", callback_data="adm_stats"), InlineKeyboardButton("📢 برۆدکاست", callback_data="adm_broadcast")],
+                [InlineKeyboardButton("🚫 بلۆككردن", callback_data="adm_block"), InlineKeyboardButton("👤 زانیاری کەس", callback_data="adm_userinfo")],
+                *back(lang)
+            ]
+            await q.edit_message_text(
+                f"🛡 پانێڵی ئەدمین\n\n👥 بەکارهێنەران: {len(await all_uids())}\n🕐 کات: {now_str()}",
+                parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)
+            ); return
+
         if data == "adm_stats":
-            txt = f"📊 <b>ئامارەکان:</b>\n👥 کۆی گشتی: {len(await all_uids())}\n💎 ڤی ئای پی: {len(vip_set)}\n🚫 بلۆککراو: {len(blocked_set)}\n📥 داونلۆدەکان: {fmt(CFG.get('total_dl',0))}\n⏱ Uptime: {uptime()}"
+            txt = (
+                f"📊 ئامارەکان:\n"
+                f"👥 کۆی گشتی: {len(await all_uids())}\n"
+                f"💎 ڤی ئای پی: {len(vip_set)}\n"
+                f"🚫 بلۆككراو: {len(blocked_set)}\n"
+                f"📥 داونلۆدەکان: {fmt(CFG.get('total_dl', 0))}\n"
+                f"⏱ Uptime: {uptime()}"
+            )
             await q.edit_message_text(txt, parse_mode="HTML", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔄", callback_data="adm_stats")], *back(lang, "panel_admin")])); return
+
         if data == "adm_broadcast":
             waiting_state[uid] = "broadcast_all"
-            await q.edit_message_text("✍️ <b>پەیامەکەت بنێرە (دەتوانیت وێنە و ڤیدیۆش بنێریت):</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="panel_admin")]])); return
-        if data == "adm_block":
-            ctx.user_data["np_action"] = "blk_add"; ctx.user_data["np_buf"] = ""
-            await q.edit_message_text("🚫 <b>بلۆککردن:</b>\nئایدی کەسەکە داخڵ بکە:", parse_mode="HTML", reply_markup=numpad("blk_add")); return
-        if data == "adm_userinfo":
-            ctx.user_data["np_action"] = "info_check"; ctx.user_data["np_buf"] = ""
-            await q.edit_message_text("👤 <b>زانیاری:</b>\nئایدی داخڵ بکە:", parse_mode="HTML", reply_markup=numpad("info_check")); return
+            await q.edit_message_text(
+                "✍️ پەیامەکەت بنێرە (دەتوانیت وێنە و ڤیدیۆش بنێریت):",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="panel_admin")]])
+            ); return
 
-    # SUPER PANEL
+        if data == "adm_block":
+            waiting_state[uid] = "action_blk_add"
+            await q.edit_message_text(
+                f"🚫 بلۆككردن:\n\n{tx(lang, 'write_id')}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="panel_admin")]])
+            ); return
+
+        if data == "adm_userinfo":
+            waiting_state[uid] = "action_info_check"
+            await q.edit_message_text(
+                f"👤 زانیاری بەکارهێنەر:\n\n{tx(lang, 'write_id')}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="panel_admin")]])
+            ); return
+
+    # ── SUPER PANEL ────────────────────────────────────────────────────────────
     if data.startswith("panel_super") or data.startswith("sup_"):
         if not is_super(uid): return
         if data == "panel_super":
             maint = "🔴" if CFG["maintenance"] else "🟢"
-            kb = [[InlineKeyboardButton("👮‍♂️ ئەدمینەکان", callback_data="sup_admins"), InlineKeyboardButton("💎 VIP", callback_data="sup_vips")],[InlineKeyboardButton("📢 چەناڵەکان", callback_data="sup_channels"), InlineKeyboardButton(f"🛠 چاکسازی: {maint}", callback_data="sup_toggle_maint")],[InlineKeyboardButton("⚙️ ڕێکخستنی API", callback_data="sup_api_settings")], *back(lang)]
-            await q.edit_message_text(f"🌌 <b>سوپەر پانێل</b>\nکۆنتڕۆڵی ڕێکخستنە هەستیارەکان.", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+            kb = [
+                [InlineKeyboardButton("👮 ئەدمینەکان", callback_data="sup_admins"), InlineKeyboardButton("💎 VIP", callback_data="sup_vips")],
+                [InlineKeyboardButton("📢 چەناڵەکان", callback_data="sup_channels"), InlineKeyboardButton(f"🛠 چاکسازی: {maint}", callback_data="sup_toggle_maint")],
+                [InlineKeyboardButton("⚙️ ڕێکخستنی API", callback_data="sup_api_settings")],
+                *back(lang)
+            ]
+            await q.edit_message_text("🌌 سوپەر پانێل\nکۆنتڕۆڵی ڕێکخستنە هەستیارەکان.", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+
         if data == "sup_toggle_maint":
             CFG["maintenance"] = not CFG["maintenance"]; await save_cfg(); q.data = "panel_super"; await on_callback(update, ctx); return
+
         if data == "sup_api_settings":
             act = CFG.get("active_api", "auto")
-            kb = [[InlineKeyboardButton(f"{'✅' if act=='auto' else ''} Auto (زیرەک)", callback_data="sup_setapi_auto")],[InlineKeyboardButton(f"{'✅' if act=='tikwm' else ''} TikWM (خێرا)", callback_data="sup_setapi_tikwm")],[InlineKeyboardButton(f"{'✅' if act=='hyper' else ''} Hyper API (باکئەپ)", callback_data="sup_setapi_hyper")], *back(lang, "panel_super")]
-            await q.edit_message_text("⚙️ <b>سەرچاوەی دابەزاندن هەڵبژێرە:</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+            kb = [
+                [InlineKeyboardButton(f"{'✅ ' if act=='auto' else ''}Auto (زیرەک)", callback_data="sup_setapi_auto")],
+                [InlineKeyboardButton(f"{'✅ ' if act=='tikwm' else ''}TikWM (خێرا)", callback_data="sup_setapi_tikwm")],
+                [InlineKeyboardButton(f"{'✅ ' if act=='hyper' else ''}Hyper API (باکئەپ)", callback_data="sup_setapi_hyper")],
+                *back(lang, "panel_super")
+            ]
+            await q.edit_message_text("⚙️ سەرچاوەی دابەزاندن هەڵبژێرە:", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+
         if data.startswith("sup_setapi_"):
             CFG["active_api"] = data.split("_")[2]; await save_cfg(); q.data = "sup_api_settings"; await on_callback(update, ctx); return
+
         if data == "sup_admins":
-            kb = [[InlineKeyboardButton("➕ پێدان", callback_data="sup_add_adm"), InlineKeyboardButton("➖ سەندنەوە", callback_data="sup_rm_adm")], *back(lang, "panel_super")]
-            await q.edit_message_text(f"👮‍♂️ <b>ئەدمینەکان:</b> {len(admins_set)}", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+            kb = [
+                [InlineKeyboardButton("➕ پێدان", callback_data="sup_add_adm"), InlineKeyboardButton("➖ سەندنەوە", callback_data="sup_rm_adm")],
+                *back(lang, "panel_super")
+            ]
+            await q.edit_message_text(f"👮 ئەدمینەکان: {len(admins_set)}", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+
         if data == "sup_add_adm":
-            ctx.user_data["np_action"] = "adm_add"; ctx.user_data["np_buf"] = ""; await q.edit_message_text("➕ ئایدی داخڵ بکە:", parse_mode="HTML", reply_markup=numpad("adm_add")); return
+            waiting_state[uid] = "action_adm_add"
+            await q.edit_message_text(
+                f"➕ ئەدمینی نوێ:\n\n{tx(lang, 'write_id')}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="sup_admins")]])
+            ); return
+
         if data == "sup_rm_adm":
-            ctx.user_data["np_action"] = "adm_rm"; ctx.user_data["np_buf"] = ""; await q.edit_message_text("➖ ئایدی داخڵ بکە:", parse_mode="HTML", reply_markup=numpad("adm_rm")); return
+            waiting_state[uid] = "action_adm_rm"
+            await q.edit_message_text(
+                f"➖ لابردنی ئەدمین:\n\n{tx(lang, 'write_id')}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="sup_admins")]])
+            ); return
+
         if data == "sup_vips":
-            kb = [[InlineKeyboardButton("➕ پێدانی VIP", callback_data="sup_add_vip"), InlineKeyboardButton("➖ سەندنەوەی VIP", callback_data="sup_rm_vip")], *back(lang, "panel_super")]
-            await q.edit_message_text(f"💎 <b>ژمارەی VIP:</b> {len(vip_set)}", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+            kb = [
+                [InlineKeyboardButton("➕ پێدانی VIP", callback_data="sup_add_vip"), InlineKeyboardButton("➖ سەندنەوەی VIP", callback_data="sup_rm_vip")],
+                *back(lang, "panel_super")
+            ]
+            await q.edit_message_text(f"💎 ژمارەی VIP: {len(vip_set)}", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+
         if data == "sup_add_vip":
-            ctx.user_data["np_action"] = "vip_add"; ctx.user_data["np_buf"] = ""; await q.edit_message_text("💎 ئایدی داخڵ بکە:", parse_mode="HTML", reply_markup=numpad("vip_add")); return
+            waiting_state[uid] = "action_vip_add"
+            await q.edit_message_text(
+                f"💎 پێدانی VIP:\n\n{tx(lang, 'write_id')}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="sup_vips")]])
+            ); return
+
         if data == "sup_rm_vip":
-            ctx.user_data["np_action"] = "vip_rm"; ctx.user_data["np_buf"] = ""; await q.edit_message_text("➖ ئایدی داخڵ بکە:", parse_mode="HTML", reply_markup=numpad("vip_rm")); return
+            waiting_state[uid] = "action_vip_rm"
+            await q.edit_message_text(
+                f"➖ سەندنەوەی VIP:\n\n{tx(lang, 'write_id')}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="sup_vips")]])
+            ); return
+
         if data == "sup_channels":
             lst = "\n".join([f"• {c}" for c in channels_list]) or "📭 بەتاڵە"
-            kb = [[InlineKeyboardButton("➕ زیادکردن", callback_data="sup_add_ch"), InlineKeyboardButton("➖ سڕینەوە", callback_data="sup_rm_ch")], *back(lang, "panel_super")]
-            await q.edit_message_text(f"📢 <b>چەناڵەکان:</b>\n{lst}", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+            kb = [
+                [InlineKeyboardButton("➕ زیادکردن", callback_data="sup_add_ch"), InlineKeyboardButton("➖ سڕینەوە", callback_data="sup_rm_ch")],
+                *back(lang, "panel_super")
+            ]
+            await q.edit_message_text(f"📢 چەناڵەکان:\n{lst}", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+
         if data == "sup_add_ch":
-            ctx.user_data["ch_buf"] = "@"; await q.edit_message_text("📢 ناوی چەناڵ بنووسە:", parse_mode="HTML", reply_markup=ch_pad()); return
+            waiting_state[uid] = "action_add_ch"
+            await q.edit_message_text(
+                f"📢 زیادکردنی چەناڵ:\n\n{tx(lang, 'write_ch')}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="sup_channels")]])
+            ); return
+
         if data == "sup_rm_ch":
+            if not channels_list:
+                await q.answer("📭 هیچ چەناڵێک نییە!", show_alert=True); return
             kb = [[InlineKeyboardButton(f"❌ {c}", callback_data=f"sup_delch_{c}")] for c in channels_list] + back(lang, "sup_channels")
             await q.edit_message_text("کام چەناڵ دەسڕیتەوە؟", reply_markup=InlineKeyboardMarkup(kb)); return
+
         if data.startswith("sup_delch_"):
             ch = data.split("_", 2)[2]
             if ch in channels_list: channels_list.remove(ch); await save_cfg()
             q.data = "sup_channels"; await on_callback(update, ctx); return
 
-    # OWNER PANEL
+    # ── OWNER PANEL ────────────────────────────────────────────────────────────
     if data.startswith("panel_owner") or data.startswith("own_"):
         if not is_owner(uid): return
         if data == "panel_owner":
-            kb = [[InlineKeyboardButton("🌌 سوپەر ئەدمینەکان", callback_data="own_super_adms")],[InlineKeyboardButton("📝 نامەی خێرهاتن", callback_data="own_welcome")],[InlineKeyboardButton("🗑 ڕیسێتی ئامار", callback_data="own_reset_stats"), InlineKeyboardButton("💾 باکئەپ", callback_data="own_backup")], *back(lang)]
-            await q.edit_message_text(f"👑 <b>پانێڵی خاوەنی سەرەکی</b>\nبەخێربێیت گەورەم!", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+            kb = [
+                [InlineKeyboardButton("🌌 سوپەر ئەدمینەکان", callback_data="own_super_adms")],
+                [InlineKeyboardButton("📝 نامەی خێرهاتن", callback_data="own_welcome")],
+                [InlineKeyboardButton("🗑 ڕیسێتی ئامار", callback_data="own_reset_stats"), InlineKeyboardButton("💾 باکئەپ", callback_data="own_backup")],
+                *back(lang)
+            ]
+            await q.edit_message_text("👑 پانێڵی خاوەنی سەرەکی\nبەخێربێیت گەورەم!", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+
         if data == "own_super_adms":
-            kb = [[InlineKeyboardButton("➕ زیادکردن", callback_data="own_add_sup"), InlineKeyboardButton("➖ لابردن", callback_data="own_rm_sup")], *back(lang, "panel_owner")]
-            await q.edit_message_text(f"🌌 <b>سوپەر ئەدمینەکان:</b> {len(super_admins_set)}", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+            kb = [
+                [InlineKeyboardButton("➕ زیادکردن", callback_data="own_add_sup"), InlineKeyboardButton("➖ لابردن", callback_data="own_rm_sup")],
+                *back(lang, "panel_owner")
+            ]
+            await q.edit_message_text(f"🌌 سوپەر ئەدمینەکان: {len(super_admins_set)}", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(kb)); return
+
         if data == "own_add_sup":
-            ctx.user_data["np_action"] = "sup_add"; ctx.user_data["np_buf"] = ""; await q.edit_message_text("➕ ئایدی داخڵ بکە:", parse_mode="HTML", reply_markup=numpad("sup_add")); return
+            waiting_state[uid] = "action_sup_add"
+            await q.edit_message_text(
+                f"➕ سوپەر ئەدمینی نوێ:\n\n{tx(lang, 'write_id')}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="own_super_adms")]])
+            ); return
+
         if data == "own_rm_sup":
-            ctx.user_data["np_action"] = "sup_rm"; ctx.user_data["np_buf"] = ""; await q.edit_message_text("➖ ئایدی داخڵ بکە:", parse_mode="HTML", reply_markup=numpad("sup_rm")); return
+            waiting_state[uid] = "action_sup_rm"
+            await q.edit_message_text(
+                f"➖ لابردنی سوپەر ئەدمین:\n\n{tx(lang, 'write_id')}",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="own_super_adms")]])
+            ); return
+
         if data == "own_welcome":
             waiting_state[uid] = "set_welcome"
-            await q.edit_message_text(tx(lang, "write_welcome"), parse_mode="HTML", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗑 سڕینەوەی نامەکە", callback_data="own_clear_welcome")], *back(lang, "panel_owner")])); return
+            await q.edit_message_text(
+                tx(lang, "write_welcome"),
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🗑 سڕینەوەی نامەکە", callback_data="own_clear_welcome")],
+                    *back(lang, "panel_owner")
+                ])
+            ); return
+
         if data == "own_clear_welcome":
             CFG["welcome_msg"] = ""; await save_cfg(); q.data = "panel_owner"; await on_callback(update, ctx); return
+
         if data == "own_reset_stats":
-            for k in ("total_dl","total_video","total_audio","total_photo"): CFG[k] = 0
+            for k in ("total_dl", "total_video", "total_audio", "total_photo"): CFG[k] = 0
             await save_cfg(); await q.answer("✅ صفر کرایەوە", show_alert=True); return
+
         if data == "own_backup":
             await q.answer("⏳ ئامادە دەکرێت...", show_alert=False)
             bdata = {"time": now_str(), "cfg": CFG, "users": await all_users_data()}
@@ -517,58 +641,6 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             except: pass
             return
 
-async def on_numpad(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; data = q.data; lang = CFG.get("default_lang", "ku")
-    try: await q.answer()
-    except: pass
-
-    if data == "np_cancel":
-        ctx.user_data.pop("np_action", None); ctx.user_data.pop("np_buf", None); ctx.user_data.pop("ch_buf", None)
-        try: await q.message.delete()
-        except: pass
-        return
-
-    if data.startswith("chi_"):
-        key = data[4:]
-        buf = ctx.user_data.get("ch_buf", "@")
-        if key == "back": buf = buf[:-1] if len(buf) > 1 else buf
-        elif key == "ok":
-            if len(buf) < 3: return
-            if buf not in channels_list: channels_list.append(buf); await save_cfg()
-            await q.edit_message_text(f"✅ {buf} زیاد کرا!", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(back(lang, "sup_channels"))); return
-        else:
-            if len(buf) < 32: buf += key
-        ctx.user_data["ch_buf"] = buf
-        await q.edit_message_text(f"📢 ناوی چەناڵ:\n<code>{buf}</code>", parse_mode="HTML", reply_markup=ch_pad())
-        return
-
-    if data.startswith("np_"):
-        parts = data.split("_", 2)
-        if len(parts) < 3: return
-        action, key = parts[1], parts[2]
-        buf = ctx.user_data.get("np_buf", "")
-
-        if key == "back": buf = buf[:-1]
-        elif key == "ok":
-            if not buf.isdigit(): return
-            tid = int(buf)
-            if action == "blk_add": blocked_set.add(tid); await save_cfg(); await q.edit_message_text(f"🚫 {tid} بلۆک کرا!", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(back(lang, "panel_admin")))
-            elif action == "info_check":
-                ud = await user_get(tid)
-                if not ud: await q.edit_message_text("⚠️ نەدۆزرایەوە!", reply_markup=InlineKeyboardMarkup(back(lang, "panel_admin"))); return
-                await q.edit_message_text(f"👤 ناو: {ud.get('name')}\n🔗 یوزەر: @{ud.get('user')}\n📥 داونلۆد: {ud.get('dl')}", reply_markup=InlineKeyboardMarkup(back(lang, "panel_admin")))
-            elif action == "adm_add": admins_set.add(tid); await save_cfg(); await q.edit_message_text(f"✅ {tid} بوو بە ئەدمین!", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(back(lang, "panel_super")))
-            elif action == "adm_rm": admins_set.discard(tid); await save_cfg(); await q.edit_message_text(f"➖ {tid} لە ئەدمین لابرا.", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(back(lang, "panel_super")))
-            elif action == "sup_add": super_admins_set.add(tid); admins_set.add(tid); await save_cfg(); await q.edit_message_text(f"🌌 {tid} بوو بە سوپەر ئەدمین!", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(back(lang, "panel_owner")))
-            elif action == "sup_rm": super_admins_set.discard(tid); await save_cfg(); await q.edit_message_text(f"➖ {tid} لە سوپەر لابرا.", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(back(lang, "panel_owner")))
-            elif action == "vip_add": vip_set.add(tid); await user_field(tid, "vip", True); await save_cfg(); await q.edit_message_text(f"💎 {tid} کرایە VIP", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(back(lang, "panel_super")))
-            elif action == "vip_rm": vip_set.discard(tid); await user_field(tid, "vip", False); await save_cfg(); await q.edit_message_text(f"➖ VIP لە {tid} سەندرایەوە", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(back(lang, "panel_super")))
-            return
-        else:
-            if len(buf) < 15: buf += key
-        ctx.user_data["np_buf"] = buf
-        await q.edit_message_text(f"📟 داخڵکردن:\n\n<code>{buf if buf else '—'}</code>", parse_mode="HTML", reply_markup=numpad(action))
-
 async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if not update.message: return
     uid = update.effective_user.id
@@ -576,11 +648,14 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     msg = update.message
     txt = msg.text or ""
 
+    # ── Waiting State Processor ────────────────────────────────────────────────
     if uid in waiting_state:
         state = waiting_state.pop(uid)
+
         if state == "set_welcome":
             CFG["welcome_msg"] = txt; await save_cfg()
             await msg.reply_text(tx(lang, "welcome_set")); return
+
         if state.startswith("broadcast_"):
             all_u = await all_uids(); ok = fail = 0
             st = await msg.reply_text(f"⏳ ناردن دەستی پێکرد بۆ {len(all_u)} کەس...")
@@ -594,8 +669,63 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                     except: pass
             await st.edit_text(tx(lang, "broadcast_done", ok=ok, fail=fail), parse_mode="HTML"); return
 
+        # ── Text-based ID/channel actions ─────────────────────────────────────
+        if state.startswith("action_"):
+            action = state[len("action_"):]
+
+            # Channel action: expects @username text
+            if action == "add_ch":
+                ch = txt.strip()
+                if not ch.startswith("@") or len(ch) < 3:
+                    await msg.reply_text("❌ فۆرماتەکە هەڵەیە! باشە بنووسە: @channelname"); return
+                if ch not in channels_list:
+                    channels_list.append(ch); await save_cfg()
+                await msg.reply_text(f"✅ {ch} زیاد کرا!"); return
+
+            # All other actions expect a numeric user ID
+            if not txt.strip().isdigit():
+                await msg.reply_text(tx(lang, "invalid_id")); return
+            tid = int(txt.strip())
+
+            if action == "blk_add":
+                blocked_set.add(tid); await save_cfg()
+                await msg.reply_text(f"🚫 {tid} بلۆک کرا!")
+            elif action == "info_check":
+                ud = await user_get(tid)
+                if not ud: await msg.reply_text(tx(lang, "user_not_found")); return
+                vip_status = "💎 VIP" if ud.get("vip") else "ئاسایی"
+                await msg.reply_text(
+                    f"👤 ناو: {ud.get('name', '—')}\n"
+                    f"🔗 یوزەر: @{ud.get('user', '—')}\n"
+                    f"🆔 ئایدی: {tid}\n"
+                    f"💎 دۆخ: {vip_status}\n"
+                    f"📥 داونلۆد: {ud.get('dl', 0)}\n"
+                    f"📅 تۆماربوون: {ud.get('date', '—')}"
+                )
+            elif action == "adm_add":
+                admins_set.add(tid); await save_cfg()
+                await msg.reply_text(f"✅ {tid} بوو بە ئەدمین!")
+            elif action == "adm_rm":
+                admins_set.discard(tid); await save_cfg()
+                await msg.reply_text(f"➖ {tid} لە ئەدمین لابرا.")
+            elif action == "sup_add":
+                super_admins_set.add(tid); admins_set.add(tid); await save_cfg()
+                await msg.reply_text(f"🌌 {tid} بوو بە سوپەر ئەدمین!")
+            elif action == "sup_rm":
+                super_admins_set.discard(tid); await save_cfg()
+                await msg.reply_text(f"➖ {tid} لە سوپەر لابرا.")
+            elif action == "vip_add":
+                vip_set.add(tid); await user_field(tid, "vip", True); await save_cfg()
+                await msg.reply_text(f"💎 {tid} کرایە VIP!")
+            elif action == "vip_rm":
+                vip_set.discard(tid); await user_field(tid, "vip", False); await save_cfg()
+                await msg.reply_text(f"➖ VIP لە {tid} سەندرایەوە.")
+            return
+
+    # ── TikTok Link Handler ────────────────────────────────────────────────────
     if is_blocked(uid): return
-    if CFG["maintenance"] and not is_admin(uid): await msg.reply_text(tx(lang, "maintenance_msg")); return
+    if CFG["maintenance"] and not is_admin(uid):
+        await msg.reply_text(tx(lang, "maintenance_msg", dev=DEV)); return
     if not any(x in txt for x in ("tiktok.com", "vm.tiktok", "vt.tiktok")): return
 
     ok_sub, missing = await check_join(uid, ctx)
@@ -607,23 +737,37 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     try:
         data = await fetch_tiktok(txt)
-        if not data: await status.edit_text(tx(lang, "invalid_link"), parse_mode="HTML"); return
+        if not data: await status.edit_text(tx(lang, "invalid_link")); return
         await session_save(uid, data)
         photo_post = len(data["images"]) > 0
 
-        caption = tx(lang, "found", title=html.escape(clean_title(data["title"])), owner=html.escape(data["creator"]), views=fmt(data["views"]), likes=fmt(data["likes"]), comments=fmt(data["comments"]))
-        kb = [[InlineKeyboardButton(tx(lang, "b_photos", n=len(data["images"])), callback_data="dl_photo")] if photo_post else[InlineKeyboardButton(tx(lang, "b_video"), callback_data="dl_video")],[InlineKeyboardButton(tx(lang, "b_audio"), callback_data="dl_audio")],[InlineKeyboardButton(tx(lang, "b_delete"), callback_data="close")]]
+        caption = tx(lang, "found",
+            title=html.escape(clean_title(data["title"])),
+            owner=html.escape(data["creator"]),
+            views=fmt(data["views"]),
+            likes=fmt(data["likes"]),
+            comments=fmt(data["comments"])
+        )
+        kb = [
+            [InlineKeyboardButton(tx(lang, "b_photos", n=len(data["images"])), callback_data="dl_photo")] if photo_post else [InlineKeyboardButton(tx(lang, "b_video"), callback_data="dl_video")],
+            [InlineKeyboardButton(tx(lang, "b_audio"), callback_data="dl_audio")],
+            [InlineKeyboardButton(tx(lang, "b_delete"), callback_data="close")]
+        ]
         markup = InlineKeyboardMarkup(kb)
         cover_url = data.get("cover", "")
 
         if cover_url and cover_url.startswith("http"):
             try:
-                await status.delete(); await msg.reply_photo(photo=cover_url, caption=caption, parse_mode="HTML", reply_markup=markup)
-            except: await msg.reply_text(caption, parse_mode="HTML", reply_markup=markup)
-        else: await status.edit_text(caption, parse_mode="HTML", reply_markup=markup)
+                await status.delete()
+                await msg.reply_photo(photo=cover_url, caption=caption, parse_mode="HTML", reply_markup=markup)
+            except:
+                await msg.reply_text(caption, parse_mode="HTML", reply_markup=markup)
+        else:
+            await status.edit_text(caption, parse_mode="HTML", reply_markup=markup)
+
     except Exception as e:
         log.error(f"Download Error: {e}")
-        try: await status.edit_text(tx(lang, "dl_fail"), parse_mode="HTML")
+        try: await status.edit_text(tx(lang, "dl_fail"))
         except: pass
 
 # ==============================================================================
@@ -632,7 +776,6 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 ptb = ApplicationBuilder().token(TOKEN if TOKEN != "DUMMY_TOKEN" else "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11").build()
 ptb.add_handler(CommandHandler(["start", "menu"], cmd_start))
 ptb.add_handler(CommandHandler("ping", cmd_ping))
-ptb.add_handler(CallbackQueryHandler(on_numpad, pattern=r"^(np_|chi_)"))
 ptb.add_handler(CallbackQueryHandler(on_callback))
 ptb.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, on_message))
 
@@ -648,17 +791,21 @@ async def webhook(req: Request):
     except Exception as e:
         err_str = traceback.format_exc()
         log.error(f"CRITICAL WEBHOOK ERROR: {err_str}")
-        try: await ptb.bot.send_message(OWNER_ID, f"⚠️ <b>هەڵەیەکی کوشندە ڕوویدا لە Vercel:</b>\n\n<pre>{html.escape(str(e))}</pre>", parse_mode="HTML")
+        try:
+            await ptb.bot.send_message(
+                OWNER_ID,
+                f"⚠️ هەڵەیەکی کوشندە ڕوویدا لە Vercel:\n\n{html.escape(str(e))}",
+                parse_mode="HTML"
+            )
         except: pass
         return {"ok": False, "error": str(e)}
 
 @app.get("/api/main")
 async def health_check():
-    # ئەمە لاپەڕەی پشکنینە بۆ ئەوەی بزانیت کێشە لە کوێیە
     token_status = "✅ دانراوە و ئامادەیە" if TOKEN and TOKEN != "DUMMY_TOKEN" else "❌ لە Environment Variables دا نەگیراوە!"
     db_status = "✅ دانراوە" if DB_URL else "❌ لە Environment Variables دا نەگیراوە!"
     db_secret_status = "✅ دانراوە" if DB_SECRET else "❌ لە Environment Variables دا نەگیراوە!"
-    
+
     html_content = f"""
     <html>
         <head>
@@ -674,11 +821,11 @@ async def health_check():
         <body>
             <div class="box">
                 <h1>🤖 پشکنینی سیستەمی بۆت</h1>
-                <p>ئەگەر هەموو شتێک بە <b>✅</b> نیشان درابوو، ئەوا بۆتەکە 100٪ کاردەکات.</p>
+                <p>ئەگەر هەموو شتێک بە ✅ نیشان درابوو، ئەوا بۆتەکە 100٪ کاردەکات.</p>
                 <ul>
-                    <li><b>تۆکێنی بۆت (BOT_TOKEN):</b> {token_status}</li>
-                    <li><b>لینکی داتابەیس (DB_URL):</b> {db_status}</li>
-                    <li><b>وشەی نهێنی (DB_SECRET):</b> {db_secret_status}</li>
+                    <li>تۆکێنی بۆت (BOT_TOKEN): {token_status}</li>
+                    <li>لینکی داتابەیس (DB_URL): {db_status}</li>
+                    <li>وشەی نهێنی (DB_SECRET): {db_secret_status}</li>
                 </ul>
                 <p style="color: red; font-weight: bold;">ئەگەر هەر کامێکیان بە ❌ بوو، بڕۆ ناو سێتینگی Vercel بەشی Environment Variables زیادیان بکە و دواتر Redeploy بکەرەوە!</p>
             </div>
