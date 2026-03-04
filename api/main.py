@@ -1,8 +1,8 @@
 # ==============================================================================
 # ==                                                                          ==
-# ==           TIKTOK DOWNLOADER BOT - V13.0 ULTRA PRO MAX (GOD MODE)         ==
+# ==           TIKTOK DOWNLOADER BOT - V14.0 ULTRA PRO MAX (GOD MODE)         ==
 # ==           Developed exclusively for: @j4ck_721s                          ==
-# ==           Features: 3-Language, Super Panel, Auto-Fallback               ==
+# ==           Features: 3-Language, Unified Panel, Auto-Fallback             ==
 # ==                                                                          ==
 # ==============================================================================
 
@@ -65,7 +65,6 @@ L: dict = {
 
 # ─────────────────────────────────── KURDISH ──────────────────────────────────
 "ku": {
-    # --- General ---
     "welcome"         : "👋 سڵاو {name} {badge}\n\n🤖 بەخێربێیت بۆ پێشکەوتووترین بۆتی تیکتۆک!\n📥 ڤیدیۆ (بێ لۆگۆ)، وێنە و گۆرانی دابەزێنە بە بەرزترین خێرایی.\n\n━━━━━━━━━━━━━━━━━━━\n👇 تەنیا لینکی تیکتۆکەکە بنێرەم:",
     "help"            : "📚 ڕێنمایی بەکارهێنان\n\n1️⃣ لینکی ڤیدیۆ لە تیکتۆک کۆپی بکە.\n2️⃣ لینکەکە لێرە پەیست بکە.\n3️⃣ جۆری دابەزاندن هەڵبژێرە!\n\n🎥 ڤیدیۆ: بەبێ لۆگۆ.\n📸 وێنە: هەموو وێنەکانی پۆستەکە.\n🎵 گۆرانی: فۆرماتی MP3.\n\n💎 VIP: بێ جۆینی ناچاری، خێرایی زۆرتر.\n📩 پەیوەندی: {dev}",
     "profile"         : "👤 کارتی پرۆفایل\n\n🆔 ئایدی: {id}\n👤 ناو: {name}\n🔗 یوزەرنەیم: @{user}\n📅 تۆماربوون: {date}\n💎 VIP: {vip}\n🌍 زمان: {ulang}\n📥 دابەزاندن: {dl} جار",
@@ -105,9 +104,7 @@ L: dict = {
     "b_settings" : "⚙️ ڕێکخستن و زمان",
     "b_help"     : "ℹ️ فێرکاری",
     "b_channel"  : "📢 کەناڵی بۆت",
-    "b_admin"    : "🛡 پانێڵی ئەدمین",
-    "b_super"    : "🌌 سوپەر پانێل",
-    "b_owner"    : "👑 پانێڵی خاوەن",
+    "b_panel"    : "⚙️ پانێڵی کۆنتڕۆڵ",
     "b_back"     : "🔙 گەڕانەوە",
     "b_delete"   : "🗑 سڕینەوە",
     "b_joined"   : "✅ جۆینم کرد",
@@ -118,8 +115,15 @@ L: dict = {
     "b_en"       : "🇺🇸 English",
     "b_ar"       : "🇸🇦 العربية",
     "b_cancel"   : "❌ هەڵوەشاندنەوە",
+    "b_confirm_remove" : "✅ بەڵێ، بیسڕەوە",
+    "b_cancel_remove"  : "❌ نەخێر، هەڵوەشانەوە",
+    "confirm_remove_admin" : "⚠️ دڵنیایت دەتەوێت ئەم ئەدمینە بسڕیتەوە؟\n🆔 {id}",
+    "confirm_remove_super" : "⚠️ دڵنیایت دەتەوێت ئەم سوپەر ئەدمینە بسڕیتەوە؟\n🆔 {id}",
+    "confirm_remove_ch"    : "⚠️ دڵنیایت دەتەوێت ئەم چەناڵە بسڕیتەوە؟\n{ch}",
+    # --- Unified Panel ---
+    "unified_panel_title" : "⚙️ پانێڵی کۆنتڕۆڵ\n\n👥 بەکارهێنەران: {users}\n💎 VIP: {vip}\n🚫 بلۆككراو: {blocked}\n📥 داونلۆد: {dl}\n⏱ Uptime: {uptime}",
     # --- Admin Panel ---
-    "adm_panel_title"  : "🛡 پانێڵی ئەدمین\n\n👥 بەکارهێنەران: {users}\n🕐 {time}",
+    "adm_panel_title"  : "🛡 بەشی ئەدمین",
     "adm_stats_title"  : "📊 ئامارەکان:\n👥 کۆی بەکارهێنەران: {users}\n💎 VIP: {vip}\n🚫 بلۆككراو: {blocked}\n📥 داونلۆدەکان: {dl}\n⏱ Uptime: {uptime}",
     "adm_broadcast_ask": "✍️ پەیامەکەت بنێرە (تێکست، وێنە، ڤیدیۆ):",
     "adm_block_ask"    : "🚫 بلۆككردنی بەکارهێنەر:\n\n{write_id}",
@@ -128,14 +132,15 @@ L: dict = {
     "b_adm_broadcast"  : "📢 برۆدکاست",
     "b_adm_block"      : "🚫 بلۆككردن",
     "b_adm_info"       : "👤 زانیاری کەس",
+    "b_adm_admins"     : "👮 ئەدمینەکان",
     # --- Super Panel ---
-    "sup_panel_title"  : "🌌 سوپەر پانێل\nکۆنتڕۆڵی ڕێکخستنە هەستیارەکان.",
+    "sup_panel_title"  : "🌌 بەشی سوپەر",
     "sup_maint_on"     : "🔴 چالاکە",
     "sup_maint_off"    : "🟢 ناچالاکە",
     "sup_api_title"    : "⚙️ سەرچاوەی دابەزاندن هەڵبژێرە:",
-    "sup_admins_title" : "👮 ئەدمینەکان: {count}",
-    "sup_vip_title"    : "💎 ژمارەی VIP: {count}",
-    "sup_ch_title"     : "📢 چەناڵەکان:\n{list}",
+    "sup_admins_title" : "👮 ئەدمینەکان ({count}):",
+    "sup_vip_title"    : "💎 VIP ({count}):",
+    "sup_ch_title"     : "📢 چەناڵەکان ({count}):",
     "sup_ch_empty"     : "📭 بەتاڵە",
     "sup_ch_remove_q"  : "کام چەناڵ دەسڕیتەوە؟",
     "sup_ch_added"     : "✅ {ch} زیاد کرا!",
@@ -148,26 +153,32 @@ L: dict = {
     "b_sup_vip"        : "💎 VIP",
     "b_sup_channels"   : "📢 چەناڵەکان",
     "b_sup_maint"      : "🛠 چاکسازی: {status}",
-    "b_sup_api"        : "⚙️ ڕێکخستنی API",
+    "b_sup_api"        : "⚙️ API",
     "b_sup_botlang"    : "🌍 زمانی بۆت",
     "b_add"            : "➕ زیادکردن",
     "b_remove"         : "➖ لابردن",
-    "b_add_vip"        : "➕ پێدانی VIP",
-    "b_rm_vip"         : "➖ سەندنەوەی VIP",
+    "b_add_vip"        : "➕ VIP",
+    "b_rm_vip"         : "➖ VIP",
     "b_refresh"        : "🔄 نوێکردنەوە",
     "b_clear"          : "🗑 سڕینەوە",
     # --- Owner Panel ---
-    "own_panel_title"  : "👑 پانێڵی خاوەنی سەرەکی\nبەخێربێیت گەورەم!",
-    "own_super_title"  : "🌌 سوپەر ئەدمینەکان: {count}",
+    "own_panel_title"  : "👑 بەشی خاوەن",
+    "own_super_title"  : "🌌 سوپەر ئەدمینەکان ({count}):",
     "own_add_sup_ask"  : "➕ سوپەر ئەدمینی نوێ:\n\n{write_id}",
     "own_rm_sup_ask"   : "➖ لابردنی سوپەر ئەدمین:\n\n{write_id}",
-    "b_own_super"      : "🌌 سوپەر ئەدمینەکان",
+    "b_own_super"      : "🌌 سوپەر ئەدمین",
     "b_own_botlang"    : "🌍 زمانی بۆت",
     "b_own_welcome"    : "📝 نامەی خێرهاتن",
     "b_own_reset"      : "🗑 ڕیسێتی ئامار",
     "b_own_backup"     : "💾 باکئەپ",
     "own_reset_done"   : "✅ ئامارەکان سفر کرانەوە!",
     "own_backup_prep"  : "⏳ ئامادە دەکرێت...",
+    # --- New user notification ---
+    "new_user_notify"  : "🔔 بەکارهێنەری نوێ!\n\n👤 ناو: {name}\n🔗 یوزەر: {uname}\n🆔 ئایدی: {uid}\n🌐 زمانی ئەپ: {app_lang}\n📅 {date}",
+    "b_notify_block"   : "🚫 بلۆک",
+    "b_notify_vip"     : "💎 VIP",
+    "b_notify_admin"   : "🛡 ئەدمین",
+    "b_notify_info"    : "👤 زانیاری",
     # --- Action results ---
     "act_blocked"      : "🚫 {id} بلۆک کرا!",
     "act_unblocked"    : "✅ {id} بلۆکەکەی لابرا.",
@@ -227,9 +238,7 @@ L: dict = {
     "b_settings" : "⚙️ Settings & Language",
     "b_help"     : "ℹ️ Help",
     "b_channel"  : "📢 Bot Channel",
-    "b_admin"    : "🛡 Admin Panel",
-    "b_super"    : "🌌 Super Panel",
-    "b_owner"    : "👑 Owner Panel",
+    "b_panel"    : "⚙️ Control Panel",
     "b_back"     : "🔙 Back",
     "b_delete"   : "🗑 Delete",
     "b_joined"   : "✅ I Joined",
@@ -240,8 +249,15 @@ L: dict = {
     "b_en"       : "🇺🇸 English",
     "b_ar"       : "🇸🇦 العربية",
     "b_cancel"   : "❌ Cancel",
+    "b_confirm_remove" : "✅ Yes, Remove",
+    "b_cancel_remove"  : "❌ No, Cancel",
+    "confirm_remove_admin" : "⚠️ Are you sure you want to remove this admin?\n🆔 {id}",
+    "confirm_remove_super" : "⚠️ Are you sure you want to remove this super admin?\n🆔 {id}",
+    "confirm_remove_ch"    : "⚠️ Are you sure you want to remove this channel?\n{ch}",
+    # --- Unified Panel ---
+    "unified_panel_title" : "⚙️ Control Panel\n\n👥 Users: {users}\n💎 VIP: {vip}\n🚫 Blocked: {blocked}\n📥 Downloads: {dl}\n⏱ Uptime: {uptime}",
     # --- Admin Panel ---
-    "adm_panel_title"  : "🛡 Admin Panel\n\n👥 Users: {users}\n🕐 {time}",
+    "adm_panel_title"  : "🛡 Admin Section",
     "adm_stats_title"  : "📊 Stats:\n👥 Total users: {users}\n💎 VIP: {vip}\n🚫 Blocked: {blocked}\n📥 Downloads: {dl}\n⏱ Uptime: {uptime}",
     "adm_broadcast_ask": "✍️ Send your message (text, photo, video):",
     "adm_block_ask"    : "🚫 Block User:\n\n{write_id}",
@@ -250,14 +266,15 @@ L: dict = {
     "b_adm_broadcast"  : "📢 Broadcast",
     "b_adm_block"      : "🚫 Block User",
     "b_adm_info"       : "👤 User Info",
+    "b_adm_admins"     : "👮 Admins",
     # --- Super Panel ---
-    "sup_panel_title"  : "🌌 Super Panel\nControl sensitive settings.",
+    "sup_panel_title"  : "🌌 Super Section",
     "sup_maint_on"     : "🔴 ON",
     "sup_maint_off"    : "🟢 OFF",
     "sup_api_title"    : "⚙️ Choose API source:",
-    "sup_admins_title" : "👮 Admins: {count}",
-    "sup_vip_title"    : "💎 VIP count: {count}",
-    "sup_ch_title"     : "📢 Channels:\n{list}",
+    "sup_admins_title" : "👮 Admins ({count}):",
+    "sup_vip_title"    : "💎 VIP ({count}):",
+    "sup_ch_title"     : "📢 Channels ({count}):",
     "sup_ch_empty"     : "📭 Empty",
     "sup_ch_remove_q"  : "Which channel to remove?",
     "sup_ch_added"     : "✅ {ch} added!",
@@ -270,17 +287,17 @@ L: dict = {
     "b_sup_vip"        : "💎 VIP",
     "b_sup_channels"   : "📢 Channels",
     "b_sup_maint"      : "🛠 Maintenance: {status}",
-    "b_sup_api"        : "⚙️ API Settings",
+    "b_sup_api"        : "⚙️ API",
     "b_sup_botlang"    : "🌍 Bot Language",
     "b_add"            : "➕ Add",
     "b_remove"         : "➖ Remove",
-    "b_add_vip"        : "➕ Add VIP",
-    "b_rm_vip"         : "➖ Remove VIP",
+    "b_add_vip"        : "➕ VIP",
+    "b_rm_vip"         : "➖ VIP",
     "b_refresh"        : "🔄 Refresh",
     "b_clear"          : "🗑 Clear",
     # --- Owner Panel ---
-    "own_panel_title"  : "👑 Owner Panel\nWelcome, boss!",
-    "own_super_title"  : "🌌 Super Admins: {count}",
+    "own_panel_title"  : "👑 Owner Section",
+    "own_super_title"  : "🌌 Super Admins ({count}):",
     "own_add_sup_ask"  : "➕ Add Super Admin:\n\n{write_id}",
     "own_rm_sup_ask"   : "➖ Remove Super Admin:\n\n{write_id}",
     "b_own_super"      : "🌌 Super Admins",
@@ -290,6 +307,12 @@ L: dict = {
     "b_own_backup"     : "💾 Backup",
     "own_reset_done"   : "✅ Stats have been reset!",
     "own_backup_prep"  : "⏳ Preparing...",
+    # --- New user notification ---
+    "new_user_notify"  : "🔔 New User!\n\n👤 Name: {name}\n🔗 User: {uname}\n🆔 ID: {uid}\n🌐 App Lang: {app_lang}\n📅 {date}",
+    "b_notify_block"   : "🚫 Block",
+    "b_notify_vip"     : "💎 VIP",
+    "b_notify_admin"   : "🛡 Admin",
+    "b_notify_info"    : "👤 Info",
     # --- Action results ---
     "act_blocked"      : "🚫 {id} has been blocked!",
     "act_unblocked"    : "✅ {id} has been unblocked.",
@@ -309,8 +332,6 @@ L: dict = {
     "bot_lang_current"  : "🔵 Current: {cur}",
     "ask_link_prompt"   : "🔗 Please send me the TikTok link:",
 },
-
-# ─────────────────────────────────── ARABIC ───────────────────────────────────
 "ar": {
     "welcome"         : "👋 مرحباً {name} {badge}\n\n🤖 أهلاً بك في أقوى بوت لتحميل تيك توك!\n📥 حمّل الفيديوهات (بدون علامة مائية)، الصور والصوت بأعلى سرعة.\n\n━━━━━━━━━━━━━━━━━━━\n👇 فقط أرسل لي رابط تيك توك:",
     "help"            : "📚 طريقة الاستخدام\n\n1️⃣ انسخ رابط الفيديو من تيك توك.\n2️⃣ الصقه هنا.\n3️⃣ اختر نوع التحميل!\n\n🎥 فيديو: بدون علامة مائية.\n📸 صور: جميع صور المنشور.\n🎵 صوت: بصيغة MP3.\n\n💎 VIP: بدون انضمام إجباري، سرعة أعلى.\n📩 تواصل: {dev}",
@@ -351,9 +372,7 @@ L: dict = {
     "b_settings" : "⚙️ الإعدادات واللغة",
     "b_help"     : "ℹ️ المساعدة",
     "b_channel"  : "📢 قناة البوت",
-    "b_admin"    : "🛡 لوحة الإدارة",
-    "b_super"    : "🌌 لوحة السوبر",
-    "b_owner"    : "👑 لوحة المالك",
+    "b_panel"    : "⚙️ لوحة التحكم",
     "b_back"     : "🔙 رجوع",
     "b_delete"   : "🗑 حذف",
     "b_joined"   : "✅ انضممت",
@@ -364,8 +383,15 @@ L: dict = {
     "b_en"       : "🇺🇸 English",
     "b_ar"       : "🇸🇦 العربية",
     "b_cancel"   : "❌ إلغاء",
+    "b_confirm_remove" : "✅ نعم، احذف",
+    "b_cancel_remove"  : "❌ لا، إلغاء",
+    "confirm_remove_admin" : "⚠️ هل أنت متأكد من حذف هذا المشرف؟\n🆔 {id}",
+    "confirm_remove_super" : "⚠️ هل أنت متأكد من حذف هذا المشرف المميز؟\n🆔 {id}",
+    "confirm_remove_ch"    : "⚠️ هل أنت متأكد من حذف هذه القناة؟\n{ch}",
+    # --- Unified Panel ---
+    "unified_panel_title" : "⚙️ لوحة التحكم\n\n👥 المستخدمون: {users}\n💎 VIP: {vip}\n🚫 محظورون: {blocked}\n📥 التحميلات: {dl}\n⏱ وقت التشغيل: {uptime}",
     # --- Admin Panel ---
-    "adm_panel_title"  : "🛡 لوحة الإدارة\n\n👥 المستخدمون: {users}\n🕐 {time}",
+    "adm_panel_title"  : "🛡 قسم الإدارة",
     "adm_stats_title"  : "📊 الإحصائيات:\n👥 إجمالي المستخدمين: {users}\n💎 VIP: {vip}\n🚫 محظورون: {blocked}\n📥 التحميلات: {dl}\n⏱ وقت التشغيل: {uptime}",
     "adm_broadcast_ask": "✍️ أرسل رسالتك (نص، صورة، فيديو):",
     "adm_block_ask"    : "🚫 حظر مستخدم:\n\n{write_id}",
@@ -374,14 +400,15 @@ L: dict = {
     "b_adm_broadcast"  : "📢 البث",
     "b_adm_block"      : "🚫 حظر مستخدم",
     "b_adm_info"       : "👤 معلومات المستخدم",
+    "b_adm_admins"     : "👮 المشرفون",
     # --- Super Panel ---
-    "sup_panel_title"  : "🌌 لوحة السوبر\nالتحكم في الإعدادات الحساسة.",
+    "sup_panel_title"  : "🌌 قسم السوبر",
     "sup_maint_on"     : "🔴 مفعّل",
     "sup_maint_off"    : "🟢 معطّل",
     "sup_api_title"    : "⚙️ اختر مصدر التحميل:",
-    "sup_admins_title" : "👮 المشرفون: {count}",
-    "sup_vip_title"    : "💎 عدد VIP: {count}",
-    "sup_ch_title"     : "📢 القنوات:\n{list}",
+    "sup_admins_title" : "👮 المشرفون ({count}):",
+    "sup_vip_title"    : "💎 VIP ({count}):",
+    "sup_ch_title"     : "📢 القنوات ({count}):",
     "sup_ch_empty"     : "📭 فارغ",
     "sup_ch_remove_q"  : "أي قناة تريد حذفها؟",
     "sup_ch_added"     : "✅ تمت إضافة {ch}!",
@@ -394,17 +421,17 @@ L: dict = {
     "b_sup_vip"        : "💎 VIP",
     "b_sup_channels"   : "📢 القنوات",
     "b_sup_maint"      : "🛠 الصيانة: {status}",
-    "b_sup_api"        : "⚙️ إعدادات API",
+    "b_sup_api"        : "⚙️ API",
     "b_sup_botlang"    : "🌍 لغة البوت",
     "b_add"            : "➕ إضافة",
     "b_remove"         : "➖ إزالة",
-    "b_add_vip"        : "➕ منح VIP",
-    "b_rm_vip"         : "➖ إزالة VIP",
+    "b_add_vip"        : "➕ VIP",
+    "b_rm_vip"         : "➖ VIP",
     "b_refresh"        : "🔄 تحديث",
     "b_clear"          : "🗑 مسح",
     # --- Owner Panel ---
-    "own_panel_title"  : "👑 لوحة المالك\nأهلاً بك يا كبير!",
-    "own_super_title"  : "🌌 المشرفون المميزون: {count}",
+    "own_panel_title"  : "👑 قسم المالك",
+    "own_super_title"  : "🌌 المشرفون المميزون ({count}):",
     "own_add_sup_ask"  : "➕ إضافة مشرف مميز:\n\n{write_id}",
     "own_rm_sup_ask"   : "➖ إزالة مشرف مميز:\n\n{write_id}",
     "b_own_super"      : "🌌 المشرفون المميزون",
@@ -414,6 +441,12 @@ L: dict = {
     "b_own_backup"     : "💾 نسخة احتياطية",
     "own_reset_done"   : "✅ تمت إعادة ضبط الإحصائيات!",
     "own_backup_prep"  : "⏳ جارٍ التحضير...",
+    # --- New user notification ---
+    "new_user_notify"  : "🔔 مستخدم جديد!\n\n👤 الاسم: {name}\n🔗 اليوزر: {uname}\n🆔 المعرّف: {uid}\n🌐 لغة التطبيق: {app_lang}\n📅 {date}",
+    "b_notify_block"   : "🚫 حظر",
+    "b_notify_vip"     : "💎 VIP",
+    "b_notify_admin"   : "🛡 مشرف",
+    "b_notify_info"    : "👤 معلومات",
     # --- Action results ---
     "act_blocked"      : "🚫 تم حظر {id}!",
     "act_unblocked"    : "✅ تم رفع الحظر عن {id}.",
@@ -552,10 +585,20 @@ async def session_get(uid) -> dict | None:
     return None
 
 async def get_user_lang(uid: int) -> str:
-    """زمانی کەسی بەکارهێنەر — ئەگەر نەبوو زمانی سەرەکی بۆتەکە بەکاردێت"""
     ud = await db_get(f"users/{uid}/lang")
     if ud and ud in L: return ud
     return CFG.get("default_lang", "ku")
+
+# ── Helper: get admin name from DB ─────────────────────────────────────────────
+async def get_user_display(uid: int) -> str:
+    ud = await db_get(f"users/{uid}")
+    if ud:
+        name = ud.get("name", str(uid))
+        username = ud.get("user", "")
+        if username:
+            return f"{name} (@{username}) [{uid}]"
+        return f"{name} [{uid}]"
+    return str(uid)
 
 # ==============================================================================
 # ── 4. TIKTOK SCRAPER ─────────────────────────────────────────────────────────
@@ -636,11 +679,9 @@ async def render_main_menu(uid: int, lang: str, name: str) -> tuple[str, InlineK
          InlineKeyboardButton(tx(lang, "b_help"),     callback_data="show_help")],
         [InlineKeyboardButton(tx(lang, "b_channel"), url=CHANNEL_URL)],
     ]
-    ar = []
-    if is_admin(uid): ar.append(InlineKeyboardButton(tx(lang, "b_admin"), callback_data="panel_admin"))
-    if is_super(uid): ar.append(InlineKeyboardButton(tx(lang, "b_super"), callback_data="panel_super"))
-    if ar: kb.append(ar)
-    if is_owner(uid): kb.append([InlineKeyboardButton(tx(lang, "b_owner"), callback_data="panel_owner")])
+    # Single unified panel button for any admin/super/owner
+    if is_admin(uid):
+        kb.append([InlineKeyboardButton(tx(lang, "b_panel"), callback_data="panel_unified")])
 
     return text, InlineKeyboardMarkup(kb)
 
@@ -674,6 +715,7 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if is_new:
         user_count = CFG.get("total_users", 0) + 1
         CFG["total_users"] = user_count
+        await save_cfg()
         await user_put(uid, {
             "name": user.first_name,
             "user": user.username or "",
@@ -682,17 +724,26 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             "dl":   0,
             "lang": CFG.get("default_lang", "ku"),
         })
-        uname  = f"@{user.username}" if user.username else "—"
-        notify = (
-            f"🔔 بەکارهێنەری نوێ!\n\n"
-            f"🔢 ژمارە: #{user_count}\n"
-            f"👤 ناو: {html.escape(user.first_name)}\n"
-            f"🔗 یوزەرنەیم: {uname}\n"
-            f"🆔 ئایدی: {uid}\n"
-            f"🌐 زمانی ئەپ: {user.language_code or '—'}\n"
-            f"📅 {now_str()}"
+        uname = f"@{user.username}" if user.username else "—"
+        notify_text = tx("ku", "new_user_notify",
+            name=html.escape(user.first_name),
+            uname=uname,
+            uid=uid,
+            app_lang=user.language_code or "—",
+            date=now_str()
         )
-        try: await ctx.bot.send_message(OWNER_ID, notify)
+        # دوگمەکانی کۆنتڕۆڵ لەگەڵ ئاگادارکردنەوە
+        notify_kb = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(tx("ku", "b_notify_block"), callback_data=f"quick_blk_{uid}"),
+                InlineKeyboardButton(tx("ku", "b_notify_vip"),   callback_data=f"quick_vip_{uid}"),
+            ],
+            [
+                InlineKeyboardButton(tx("ku", "b_notify_admin"), callback_data=f"quick_adm_{uid}"),
+                InlineKeyboardButton(tx("ku", "b_notify_info"),  callback_data=f"quick_inf_{uid}"),
+            ],
+        ])
+        try: await ctx.bot.send_message(OWNER_ID, notify_text, parse_mode="HTML", reply_markup=notify_kb)
         except: pass
 
     ok_sub, missing = await check_join(uid, ctx)
@@ -717,6 +768,39 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     try: await q.answer()
     except: pass
+
+    # ── Quick actions from new user notification ───────────────────────────────
+    if data.startswith("quick_") and is_owner(uid):
+        parts  = data.split("_")
+        action = parts[1]
+        tid    = int(parts[2])
+        olang  = "ku"  # Owner always sees Kurdish for quick actions
+
+        if action == "blk":
+            blocked_set.add(tid); await save_cfg()
+            await q.answer(tx(olang, "act_blocked", id=tid), show_alert=True)
+            return
+        if action == "vip":
+            vip_set.add(tid); await user_field(tid, "vip", True); await save_cfg()
+            await q.answer(tx(olang, "act_vip_added", id=tid), show_alert=True)
+            return
+        if action == "adm":
+            admins_set.add(tid); await save_cfg()
+            await q.answer(tx(olang, "act_adm_added", id=tid), show_alert=True)
+            return
+        if action == "inf":
+            ud = await user_get(tid)
+            if not ud:
+                await q.answer(tx(olang, "user_not_found"), show_alert=True); return
+            ulang_str = LANG_NAMES.get(ud.get("lang", "—"), ud.get("lang", "—"))
+            vip_str   = tx(olang, "vip_yes") if ud.get("vip") else tx(olang, "vip_no")
+            info = tx(olang, "userinfo_text",
+                name=ud.get("name","—"), user=ud.get("user","—"),
+                id=tid, vip=vip_str, lang=ulang_str,
+                dl=ud.get("dl", 0), date=ud.get("date","—")
+            )
+            await q.answer(info[:200], show_alert=True)
+            return
 
     # ── Navigation ─────────────────────────────────────────────────────────────
     if data in ("main_menu_render", "check_join_btn"):
@@ -768,15 +852,13 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         text, markup = await render_main_menu(uid, chosen, q.from_user.first_name)
         await q.edit_message_text(text, parse_mode="HTML", reply_markup=markup); return
 
-    # ── Bot-wide language (owner + super) ──────────────────────────────────────
+    # ── Bot-wide language ──────────────────────────────────────────────────────
     if data.startswith("set_bot_lang_") and is_super(uid):
         chosen = data.split("_")[3]
         CFG["default_lang"] = chosen
         await save_cfg()
         await q.answer(tx(lang, "bot_lang_saved", lang=LANG_NAMES.get(chosen, chosen)), show_alert=True)
-        # گەڕانەوە بۆ پانێڵی خاوەن یان سوپەر
-        q.data = "panel_owner" if is_owner(uid) else "panel_super"
-        await on_callback(update, ctx); return
+        q.data = "panel_unified"; await on_callback(update, ctx); return
 
     # ── Download ───────────────────────────────────────────────────────────────
     if data.startswith("dl_"):
@@ -828,22 +910,70 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     # ══════════════════════════════════════════════════════════════════════════
-    # ── ADMIN PANEL ───────────────────────────────────────────────────────────
-    if data.startswith("panel_admin") or data.startswith("adm_"):
+    # ── UNIFIED PANEL ─────────────────────────────────────────────────────────
+    if data == "panel_unified":
         if not is_admin(uid): return
+        uids_list = await all_uids()
+        kb = []
 
-        if data == "panel_admin":
-            kb = [
-                [InlineKeyboardButton(tx(lang, "b_adm_stats"),     callback_data="adm_stats"),
-                 InlineKeyboardButton(tx(lang, "b_adm_broadcast"), callback_data="adm_broadcast")],
-                [InlineKeyboardButton(tx(lang, "b_adm_block"),     callback_data="adm_block"),
-                 InlineKeyboardButton(tx(lang, "b_adm_info"),      callback_data="adm_userinfo")],
-                *back(lang),
-            ]
-            await q.edit_message_text(
-                tx(lang, "adm_panel_title", users=len(await all_uids()), time=now_str()),
-                reply_markup=InlineKeyboardMarkup(kb)
-            ); return
+        # Admin section (all admins see this)
+        kb.append([
+            InlineKeyboardButton(tx(lang, "b_adm_stats"),     callback_data="adm_stats"),
+            InlineKeyboardButton(tx(lang, "b_adm_broadcast"), callback_data="adm_broadcast"),
+        ])
+        kb.append([
+            InlineKeyboardButton(tx(lang, "b_adm_block"),   callback_data="adm_block"),
+            InlineKeyboardButton(tx(lang, "b_adm_info"),    callback_data="adm_userinfo"),
+        ])
+        # Admins can also add admins (but not remove)
+        kb.append([
+            InlineKeyboardButton(tx(lang, "b_adm_admins"), callback_data="adm_manage_admins"),
+        ])
+
+        # Super section (super admins only)
+        if is_super(uid):
+            kb.append([InlineKeyboardButton("─── 🌌 Super ───", callback_data="noop")])
+            kb.append([
+                InlineKeyboardButton(tx(lang, "b_sup_vip"),      callback_data="sup_vips"),
+                InlineKeyboardButton(tx(lang, "b_sup_channels"), callback_data="sup_channels"),
+            ])
+            maint_status = tx(lang, "sup_maint_on") if CFG["maintenance"] else tx(lang, "sup_maint_off")
+            kb.append([
+                InlineKeyboardButton(tx(lang, "b_sup_maint", status=maint_status), callback_data="sup_toggle_maint"),
+                InlineKeyboardButton(tx(lang, "b_sup_api"),    callback_data="sup_api_settings"),
+            ])
+            kb.append([
+                InlineKeyboardButton(tx(lang, "b_sup_botlang"), callback_data="sup_bot_lang"),
+            ])
+
+        # Owner section
+        if is_owner(uid):
+            kb.append([InlineKeyboardButton("─── 👑 Owner ───", callback_data="noop")])
+            kb.append([
+                InlineKeyboardButton(tx(lang, "b_own_super"),   callback_data="own_super_adms"),
+                InlineKeyboardButton(tx(lang, "b_own_welcome"), callback_data="own_welcome"),
+            ])
+            kb.append([
+                InlineKeyboardButton(tx(lang, "b_own_reset"),  callback_data="own_reset_stats"),
+                InlineKeyboardButton(tx(lang, "b_own_backup"), callback_data="own_backup"),
+            ])
+
+        kb += back(lang)
+        await q.edit_message_text(
+            tx(lang, "unified_panel_title",
+               users=len(uids_list), vip=len(vip_set),
+               blocked=len(blocked_set), dl=fmt(CFG.get("total_dl", 0)),
+               uptime=uptime()),
+            reply_markup=InlineKeyboardMarkup(kb)
+        ); return
+
+    if data == "noop":
+        return
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # ── ADMIN SECTION ─────────────────────────────────────────────────────────
+    if data.startswith("adm_"):
+        if not is_admin(uid): return
 
         if data == "adm_stats":
             txt = tx(lang, "adm_stats_title",
@@ -852,55 +982,61 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             )
             await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton(tx(lang, "b_refresh"), callback_data="adm_stats")],
-                 *back(lang, "panel_admin")]
+                 *back(lang, "panel_unified")]
             )); return
 
         if data == "adm_broadcast":
             waiting_state[uid] = "broadcast_all"
             await q.edit_message_text(
                 tx(lang, "adm_broadcast_ask"),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="panel_admin")]])
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="panel_unified")]])
             ); return
 
         if data == "adm_block":
             waiting_state[uid] = "action_blk_add"
             await q.edit_message_text(
                 tx(lang, "adm_block_ask", write_id=tx(lang, "write_id")),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="panel_admin")]])
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="panel_unified")]])
             ); return
 
         if data == "adm_userinfo":
             waiting_state[uid] = "action_info_check"
             await q.edit_message_text(
                 tx(lang, "adm_info_ask", write_id=tx(lang, "write_id")),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="panel_admin")]])
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="panel_unified")]])
             ); return
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # ── SUPER PANEL ───────────────────────────────────────────────────────────
-    if data.startswith("panel_super") or data.startswith("sup_"):
-        if not is_super(uid): return
-
-        if data == "panel_super":
-            maint_status = tx(lang, "sup_maint_on") if CFG["maintenance"] else tx(lang, "sup_maint_off")
+        # Admin manage admins — all admins can add, only super/owner can remove
+        if data == "adm_manage_admins":
+            adm_list = admins_set - {OWNER_ID}
+            lines = []
+            for aid in adm_list:
+                display = await get_user_display(aid)
+                lines.append(display)
+            text = tx(lang, "sup_admins_title", count=len(adm_list))
+            if lines:
+                text += "\n" + "\n".join(f"• {l}" for l in lines)
             kb = [
-                [InlineKeyboardButton(tx(lang, "b_sup_admins"),   callback_data="sup_admins"),
-                 InlineKeyboardButton(tx(lang, "b_sup_vip"),      callback_data="sup_vips")],
-                [InlineKeyboardButton(tx(lang, "b_sup_channels"), callback_data="sup_channels"),
-                 InlineKeyboardButton(tx(lang, "b_sup_maint", status=maint_status), callback_data="sup_toggle_maint")],
-                [InlineKeyboardButton(tx(lang, "b_sup_api"),      callback_data="sup_api_settings"),
-                 InlineKeyboardButton(tx(lang, "b_sup_botlang"),  callback_data="sup_bot_lang")],
-                *back(lang),
+                [InlineKeyboardButton(tx(lang, "b_add"), callback_data="sup_add_adm")],
             ]
-            await q.edit_message_text(tx(lang, "sup_panel_title"), reply_markup=InlineKeyboardMarkup(kb)); return
+            # Only super/owner can see remove button
+            if is_super(uid):
+                kb[0].append(InlineKeyboardButton(tx(lang, "b_remove"), callback_data="sup_rm_adm_list"))
+            kb += back(lang, "panel_unified")
+            await q.edit_message_text(text, reply_markup=InlineKeyboardMarkup(kb)); return
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # ── SUPER SECTION ─────────────────────────────────────────────────────────
+    if data.startswith("sup_"):
+        if not is_super(uid): return
 
         if data == "sup_toggle_maint":
             CFG["maintenance"] = not CFG["maintenance"]; await save_cfg()
-            q.data = "panel_super"; await on_callback(update, ctx); return
+            q.data = "panel_unified"; await on_callback(update, ctx); return
 
         if data == "sup_bot_lang":
             cur = LANG_NAMES.get(CFG.get("default_lang", "ku"), "?")
-            kb  = bot_lang_select_buttons() + back(lang, "panel_super")
+            kb  = bot_lang_select_buttons() + back(lang, "panel_unified")
             await q.edit_message_text(
                 tx(lang, "bot_lang_title") + "\n\n" + tx(lang, "bot_lang_current", cur=cur),
                 reply_markup=InlineKeyboardMarkup(kb)
@@ -912,7 +1048,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton(f"{'✅ ' if act=='auto'  else ''}Auto",      callback_data="sup_setapi_auto")],
                 [InlineKeyboardButton(f"{'✅ ' if act=='tikwm' else ''}TikWM",     callback_data="sup_setapi_tikwm")],
                 [InlineKeyboardButton(f"{'✅ ' if act=='hyper' else ''}Hyper API", callback_data="sup_setapi_hyper")],
-                *back(lang, "panel_super"),
+                *back(lang, "panel_unified"),
             ]
             await q.edit_message_text(tx(lang, "sup_api_title"), reply_markup=InlineKeyboardMarkup(kb)); return
 
@@ -920,35 +1056,57 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             CFG["active_api"] = data.split("_")[2]; await save_cfg()
             q.data = "sup_api_settings"; await on_callback(update, ctx); return
 
-        if data == "sup_admins":
-            kb = [
-                [InlineKeyboardButton(tx(lang, "b_add"),    callback_data="sup_add_adm"),
-                 InlineKeyboardButton(tx(lang, "b_remove"), callback_data="sup_rm_adm")],
-                *back(lang, "panel_super"),
-            ]
-            await q.edit_message_text(tx(lang, "sup_admins_title", count=len(admins_set)), reply_markup=InlineKeyboardMarkup(kb)); return
-
+        # Add admin (accessible from adm_manage_admins too)
         if data == "sup_add_adm":
             waiting_state[uid] = "action_adm_add"
             await q.edit_message_text(
                 tx(lang, "sup_add_adm_ask", write_id=tx(lang, "write_id")),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="sup_admins")]])
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="adm_manage_admins")]])
             ); return
 
-        if data == "sup_rm_adm":
-            waiting_state[uid] = "action_adm_rm"
+        # Remove admin — show list with confirm
+        if data == "sup_rm_adm_list":
+            adm_list = admins_set - super_admins_set - {OWNER_ID}
+            if not adm_list:
+                await q.answer("—", show_alert=True); return
+            kb = []
+            for aid in adm_list:
+                display = await get_user_display(aid)
+                kb.append([InlineKeyboardButton(f"❌ {display}", callback_data=f"sup_confirm_rm_adm_{aid}")])
+            kb += back(lang, "adm_manage_admins")
+            await q.edit_message_text(tx(lang, "sup_admins_title", count=len(adm_list)), reply_markup=InlineKeyboardMarkup(kb)); return
+
+        if data.startswith("sup_confirm_rm_adm_"):
+            tid = int(data.split("_")[4])
             await q.edit_message_text(
-                tx(lang, "sup_rm_adm_ask", write_id=tx(lang, "write_id")),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="sup_admins")]])
+                tx(lang, "confirm_remove_admin", id=tid),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton(tx(lang, "b_confirm_remove"), callback_data=f"sup_do_rm_adm_{tid}")],
+                    [InlineKeyboardButton(tx(lang, "b_cancel_remove"),  callback_data="adm_manage_admins")],
+                ])
             ); return
+
+        if data.startswith("sup_do_rm_adm_"):
+            tid = int(data.split("_")[4])
+            admins_set.discard(tid); await save_cfg()
+            await q.answer(tx(lang, "act_adm_removed", id=tid), show_alert=True)
+            q.data = "adm_manage_admins"; await on_callback(update, ctx); return
 
         if data == "sup_vips":
+            vip_real = vip_set - super_admins_set - {OWNER_ID}
+            lines = []
+            for vid in vip_real:
+                display = await get_user_display(vid)
+                lines.append(display)
+            text = tx(lang, "sup_vip_title", count=len(vip_real))
+            if lines:
+                text += "\n" + "\n".join(f"• {l}" for l in lines)
             kb = [
                 [InlineKeyboardButton(tx(lang, "b_add_vip"), callback_data="sup_add_vip"),
-                 InlineKeyboardButton(tx(lang, "b_rm_vip"),  callback_data="sup_rm_vip")],
-                *back(lang, "panel_super"),
+                 InlineKeyboardButton(tx(lang, "b_rm_vip"),  callback_data="sup_rm_vip_list")],
+                *back(lang, "panel_unified"),
             ]
-            await q.edit_message_text(tx(lang, "sup_vip_title", count=len(vip_set)), reply_markup=InlineKeyboardMarkup(kb)); return
+            await q.edit_message_text(text, reply_markup=InlineKeyboardMarkup(kb)); return
 
         if data == "sup_add_vip":
             waiting_state[uid] = "action_vip_add"
@@ -957,21 +1115,48 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="sup_vips")]])
             ); return
 
-        if data == "sup_rm_vip":
-            waiting_state[uid] = "action_vip_rm"
+        if data == "sup_rm_vip_list":
+            vip_real = vip_set - super_admins_set - {OWNER_ID}
+            if not vip_real:
+                await q.answer(tx(lang, "sup_ch_empty"), show_alert=True); return
+            kb = []
+            for vid in vip_real:
+                display = await get_user_display(vid)
+                kb.append([InlineKeyboardButton(f"❌ {display}", callback_data=f"sup_confirm_rm_vip_{vid}")])
+            kb += back(lang, "sup_vips")
+            await q.edit_message_text(tx(lang, "sup_vip_title", count=len(vip_real)), reply_markup=InlineKeyboardMarkup(kb)); return
+
+        if data.startswith("sup_confirm_rm_vip_"):
+            vid = int(data.split("_")[4])
             await q.edit_message_text(
-                tx(lang, "sup_rm_vip_ask", write_id=tx(lang, "write_id")),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="sup_vips")]])
+                tx(lang, "confirm_remove_admin", id=vid),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton(tx(lang, "b_confirm_remove"), callback_data=f"sup_do_rm_vip_{vid}")],
+                    [InlineKeyboardButton(tx(lang, "b_cancel_remove"),  callback_data="sup_vips")],
+                ])
             ); return
 
+        if data.startswith("sup_do_rm_vip_"):
+            vid = int(data.split("_")[4])
+            vip_set.discard(vid); await user_field(vid, "vip", False); await save_cfg()
+            await q.answer(tx(lang, "act_vip_removed", id=vid), show_alert=True)
+            q.data = "sup_vips"; await on_callback(update, ctx); return
+
         if data == "sup_channels":
-            lst = "\n".join([f"• {c}" for c in channels_list]) or tx(lang, "sup_ch_empty")
+            lst_lines = []
+            for ch in channels_list:
+                lst_lines.append(f"• {ch}")
+            text = tx(lang, "sup_ch_title", count=len(channels_list))
+            if lst_lines:
+                text += "\n" + "\n".join(lst_lines)
+            else:
+                text += f"\n{tx(lang, 'sup_ch_empty')}"
             kb = [
                 [InlineKeyboardButton(tx(lang, "b_add"),    callback_data="sup_add_ch"),
-                 InlineKeyboardButton(tx(lang, "b_remove"), callback_data="sup_rm_ch")],
-                *back(lang, "panel_super"),
+                 InlineKeyboardButton(tx(lang, "b_remove"), callback_data="sup_rm_ch_list")],
+                *back(lang, "panel_unified"),
             ]
-            await q.edit_message_text(tx(lang, "sup_ch_title", list=lst), reply_markup=InlineKeyboardMarkup(kb)); return
+            await q.edit_message_text(text, reply_markup=InlineKeyboardMarkup(kb)); return
 
         if data == "sup_add_ch":
             waiting_state[uid] = "action_add_ch"
@@ -980,39 +1165,47 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="sup_channels")]])
             ); return
 
-        if data == "sup_rm_ch":
+        if data == "sup_rm_ch_list":
             if not channels_list: await q.answer(tx(lang, "sup_ch_empty"), show_alert=True); return
-            kb = [[InlineKeyboardButton(f"❌ {c}", callback_data=f"sup_delch_{c}")] for c in channels_list] + back(lang, "sup_channels")
+            kb = [[InlineKeyboardButton(f"❌ {c}", callback_data=f"sup_confirm_rm_ch_{c}")] for c in channels_list]
+            kb += back(lang, "sup_channels")
             await q.edit_message_text(tx(lang, "sup_ch_remove_q"), reply_markup=InlineKeyboardMarkup(kb)); return
 
-        if data.startswith("sup_delch_"):
-            ch = data.split("_", 2)[2]
+        if data.startswith("sup_confirm_rm_ch_"):
+            ch = data[len("sup_confirm_rm_ch_"):]
+            await q.edit_message_text(
+                tx(lang, "confirm_remove_ch", ch=ch),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton(tx(lang, "b_confirm_remove"), callback_data=f"sup_do_rm_ch_{ch}")],
+                    [InlineKeyboardButton(tx(lang, "b_cancel_remove"),  callback_data="sup_channels")],
+                ])
+            ); return
+
+        if data.startswith("sup_do_rm_ch_"):
+            ch = data[len("sup_do_rm_ch_"):]
             if ch in channels_list: channels_list.remove(ch); await save_cfg()
             q.data = "sup_channels"; await on_callback(update, ctx); return
 
     # ══════════════════════════════════════════════════════════════════════════
-    # ── OWNER PANEL ───────────────────────────────────────────────────────────
-    if data.startswith("panel_owner") or data.startswith("own_"):
+    # ── OWNER SECTION ─────────────────────────────────────────────────────────
+    if data.startswith("own_"):
         if not is_owner(uid): return
 
-        if data == "panel_owner":
-            kb = [
-                [InlineKeyboardButton(tx(lang, "b_own_super"),   callback_data="own_super_adms")],
-                [InlineKeyboardButton(tx(lang, "b_own_botlang"), callback_data="own_bot_lang")],
-                [InlineKeyboardButton(tx(lang, "b_own_welcome"), callback_data="own_welcome")],
-                [InlineKeyboardButton(tx(lang, "b_own_reset"),   callback_data="own_reset_stats"),
-                 InlineKeyboardButton(tx(lang, "b_own_backup"),  callback_data="own_backup")],
-                *back(lang),
-            ]
-            await q.edit_message_text(tx(lang, "own_panel_title"), reply_markup=InlineKeyboardMarkup(kb)); return
-
         if data == "own_super_adms":
+            sup_real = super_admins_set - {OWNER_ID}
+            lines = []
+            for sid in sup_real:
+                display = await get_user_display(sid)
+                lines.append(display)
+            text = tx(lang, "own_super_title", count=len(sup_real))
+            if lines:
+                text += "\n" + "\n".join(f"• {l}" for l in lines)
             kb = [
                 [InlineKeyboardButton(tx(lang, "b_add"),    callback_data="own_add_sup"),
-                 InlineKeyboardButton(tx(lang, "b_remove"), callback_data="own_rm_sup")],
-                *back(lang, "panel_owner"),
+                 InlineKeyboardButton(tx(lang, "b_remove"), callback_data="own_rm_sup_list")],
+                *back(lang, "panel_unified"),
             ]
-            await q.edit_message_text(tx(lang, "own_super_title", count=len(super_admins_set)), reply_markup=InlineKeyboardMarkup(kb)); return
+            await q.edit_message_text(text, reply_markup=InlineKeyboardMarkup(kb)); return
 
         if data == "own_add_sup":
             waiting_state[uid] = "action_sup_add"
@@ -1021,20 +1214,32 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="own_super_adms")]])
             ); return
 
-        if data == "own_rm_sup":
-            waiting_state[uid] = "action_sup_rm"
+        if data == "own_rm_sup_list":
+            sup_real = super_admins_set - {OWNER_ID}
+            if not sup_real:
+                await q.answer("—", show_alert=True); return
+            kb = []
+            for sid in sup_real:
+                display = await get_user_display(sid)
+                kb.append([InlineKeyboardButton(f"❌ {display}", callback_data=f"own_confirm_rm_sup_{sid}")])
+            kb += back(lang, "own_super_adms")
+            await q.edit_message_text(tx(lang, "own_super_title", count=len(sup_real)), reply_markup=InlineKeyboardMarkup(kb)); return
+
+        if data.startswith("own_confirm_rm_sup_"):
+            sid = int(data.split("_")[4])
             await q.edit_message_text(
-                tx(lang, "own_rm_sup_ask", write_id=tx(lang, "write_id")),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="own_super_adms")]])
+                tx(lang, "confirm_remove_super", id=sid),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton(tx(lang, "b_confirm_remove"), callback_data=f"own_do_rm_sup_{sid}")],
+                    [InlineKeyboardButton(tx(lang, "b_cancel_remove"),  callback_data="own_super_adms")],
+                ])
             ); return
 
-        if data == "own_bot_lang":
-            cur = LANG_NAMES.get(CFG.get("default_lang", "ku"), "?")
-            kb  = bot_lang_select_buttons() + back(lang, "panel_owner")
-            await q.edit_message_text(
-                tx(lang, "bot_lang_title") + "\n\n" + tx(lang, "bot_lang_current", cur=cur),
-                reply_markup=InlineKeyboardMarkup(kb)
-            ); return
+        if data.startswith("own_do_rm_sup_"):
+            sid = int(data.split("_")[4])
+            super_admins_set.discard(sid); await save_cfg()
+            await q.answer(tx(lang, "act_sup_removed", id=sid), show_alert=True)
+            q.data = "own_super_adms"; await on_callback(update, ctx); return
 
         if data == "own_welcome":
             waiting_state[uid] = "set_welcome"
@@ -1042,13 +1247,13 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 tx(lang, "write_welcome"),
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton(tx(lang, "b_clear"), callback_data="own_clear_welcome")],
-                    *back(lang, "panel_owner"),
+                    *back(lang, "panel_unified"),
                 ])
             ); return
 
         if data == "own_clear_welcome":
             CFG["welcome_msg"] = ""; await save_cfg()
-            q.data = "panel_owner"; await on_callback(update, ctx); return
+            q.data = "panel_unified"; await on_callback(update, ctx); return
 
         if data == "own_reset_stats":
             for k in ("total_dl", "total_users"): CFG[k] = 0
@@ -1121,17 +1326,16 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                     dl=ud.get("dl", 0), date=ud.get("date","—")
                 ))
             elif action == "adm_add":
-                admins_set.add(tid); await save_cfg()
-                await msg.reply_text(tx(lang, "act_adm_added", id=tid))
-            elif action == "adm_rm":
-                admins_set.discard(tid); await save_cfg()
-                await msg.reply_text(tx(lang, "act_adm_removed", id=tid))
+                if not is_super(uid):
+                    # Regular admins can add admins (but not super admins)
+                    admins_set.add(tid); await save_cfg()
+                    await msg.reply_text(tx(lang, "act_adm_added", id=tid))
+                else:
+                    admins_set.add(tid); await save_cfg()
+                    await msg.reply_text(tx(lang, "act_adm_added", id=tid))
             elif action == "sup_add":
                 super_admins_set.add(tid); admins_set.add(tid); await save_cfg()
                 await msg.reply_text(tx(lang, "act_sup_added", id=tid))
-            elif action == "sup_rm":
-                super_admins_set.discard(tid); await save_cfg()
-                await msg.reply_text(tx(lang, "act_sup_removed", id=tid))
             elif action == "vip_add":
                 vip_set.add(tid); await user_field(tid, "vip", True); await save_cfg()
                 await msg.reply_text(tx(lang, "act_vip_added", id=tid))
