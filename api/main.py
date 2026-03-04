@@ -65,6 +65,7 @@ L: dict = {
 
 # ─────────────────────────────────── KURDISH ──────────────────────────────────
 "ku": {
+    # --- General ---
     "welcome"         : "👋 سڵاو {name} {badge}\n\n🤖 بەخێربێیت بۆ پێشکەوتووترین بۆتی تیکتۆک!\n📥 ڤیدیۆ (بێ لۆگۆ)، وێنە و گۆرانی دابەزێنە بە بەرزترین خێرایی.\n\n━━━━━━━━━━━━━━━━━━━\n👇 تەنیا لینکی تیکتۆکەکە بنێرەم:",
     "help"            : "📚 ڕێنمایی بەکارهێنان\n\n1️⃣ لینکی ڤیدیۆ لە تیکتۆک کۆپی بکە.\n2️⃣ لینکەکە لێرە پەیست بکە.\n3️⃣ جۆری دابەزاندن هەڵبژێرە!\n\n🎥 ڤیدیۆ: بەبێ لۆگۆ.\n📸 وێنە: هەموو وێنەکانی پۆستەکە.\n🎵 گۆرانی: فۆرماتی MP3.\n\n💎 VIP: بێ جۆینی ناچاری، خێرایی زۆرتر.\n📩 پەیوەندی: {dev}",
     "profile"         : "👤 کارتی پرۆفایل\n\n🆔 ئایدی: {id}\n👤 ناو: {name}\n🔗 یوزەرنەیم: @{user}\n📅 تۆماربوون: {date}\n💎 VIP: {vip}\n🌍 زمان: {ulang}\n📥 دابەزاندن: {dl} جار",
@@ -113,13 +114,79 @@ L: dict = {
     "b_video"    : "🎥 ڤیدیۆ (بێ لۆگۆ)",
     "b_photos"   : "📸 وێنەکان ({n})",
     "b_audio"    : "🎵 گۆرانی (MP3)",
-    "b_ku"       : "🏳️ کوردی",
+    "b_ku"       : "🔴🔆🟢 کوردی",
     "b_en"       : "🇺🇸 English",
     "b_ar"       : "🇸🇦 العربية",
     "b_cancel"   : "❌ هەڵوەشاندنەوە",
+    # --- Admin Panel ---
+    "adm_panel_title"  : "🛡 پانێڵی ئەدمین\n\n👥 بەکارهێنەران: {users}\n🕐 {time}",
+    "adm_stats_title"  : "📊 ئامارەکان:\n👥 کۆی بەکارهێنەران: {users}\n💎 VIP: {vip}\n🚫 بلۆككراو: {blocked}\n📥 داونلۆدەکان: {dl}\n⏱ Uptime: {uptime}",
+    "adm_broadcast_ask": "✍️ پەیامەکەت بنێرە (تێکست، وێنە، ڤیدیۆ):",
+    "adm_block_ask"    : "🚫 بلۆككردنی بەکارهێنەر:\n\n{write_id}",
+    "adm_info_ask"     : "👤 زانیاری بەکارهێنەر:\n\n{write_id}",
+    "b_adm_stats"      : "📊 ئامارەکان",
+    "b_adm_broadcast"  : "📢 برۆدکاست",
+    "b_adm_block"      : "🚫 بلۆككردن",
+    "b_adm_info"       : "👤 زانیاری کەس",
+    # --- Super Panel ---
+    "sup_panel_title"  : "🌌 سوپەر پانێل\nکۆنتڕۆڵی ڕێکخستنە هەستیارەکان.",
+    "sup_maint_on"     : "🔴 چالاکە",
+    "sup_maint_off"    : "🟢 ناچالاکە",
+    "sup_api_title"    : "⚙️ سەرچاوەی دابەزاندن هەڵبژێرە:",
+    "sup_admins_title" : "👮 ئەدمینەکان: {count}",
+    "sup_vip_title"    : "💎 ژمارەی VIP: {count}",
+    "sup_ch_title"     : "📢 چەناڵەکان:\n{list}",
+    "sup_ch_empty"     : "📭 بەتاڵە",
+    "sup_ch_remove_q"  : "کام چەناڵ دەسڕیتەوە؟",
+    "sup_ch_added"     : "✅ {ch} زیاد کرا!",
+    "sup_add_adm_ask"  : "➕ ئەدمینی نوێ:\n\n{write_id}",
+    "sup_rm_adm_ask"   : "➖ لابردنی ئەدمین:\n\n{write_id}",
+    "sup_add_vip_ask"  : "💎 پێدانی VIP:\n\n{write_id}",
+    "sup_rm_vip_ask"   : "➖ سەندنەوەی VIP:\n\n{write_id}",
+    "sup_add_ch_ask"   : "📢 زیادکردنی چەناڵ:\n\n{write_ch}",
+    "b_sup_admins"     : "👮 ئەدمینەکان",
+    "b_sup_vip"        : "💎 VIP",
+    "b_sup_channels"   : "📢 چەناڵەکان",
+    "b_sup_maint"      : "🛠 چاکسازی: {status}",
+    "b_sup_api"        : "⚙️ ڕێکخستنی API",
+    "b_sup_botlang"    : "🌍 زمانی بۆت",
+    "b_add"            : "➕ زیادکردن",
+    "b_remove"         : "➖ لابردن",
+    "b_add_vip"        : "➕ پێدانی VIP",
+    "b_rm_vip"         : "➖ سەندنەوەی VIP",
+    "b_refresh"        : "🔄 نوێکردنەوە",
+    "b_clear"          : "🗑 سڕینەوە",
+    # --- Owner Panel ---
+    "own_panel_title"  : "👑 پانێڵی خاوەنی سەرەکی\nبەخێربێیت گەورەم!",
+    "own_super_title"  : "🌌 سوپەر ئەدمینەکان: {count}",
+    "own_add_sup_ask"  : "➕ سوپەر ئەدمینی نوێ:\n\n{write_id}",
+    "own_rm_sup_ask"   : "➖ لابردنی سوپەر ئەدمین:\n\n{write_id}",
+    "b_own_super"      : "🌌 سوپەر ئەدمینەکان",
+    "b_own_botlang"    : "🌍 زمانی بۆت",
+    "b_own_welcome"    : "📝 نامەی خێرهاتن",
+    "b_own_reset"      : "🗑 ڕیسێتی ئامار",
+    "b_own_backup"     : "💾 باکئەپ",
+    "own_reset_done"   : "✅ ئامارەکان سفر کرانەوە!",
+    "own_backup_prep"  : "⏳ ئامادە دەکرێت...",
+    # --- Action results ---
+    "act_blocked"      : "🚫 {id} بلۆک کرا!",
+    "act_unblocked"    : "✅ {id} بلۆکەکەی لابرا.",
+    "act_adm_added"    : "✅ {id} بوو بە ئەدمین!",
+    "act_adm_removed"  : "➖ {id} لە ئەدمین لابرا.",
+    "act_sup_added"    : "🌌 {id} بوو بە سوپەر ئەدمین!",
+    "act_sup_removed"  : "➖ {id} لە سوپەر لابرا.",
+    "act_vip_added"    : "💎 {id} کرایە VIP!",
+    "act_vip_removed"  : "➖ VIP لە {id} سەندرایەوە.",
+    "act_ch_wrong_fmt" : "❌ فۆرماتەکە هەڵەیە! بنووسە: @channelname",
+    # --- User info display ---
+    "userinfo_text"    : "👤 ناو: {name}\n🔗 یوزەر: @{user}\n🆔 ئایدی: {id}\n💎 VIP: {vip}\n🌍 زمان: {lang}\n📥 داونلۆد: {dl}\n📅 تۆماربوون: {date}",
+    # --- Broadcast ---
+    "broadcast_sending": "⏳ ناردن دەستی پێکرد بۆ {total} کەس...",
+    "broadcast_progress": "⏳ ناردن: {done}/{total}...",
+    # --- Bot language ---
+    "bot_lang_current" : "🔵 ئێستا: {cur}",
+    "ask_link_prompt"  : "🔗 تکایە لینکی تیکتۆکەکە بنێرەم:",
 },
-
-# ─────────────────────────────────── ENGLISH ──────────────────────────────────
 "en": {
     "welcome"         : "👋 Hello {name} {badge}\n\n🤖 Welcome to the most advanced TikTok Downloader Bot!\n📥 Download videos (no watermark), photos & audio at top speed.\n\n━━━━━━━━━━━━━━━━━━━\n👇 Just send me a TikTok link:",
     "help"            : "📚 How to Use\n\n1️⃣ Copy a TikTok video link.\n2️⃣ Paste it here.\n3️⃣ Choose your download type!\n\n🎥 Video: No watermark.\n📸 Photos: All post images.\n🎵 Audio: MP3 format.\n\n💎 VIP: No forced join, faster downloads.\n📩 Contact: {dev}",
@@ -169,10 +236,78 @@ L: dict = {
     "b_video"    : "🎥 Video (No Watermark)",
     "b_photos"   : "📸 Photos ({n})",
     "b_audio"    : "🎵 Audio (MP3)",
-    "b_ku"       : "🏳️ کوردی",
+    "b_ku"       : "🔴🔆🟢 کوردی",
     "b_en"       : "🇺🇸 English",
     "b_ar"       : "🇸🇦 العربية",
     "b_cancel"   : "❌ Cancel",
+    # --- Admin Panel ---
+    "adm_panel_title"  : "🛡 Admin Panel\n\n👥 Users: {users}\n🕐 {time}",
+    "adm_stats_title"  : "📊 Stats:\n👥 Total users: {users}\n💎 VIP: {vip}\n🚫 Blocked: {blocked}\n📥 Downloads: {dl}\n⏱ Uptime: {uptime}",
+    "adm_broadcast_ask": "✍️ Send your message (text, photo, video):",
+    "adm_block_ask"    : "🚫 Block User:\n\n{write_id}",
+    "adm_info_ask"     : "👤 User Info:\n\n{write_id}",
+    "b_adm_stats"      : "📊 Stats",
+    "b_adm_broadcast"  : "📢 Broadcast",
+    "b_adm_block"      : "🚫 Block User",
+    "b_adm_info"       : "👤 User Info",
+    # --- Super Panel ---
+    "sup_panel_title"  : "🌌 Super Panel\nControl sensitive settings.",
+    "sup_maint_on"     : "🔴 ON",
+    "sup_maint_off"    : "🟢 OFF",
+    "sup_api_title"    : "⚙️ Choose API source:",
+    "sup_admins_title" : "👮 Admins: {count}",
+    "sup_vip_title"    : "💎 VIP count: {count}",
+    "sup_ch_title"     : "📢 Channels:\n{list}",
+    "sup_ch_empty"     : "📭 Empty",
+    "sup_ch_remove_q"  : "Which channel to remove?",
+    "sup_ch_added"     : "✅ {ch} added!",
+    "sup_add_adm_ask"  : "➕ Add Admin:\n\n{write_id}",
+    "sup_rm_adm_ask"   : "➖ Remove Admin:\n\n{write_id}",
+    "sup_add_vip_ask"  : "💎 Give VIP:\n\n{write_id}",
+    "sup_rm_vip_ask"   : "➖ Remove VIP:\n\n{write_id}",
+    "sup_add_ch_ask"   : "📢 Add Channel:\n\n{write_ch}",
+    "b_sup_admins"     : "👮 Admins",
+    "b_sup_vip"        : "💎 VIP",
+    "b_sup_channels"   : "📢 Channels",
+    "b_sup_maint"      : "🛠 Maintenance: {status}",
+    "b_sup_api"        : "⚙️ API Settings",
+    "b_sup_botlang"    : "🌍 Bot Language",
+    "b_add"            : "➕ Add",
+    "b_remove"         : "➖ Remove",
+    "b_add_vip"        : "➕ Add VIP",
+    "b_rm_vip"         : "➖ Remove VIP",
+    "b_refresh"        : "🔄 Refresh",
+    "b_clear"          : "🗑 Clear",
+    # --- Owner Panel ---
+    "own_panel_title"  : "👑 Owner Panel\nWelcome, boss!",
+    "own_super_title"  : "🌌 Super Admins: {count}",
+    "own_add_sup_ask"  : "➕ Add Super Admin:\n\n{write_id}",
+    "own_rm_sup_ask"   : "➖ Remove Super Admin:\n\n{write_id}",
+    "b_own_super"      : "🌌 Super Admins",
+    "b_own_botlang"    : "🌍 Bot Language",
+    "b_own_welcome"    : "📝 Welcome Message",
+    "b_own_reset"      : "🗑 Reset Stats",
+    "b_own_backup"     : "💾 Backup",
+    "own_reset_done"   : "✅ Stats have been reset!",
+    "own_backup_prep"  : "⏳ Preparing...",
+    # --- Action results ---
+    "act_blocked"      : "🚫 {id} has been blocked!",
+    "act_unblocked"    : "✅ {id} has been unblocked.",
+    "act_adm_added"    : "✅ {id} is now Admin!",
+    "act_adm_removed"  : "➖ {id} removed from Admin.",
+    "act_sup_added"    : "🌌 {id} is now Super Admin!",
+    "act_sup_removed"  : "➖ {id} removed from Super Admin.",
+    "act_vip_added"    : "💎 {id} is now VIP!",
+    "act_vip_removed"  : "➖ VIP removed from {id}.",
+    "act_ch_wrong_fmt" : "❌ Wrong format! Use: @channelname",
+    # --- User info display ---
+    "userinfo_text"    : "👤 Name: {name}\n🔗 User: @{user}\n🆔 ID: {id}\n💎 VIP: {vip}\n🌍 Lang: {lang}\n📥 Downloads: {dl}\n📅 Joined: {date}",
+    # --- Broadcast ---
+    "broadcast_sending" : "⏳ Starting broadcast to {total} users...",
+    "broadcast_progress": "⏳ Sending: {done}/{total}...",
+    # --- Bot language ---
+    "bot_lang_current"  : "🔵 Current: {cur}",
+    "ask_link_prompt"   : "🔗 Please send me the TikTok link:",
 },
 
 # ─────────────────────────────────── ARABIC ───────────────────────────────────
@@ -225,14 +360,82 @@ L: dict = {
     "b_video"    : "🎥 فيديو (بدون علامة مائية)",
     "b_photos"   : "📸 الصور ({n})",
     "b_audio"    : "🎵 صوت (MP3)",
-    "b_ku"       : "🏳️ کوردی",
+    "b_ku"       : "🔴🔆🟢 کوردی",
     "b_en"       : "🇺🇸 English",
     "b_ar"       : "🇸🇦 العربية",
     "b_cancel"   : "❌ إلغاء",
+    # --- Admin Panel ---
+    "adm_panel_title"  : "🛡 لوحة الإدارة\n\n👥 المستخدمون: {users}\n🕐 {time}",
+    "adm_stats_title"  : "📊 الإحصائيات:\n👥 إجمالي المستخدمين: {users}\n💎 VIP: {vip}\n🚫 محظورون: {blocked}\n📥 التحميلات: {dl}\n⏱ وقت التشغيل: {uptime}",
+    "adm_broadcast_ask": "✍️ أرسل رسالتك (نص، صورة، فيديو):",
+    "adm_block_ask"    : "🚫 حظر مستخدم:\n\n{write_id}",
+    "adm_info_ask"     : "👤 معلومات المستخدم:\n\n{write_id}",
+    "b_adm_stats"      : "📊 الإحصائيات",
+    "b_adm_broadcast"  : "📢 البث",
+    "b_adm_block"      : "🚫 حظر مستخدم",
+    "b_adm_info"       : "👤 معلومات المستخدم",
+    # --- Super Panel ---
+    "sup_panel_title"  : "🌌 لوحة السوبر\nالتحكم في الإعدادات الحساسة.",
+    "sup_maint_on"     : "🔴 مفعّل",
+    "sup_maint_off"    : "🟢 معطّل",
+    "sup_api_title"    : "⚙️ اختر مصدر التحميل:",
+    "sup_admins_title" : "👮 المشرفون: {count}",
+    "sup_vip_title"    : "💎 عدد VIP: {count}",
+    "sup_ch_title"     : "📢 القنوات:\n{list}",
+    "sup_ch_empty"     : "📭 فارغ",
+    "sup_ch_remove_q"  : "أي قناة تريد حذفها؟",
+    "sup_ch_added"     : "✅ تمت إضافة {ch}!",
+    "sup_add_adm_ask"  : "➕ إضافة مشرف:\n\n{write_id}",
+    "sup_rm_adm_ask"   : "➖ إزالة مشرف:\n\n{write_id}",
+    "sup_add_vip_ask"  : "💎 منح VIP:\n\n{write_id}",
+    "sup_rm_vip_ask"   : "➖ إزالة VIP:\n\n{write_id}",
+    "sup_add_ch_ask"   : "📢 إضافة قناة:\n\n{write_ch}",
+    "b_sup_admins"     : "👮 المشرفون",
+    "b_sup_vip"        : "💎 VIP",
+    "b_sup_channels"   : "📢 القنوات",
+    "b_sup_maint"      : "🛠 الصيانة: {status}",
+    "b_sup_api"        : "⚙️ إعدادات API",
+    "b_sup_botlang"    : "🌍 لغة البوت",
+    "b_add"            : "➕ إضافة",
+    "b_remove"         : "➖ إزالة",
+    "b_add_vip"        : "➕ منح VIP",
+    "b_rm_vip"         : "➖ إزالة VIP",
+    "b_refresh"        : "🔄 تحديث",
+    "b_clear"          : "🗑 مسح",
+    # --- Owner Panel ---
+    "own_panel_title"  : "👑 لوحة المالك\nأهلاً بك يا كبير!",
+    "own_super_title"  : "🌌 المشرفون المميزون: {count}",
+    "own_add_sup_ask"  : "➕ إضافة مشرف مميز:\n\n{write_id}",
+    "own_rm_sup_ask"   : "➖ إزالة مشرف مميز:\n\n{write_id}",
+    "b_own_super"      : "🌌 المشرفون المميزون",
+    "b_own_botlang"    : "🌍 لغة البوت",
+    "b_own_welcome"    : "📝 رسالة الترحيب",
+    "b_own_reset"      : "🗑 إعادة الإحصائيات",
+    "b_own_backup"     : "💾 نسخة احتياطية",
+    "own_reset_done"   : "✅ تمت إعادة ضبط الإحصائيات!",
+    "own_backup_prep"  : "⏳ جارٍ التحضير...",
+    # --- Action results ---
+    "act_blocked"      : "🚫 تم حظر {id}!",
+    "act_unblocked"    : "✅ تم رفع الحظر عن {id}.",
+    "act_adm_added"    : "✅ {id} أصبح مشرفاً!",
+    "act_adm_removed"  : "➖ تمت إزالة {id} من المشرفين.",
+    "act_sup_added"    : "🌌 {id} أصبح مشرفاً مميزاً!",
+    "act_sup_removed"  : "➖ تمت إزالة {id} من المشرفين المميزين.",
+    "act_vip_added"    : "💎 {id} أصبح VIP!",
+    "act_vip_removed"  : "➖ تمت إزالة VIP من {id}.",
+    "act_ch_wrong_fmt" : "❌ صيغة خاطئة! استخدم: @channelname",
+    # --- User info display ---
+    "userinfo_text"    : "👤 الاسم: {name}\n🔗 اليوزر: @{user}\n🆔 المعرّف: {id}\n💎 VIP: {vip}\n🌍 اللغة: {lang}\n📥 التحميلات: {dl}\n📅 تاريخ التسجيل: {date}",
+    # --- Broadcast ---
+    "broadcast_sending" : "⏳ بدء الإرسال إلى {total} مستخدم...",
+    "broadcast_progress": "⏳ جارٍ الإرسال: {done}/{total}...",
+    # --- Bot language ---
+    "bot_lang_current" : "🔵 الحالية: {cur}",
+    "ask_link_prompt"  : "🔗 أرسل رابط تيك توك:",
 },
 }
 
-LANG_NAMES = {"ku": "🏳️ کوردی", "en": "🇺🇸 English", "ar": "🇸🇦 العربية"}
+LANG_NAMES = {"ku": "🔴🔆🟢 کوردی", "en": "🇺🇸 English", "ar": "🇸🇦 العربية"}
 
 def tx(lang: str, key: str, **kw) -> str:
     base = L.get(lang, L["ku"])
@@ -528,12 +731,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     if data == "ask_link":
-        link_prompt = {
-            "ku": "🔗 تکایە لینکی تیکتۆکەکە بنێرەم:",
-            "en": "🔗 Please send me the TikTok link:",
-            "ar": "🔗 أرسل رابط تيك توك:",
-        }
-        await q.message.reply_text(link_prompt.get(lang, link_prompt["ku"]), reply_markup=ForceReply(selective=True))
+        await q.message.reply_text(tx(lang, "ask_link_prompt"), reply_markup=ForceReply(selective=True))
         return
 
     # ── Info Pages ─────────────────────────────────────────────────────────────
@@ -636,48 +834,45 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         if data == "panel_admin":
             kb = [
-                [InlineKeyboardButton("📊 Stats",       callback_data="adm_stats"),
-                 InlineKeyboardButton("📢 Broadcast",   callback_data="adm_broadcast")],
-                [InlineKeyboardButton("🚫 Block User",  callback_data="adm_block"),
-                 InlineKeyboardButton("👤 User Info",   callback_data="adm_userinfo")],
+                [InlineKeyboardButton(tx(lang, "b_adm_stats"),     callback_data="adm_stats"),
+                 InlineKeyboardButton(tx(lang, "b_adm_broadcast"), callback_data="adm_broadcast")],
+                [InlineKeyboardButton(tx(lang, "b_adm_block"),     callback_data="adm_block"),
+                 InlineKeyboardButton(tx(lang, "b_adm_info"),      callback_data="adm_userinfo")],
                 *back(lang),
             ]
             await q.edit_message_text(
-                f"🛡 Admin Panel\n\n👥 Users: {len(await all_uids())}\n🕐 {now_str()}",
+                tx(lang, "adm_panel_title", users=len(await all_uids()), time=now_str()),
                 reply_markup=InlineKeyboardMarkup(kb)
             ); return
 
         if data == "adm_stats":
-            txt = (
-                f"📊 Stats:\n"
-                f"👥 Total users: {len(await all_uids())}\n"
-                f"💎 VIP: {len(vip_set)}\n"
-                f"🚫 Blocked: {len(blocked_set)}\n"
-                f"📥 Downloads: {fmt(CFG.get('total_dl', 0))}\n"
-                f"⏱ Uptime: {uptime()}"
+            txt = tx(lang, "adm_stats_title",
+                users=len(await all_uids()), vip=len(vip_set),
+                blocked=len(blocked_set), dl=fmt(CFG.get("total_dl", 0)), uptime=uptime()
             )
             await q.edit_message_text(txt, reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton("🔄", callback_data="adm_stats")], *back(lang, "panel_admin")]
+                [[InlineKeyboardButton(tx(lang, "b_refresh"), callback_data="adm_stats")],
+                 *back(lang, "panel_admin")]
             )); return
 
         if data == "adm_broadcast":
             waiting_state[uid] = "broadcast_all"
             await q.edit_message_text(
-                "✍️ Send your message (text/photo/video):",
+                tx(lang, "adm_broadcast_ask"),
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="panel_admin")]])
             ); return
 
         if data == "adm_block":
             waiting_state[uid] = "action_blk_add"
             await q.edit_message_text(
-                f"🚫 Block User:\n\n{tx(lang, 'write_id')}",
+                tx(lang, "adm_block_ask", write_id=tx(lang, "write_id")),
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="panel_admin")]])
             ); return
 
         if data == "adm_userinfo":
             waiting_state[uid] = "action_info_check"
             await q.edit_message_text(
-                f"👤 User Info:\n\n{tx(lang, 'write_id')}",
+                tx(lang, "adm_info_ask", write_id=tx(lang, "write_id")),
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="panel_admin")]])
             ); return
 
@@ -687,17 +882,17 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if not is_super(uid): return
 
         if data == "panel_super":
-            maint = "🔴 ON" if CFG["maintenance"] else "🟢 OFF"
+            maint_status = tx(lang, "sup_maint_on") if CFG["maintenance"] else tx(lang, "sup_maint_off")
             kb = [
-                [InlineKeyboardButton("👮 Admins",                callback_data="sup_admins"),
-                 InlineKeyboardButton("💎 VIP",                   callback_data="sup_vips")],
-                [InlineKeyboardButton("📢 Channels",              callback_data="sup_channels"),
-                 InlineKeyboardButton(f"🛠 Maintenance: {maint}", callback_data="sup_toggle_maint")],
-                [InlineKeyboardButton("⚙️ API Settings",         callback_data="sup_api_settings"),
-                 InlineKeyboardButton("🌍 Bot Language",          callback_data="sup_bot_lang")],
+                [InlineKeyboardButton(tx(lang, "b_sup_admins"),   callback_data="sup_admins"),
+                 InlineKeyboardButton(tx(lang, "b_sup_vip"),      callback_data="sup_vips")],
+                [InlineKeyboardButton(tx(lang, "b_sup_channels"), callback_data="sup_channels"),
+                 InlineKeyboardButton(tx(lang, "b_sup_maint", status=maint_status), callback_data="sup_toggle_maint")],
+                [InlineKeyboardButton(tx(lang, "b_sup_api"),      callback_data="sup_api_settings"),
+                 InlineKeyboardButton(tx(lang, "b_sup_botlang"),  callback_data="sup_bot_lang")],
                 *back(lang),
             ]
-            await q.edit_message_text("🌌 Super Panel", reply_markup=InlineKeyboardMarkup(kb)); return
+            await q.edit_message_text(tx(lang, "sup_panel_title"), reply_markup=InlineKeyboardMarkup(kb)); return
 
         if data == "sup_toggle_maint":
             CFG["maintenance"] = not CFG["maintenance"]; await save_cfg()
@@ -707,7 +902,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             cur = LANG_NAMES.get(CFG.get("default_lang", "ku"), "?")
             kb  = bot_lang_select_buttons() + back(lang, "panel_super")
             await q.edit_message_text(
-                tx(lang, "bot_lang_title") + f"\n\n🔵 Current: {cur}",
+                tx(lang, "bot_lang_title") + "\n\n" + tx(lang, "bot_lang_current", cur=cur),
                 reply_markup=InlineKeyboardMarkup(kb)
             ); return
 
@@ -719,7 +914,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton(f"{'✅ ' if act=='hyper' else ''}Hyper API", callback_data="sup_setapi_hyper")],
                 *back(lang, "panel_super"),
             ]
-            await q.edit_message_text("⚙️ Choose API source:", reply_markup=InlineKeyboardMarkup(kb)); return
+            await q.edit_message_text(tx(lang, "sup_api_title"), reply_markup=InlineKeyboardMarkup(kb)); return
 
         if data.startswith("sup_setapi_"):
             CFG["active_api"] = data.split("_")[2]; await save_cfg()
@@ -727,68 +922,68 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         if data == "sup_admins":
             kb = [
-                [InlineKeyboardButton("➕ Add",    callback_data="sup_add_adm"),
-                 InlineKeyboardButton("➖ Remove", callback_data="sup_rm_adm")],
+                [InlineKeyboardButton(tx(lang, "b_add"),    callback_data="sup_add_adm"),
+                 InlineKeyboardButton(tx(lang, "b_remove"), callback_data="sup_rm_adm")],
                 *back(lang, "panel_super"),
             ]
-            await q.edit_message_text(f"👮 Admins: {len(admins_set)}", reply_markup=InlineKeyboardMarkup(kb)); return
+            await q.edit_message_text(tx(lang, "sup_admins_title", count=len(admins_set)), reply_markup=InlineKeyboardMarkup(kb)); return
 
         if data == "sup_add_adm":
             waiting_state[uid] = "action_adm_add"
             await q.edit_message_text(
-                f"➕ Add Admin:\n\n{tx(lang, 'write_id')}",
+                tx(lang, "sup_add_adm_ask", write_id=tx(lang, "write_id")),
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="sup_admins")]])
             ); return
 
         if data == "sup_rm_adm":
             waiting_state[uid] = "action_adm_rm"
             await q.edit_message_text(
-                f"➖ Remove Admin:\n\n{tx(lang, 'write_id')}",
+                tx(lang, "sup_rm_adm_ask", write_id=tx(lang, "write_id")),
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="sup_admins")]])
             ); return
 
         if data == "sup_vips":
             kb = [
-                [InlineKeyboardButton("➕ Add VIP",    callback_data="sup_add_vip"),
-                 InlineKeyboardButton("➖ Remove VIP", callback_data="sup_rm_vip")],
+                [InlineKeyboardButton(tx(lang, "b_add_vip"), callback_data="sup_add_vip"),
+                 InlineKeyboardButton(tx(lang, "b_rm_vip"),  callback_data="sup_rm_vip")],
                 *back(lang, "panel_super"),
             ]
-            await q.edit_message_text(f"💎 VIP count: {len(vip_set)}", reply_markup=InlineKeyboardMarkup(kb)); return
+            await q.edit_message_text(tx(lang, "sup_vip_title", count=len(vip_set)), reply_markup=InlineKeyboardMarkup(kb)); return
 
         if data == "sup_add_vip":
             waiting_state[uid] = "action_vip_add"
             await q.edit_message_text(
-                f"💎 Give VIP:\n\n{tx(lang, 'write_id')}",
+                tx(lang, "sup_add_vip_ask", write_id=tx(lang, "write_id")),
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="sup_vips")]])
             ); return
 
         if data == "sup_rm_vip":
             waiting_state[uid] = "action_vip_rm"
             await q.edit_message_text(
-                f"➖ Remove VIP:\n\n{tx(lang, 'write_id')}",
+                tx(lang, "sup_rm_vip_ask", write_id=tx(lang, "write_id")),
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="sup_vips")]])
             ); return
 
         if data == "sup_channels":
-            lst = "\n".join([f"• {c}" for c in channels_list]) or "📭 Empty"
+            lst = "\n".join([f"• {c}" for c in channels_list]) or tx(lang, "sup_ch_empty")
             kb = [
-                [InlineKeyboardButton("➕ Add",    callback_data="sup_add_ch"),
-                 InlineKeyboardButton("➖ Remove", callback_data="sup_rm_ch")],
+                [InlineKeyboardButton(tx(lang, "b_add"),    callback_data="sup_add_ch"),
+                 InlineKeyboardButton(tx(lang, "b_remove"), callback_data="sup_rm_ch")],
                 *back(lang, "panel_super"),
             ]
-            await q.edit_message_text(f"📢 Channels:\n{lst}", reply_markup=InlineKeyboardMarkup(kb)); return
+            await q.edit_message_text(tx(lang, "sup_ch_title", list=lst), reply_markup=InlineKeyboardMarkup(kb)); return
 
         if data == "sup_add_ch":
             waiting_state[uid] = "action_add_ch"
             await q.edit_message_text(
-                f"📢 Add Channel:\n\n{tx(lang, 'write_ch')}",
+                tx(lang, "sup_add_ch_ask", write_ch=tx(lang, "write_ch")),
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="sup_channels")]])
             ); return
 
         if data == "sup_rm_ch":
-            if not channels_list: await q.answer("📭 No channels!", show_alert=True); return
+            if not channels_list: await q.answer(tx(lang, "sup_ch_empty"), show_alert=True); return
             kb = [[InlineKeyboardButton(f"❌ {c}", callback_data=f"sup_delch_{c}")] for c in channels_list] + back(lang, "sup_channels")
-            await q.edit_message_text("Remove which channel?", reply_markup=InlineKeyboardMarkup(kb)); return
+            await q.edit_message_text(tx(lang, "sup_ch_remove_q"), reply_markup=InlineKeyboardMarkup(kb)); return
 
         if data.startswith("sup_delch_"):
             ch = data.split("_", 2)[2]
@@ -802,34 +997,34 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         if data == "panel_owner":
             kb = [
-                [InlineKeyboardButton("🌌 Super Admins",    callback_data="own_super_adms")],
-                [InlineKeyboardButton("🌍 Bot Language",    callback_data="own_bot_lang")],
-                [InlineKeyboardButton("📝 Welcome Message", callback_data="own_welcome")],
-                [InlineKeyboardButton("🗑 Reset Stats",     callback_data="own_reset_stats"),
-                 InlineKeyboardButton("💾 Backup",          callback_data="own_backup")],
+                [InlineKeyboardButton(tx(lang, "b_own_super"),   callback_data="own_super_adms")],
+                [InlineKeyboardButton(tx(lang, "b_own_botlang"), callback_data="own_bot_lang")],
+                [InlineKeyboardButton(tx(lang, "b_own_welcome"), callback_data="own_welcome")],
+                [InlineKeyboardButton(tx(lang, "b_own_reset"),   callback_data="own_reset_stats"),
+                 InlineKeyboardButton(tx(lang, "b_own_backup"),  callback_data="own_backup")],
                 *back(lang),
             ]
-            await q.edit_message_text("👑 Owner Panel", reply_markup=InlineKeyboardMarkup(kb)); return
+            await q.edit_message_text(tx(lang, "own_panel_title"), reply_markup=InlineKeyboardMarkup(kb)); return
 
         if data == "own_super_adms":
             kb = [
-                [InlineKeyboardButton("➕ Add",    callback_data="own_add_sup"),
-                 InlineKeyboardButton("➖ Remove", callback_data="own_rm_sup")],
+                [InlineKeyboardButton(tx(lang, "b_add"),    callback_data="own_add_sup"),
+                 InlineKeyboardButton(tx(lang, "b_remove"), callback_data="own_rm_sup")],
                 *back(lang, "panel_owner"),
             ]
-            await q.edit_message_text(f"🌌 Super Admins: {len(super_admins_set)}", reply_markup=InlineKeyboardMarkup(kb)); return
+            await q.edit_message_text(tx(lang, "own_super_title", count=len(super_admins_set)), reply_markup=InlineKeyboardMarkup(kb)); return
 
         if data == "own_add_sup":
             waiting_state[uid] = "action_sup_add"
             await q.edit_message_text(
-                f"➕ Add Super Admin:\n\n{tx(lang, 'write_id')}",
+                tx(lang, "own_add_sup_ask", write_id=tx(lang, "write_id")),
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="own_super_adms")]])
             ); return
 
         if data == "own_rm_sup":
             waiting_state[uid] = "action_sup_rm"
             await q.edit_message_text(
-                f"➖ Remove Super Admin:\n\n{tx(lang, 'write_id')}",
+                tx(lang, "own_rm_sup_ask", write_id=tx(lang, "write_id")),
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_cancel"), callback_data="own_super_adms")]])
             ); return
 
@@ -837,7 +1032,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             cur = LANG_NAMES.get(CFG.get("default_lang", "ku"), "?")
             kb  = bot_lang_select_buttons() + back(lang, "panel_owner")
             await q.edit_message_text(
-                tx(lang, "bot_lang_title") + f"\n\n🔵 Current: {cur}",
+                tx(lang, "bot_lang_title") + "\n\n" + tx(lang, "bot_lang_current", cur=cur),
                 reply_markup=InlineKeyboardMarkup(kb)
             ); return
 
@@ -846,7 +1041,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             await q.edit_message_text(
                 tx(lang, "write_welcome"),
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🗑 Clear", callback_data="own_clear_welcome")],
+                    [InlineKeyboardButton(tx(lang, "b_clear"), callback_data="own_clear_welcome")],
                     *back(lang, "panel_owner"),
                 ])
             ); return
@@ -857,10 +1052,10 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         if data == "own_reset_stats":
             for k in ("total_dl", "total_users"): CFG[k] = 0
-            await save_cfg(); await q.answer("✅ Stats reset!", show_alert=True); return
+            await save_cfg(); await q.answer(tx(lang, "own_reset_done"), show_alert=True); return
 
         if data == "own_backup":
-            await q.answer("⏳ Preparing...", show_alert=False)
+            await q.answer(tx(lang, "own_backup_prep"), show_alert=False)
             bdata = {"time": now_str(), "cfg": CFG, "users": await all_users_data()}
             bio   = io.BytesIO(json.dumps(bdata, ensure_ascii=False, indent=2).encode())
             bio.name = f"Backup_{now_str()}.json"
@@ -886,14 +1081,14 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
         if state.startswith("broadcast_"):
             all_u = await all_uids(); ok = fail = 0
-            st = await msg.reply_text(f"⏳ Sending to {len(all_u)} users...")
+            st = await msg.reply_text(tx(lang, "broadcast_sending", total=len(all_u)))
             for i, t in enumerate(all_u):
                 try:
                     await ctx.bot.copy_message(chat_id=t, from_chat_id=msg.chat_id, message_id=msg.message_id)
                     ok += 1; await asyncio.sleep(0.04)
                 except: fail += 1
                 if i % 100 == 0 and i > 0:
-                    try: await st.edit_text(f"⏳ {i}/{len(all_u)}...")
+                    try: await st.edit_text(tx(lang, "broadcast_progress", done=i, total=len(all_u)))
                     except: pass
             await st.edit_text(tx(lang, "broadcast_done", ok=ok, fail=fail)); return
 
@@ -903,10 +1098,10 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             if action == "add_ch":
                 ch = txt.strip()
                 if not ch.startswith("@") or len(ch) < 3:
-                    await msg.reply_text("❌ Wrong format! Use: @channelname"); return
+                    await msg.reply_text(tx(lang, "act_ch_wrong_fmt")); return
                 if ch not in channels_list:
                     channels_list.append(ch); await save_cfg()
-                await msg.reply_text(f"✅ {ch} added!"); return
+                await msg.reply_text(tx(lang, "sup_ch_added", ch=ch)); return
 
             if not txt.strip().isdigit():
                 await msg.reply_text(tx(lang, "invalid_id")); return
@@ -914,38 +1109,35 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
             if action == "blk_add":
                 blocked_set.add(tid); await save_cfg()
-                await msg.reply_text(f"🚫 {tid} blocked!")
+                await msg.reply_text(tx(lang, "act_blocked", id=tid))
             elif action == "info_check":
                 ud = await user_get(tid)
                 if not ud: await msg.reply_text(tx(lang, "user_not_found")); return
                 ulang_str = LANG_NAMES.get(ud.get("lang", "—"), ud.get("lang", "—"))
-                await msg.reply_text(
-                    f"👤 Name: {ud.get('name','—')}\n"
-                    f"🔗 User: @{ud.get('user','—')}\n"
-                    f"🆔 ID: {tid}\n"
-                    f"💎 VIP: {'Yes' if ud.get('vip') else 'No'}\n"
-                    f"🌍 Lang: {ulang_str}\n"
-                    f"📥 Downloads: {ud.get('dl', 0)}\n"
-                    f"📅 Joined: {ud.get('date','—')}"
-                )
+                vip_str   = tx(lang, "vip_yes") if ud.get("vip") else tx(lang, "vip_no")
+                await msg.reply_text(tx(lang, "userinfo_text",
+                    name=ud.get("name","—"), user=ud.get("user","—"),
+                    id=tid, vip=vip_str, lang=ulang_str,
+                    dl=ud.get("dl", 0), date=ud.get("date","—")
+                ))
             elif action == "adm_add":
                 admins_set.add(tid); await save_cfg()
-                await msg.reply_text(f"✅ {tid} is now Admin!")
+                await msg.reply_text(tx(lang, "act_adm_added", id=tid))
             elif action == "adm_rm":
                 admins_set.discard(tid); await save_cfg()
-                await msg.reply_text(f"➖ {tid} removed from Admin.")
+                await msg.reply_text(tx(lang, "act_adm_removed", id=tid))
             elif action == "sup_add":
                 super_admins_set.add(tid); admins_set.add(tid); await save_cfg()
-                await msg.reply_text(f"🌌 {tid} is now Super Admin!")
+                await msg.reply_text(tx(lang, "act_sup_added", id=tid))
             elif action == "sup_rm":
                 super_admins_set.discard(tid); await save_cfg()
-                await msg.reply_text(f"➖ {tid} removed from Super Admin.")
+                await msg.reply_text(tx(lang, "act_sup_removed", id=tid))
             elif action == "vip_add":
                 vip_set.add(tid); await user_field(tid, "vip", True); await save_cfg()
-                await msg.reply_text(f"💎 {tid} is now VIP!")
+                await msg.reply_text(tx(lang, "act_vip_added", id=tid))
             elif action == "vip_rm":
                 vip_set.discard(tid); await user_field(tid, "vip", False); await save_cfg()
-                await msg.reply_text(f"➖ VIP removed from {tid}.")
+                await msg.reply_text(tx(lang, "act_vip_removed", id=tid))
             return
 
     # ── TikTok Link ────────────────────────────────────────────────────────────
