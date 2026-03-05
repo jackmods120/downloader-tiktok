@@ -75,7 +75,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ زمانی سەرەکی بۆتەکە گۆڕدرا بۆ: {lang}",
     "force_join"      : "🔒 جۆینی ناچاری\nتکایە سەرەتا ئەم چەناڵانە جۆین بکە، پاشان کلیک لە '✅ جۆینم کرد' بکە:",
     "processing"      : "🔍 دەگەڕێم بۆ لینکەکە...\nچەند چرکەیەک چاوەڕێبە ⏳",
-    "found"           : "✅ دۆزرایەوە!\n\n📝 سەردێڕ: {title}\n👤 خاوەن: {owner}\n\n📊 ئامارەکان:\n👁 بینەر: {views}  \n❤️ لایک: {likes}  \n💬 کۆمێنت: {comments}\n\n👇 جۆری دابەزاندن هەڵبژێرە:",
+    "found"           : "✅ دۆزرایەوە!\n\n📝 سەردێڕ: {title}\n👤 خاوەن: {owner}\n\n📊 ئامارەکان:\n👁 بینەر: {views}  ❤️ لایک: {likes}  💬 کۆمێنت: {comments}",
     "sending_photos"  : "📸 وێنەکان ئامادە دەکرێن...",
     "blocked_msg"     : "⛔ تۆ بلۆک کراویت.",
     "maintenance_msg" : "🛠 چاکسازی کاتی!\n\n⚙️ بۆتەکەمان لە ژێر نوێکردنەوەیەکی گەورەدایە.\n⏳ زووترین کاتێکدا دەگەڕێینەوە!\n\n📩 پەیوەندی: {dev}",
@@ -209,7 +209,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ Bot default language changed to: {lang}",
     "force_join"      : "🔒 Forced Join\nPlease join the channels below first, then click '✅ I Joined':",
     "processing"      : "🔍 Fetching your link...\nPlease wait a few seconds ⏳",
-    "found"           : "✅ Found!\n\n📝 Title: {title}\n👤 Author: {owner}\n\n📊 Stats:\n👁 Views: {views}  ❤️ Likes: {likes}  💬 Comments: {comments}\n\n👇 Choose download type:",
+    "found"           : "✅ Found!\n\n📝 Title: {title}\n👤 Author: {owner}\n\n📊 Stats:\n👁 Views: {views}  ❤️ Likes: {likes}  💬 Comments: {comments}",
     "sending_photos"  : "📸 Preparing photos...",
     "blocked_msg"     : "⛔ You have been blocked.",
     "maintenance_msg" : "🛠 Maintenance Mode!\n\n⚙️ The bot is under a major update.\n⏳ We'll be back soon!\n\n📩 Contact: {dev}",
@@ -343,7 +343,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ تم تغيير لغة البوت إلى: {lang}",
     "force_join"      : "🔒 انضمام إجباري\nالرجاء الانضمام للقنوات أدناه أولاً، ثم اضغط '✅ انضممت':",
     "processing"      : "🔍 جارٍ البحث عن الرابط...\nانتظر لحظة ⏳",
-    "found"           : "✅ تم الإيجاد!\n\n📝 العنوان: {title}\n👤 المالك: {owner}\n\n📊 الإحصائيات:\n👁 مشاهدة: {views}  ❤️ إعجاب: {likes}  💬 تعليق: {comments}\n\n👇 اختر نوع التحميل:",
+    "found"           : "✅ تم الإيجاد!\n\n📝 العنوان: {title}\n👤 المالك: {owner}\n\n📊 الإحصائيات:\n👁 مشاهدة: {views}  ❤️ إعجاب: {likes}  💬 تعليق: {comments}",
     "sending_photos"  : "📸 جارٍ تجهيز الصور...",
     "blocked_msg"     : "⛔ أنت محظور.",
     "maintenance_msg" : "🛠 وضع الصيانة!\n\n⚙️ البوت تحت تحديث كبير.\n⏳ سنعود قريباً!\n\n📩 تواصل: {dev}",
@@ -1373,28 +1373,51 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             likes=fmt(data["likes"]),
             comments=fmt(data["comments"]),
         )
-        kb = [
-            [InlineKeyboardButton(tx(lang, "b_photos", n=len(data["images"])), callback_data="dl_photo")]
-            if photo_post else
-            [InlineKeyboardButton(tx(lang, "b_video"), callback_data="dl_video")],
-            [InlineKeyboardButton(tx(lang, "b_audio"),  callback_data="dl_audio")],
-            [InlineKeyboardButton(tx(lang, "b_delete"), callback_data="close")],
-        ]
-        markup    = InlineKeyboardMarkup(kb)
-        cover_url = data.get("cover", "")
+        del_kb = InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_delete"), callback_data="close")]])
+        audio_cap = f"🎵 {html.escape(clean_title(data['title']))}\n👤 {html.escape(data['creator'])}"
 
-        if cover_url and cover_url.startswith("http"):
-            try:
-                await status.delete()
-                await msg.reply_photo(photo=cover_url, caption=caption, parse_mode="HTML", reply_markup=markup)
-            except:
-                await msg.reply_text(caption, parse_mode="HTML", reply_markup=markup)
+        try: await status.delete()
+        except: pass
+
+        if photo_post:
+            # Photo post: send photos then audio
+            imgs = data["images"]
+            w = await ctx.bot.send_message(uid, tx(lang, "sending_photos"))
+            for i in range(0, min(len(imgs), int(CFG.get("max_photos", 15))), 10):
+                chunk = imgs[i:i+10]
+                media = [InputMediaPhoto(u) for u in chunk]
+                if i == 0: media[0].caption = caption; media[0].parse_mode = "HTML"
+                try: await ctx.bot.send_media_group(uid, media)
+                except:
+                    for u in chunk:
+                        try: await ctx.bot.send_photo(uid, u)
+                        except: pass
+                await asyncio.sleep(1)
+            try: await w.delete()
+            except: pass
         else:
-            await status.edit_text(caption, parse_mode="HTML", reply_markup=markup)
+            # Video post: send video with caption first
+            vurl = data.get("video_url")
+            if vurl:
+                try: await ctx.bot.send_video(uid, vurl, caption=caption, parse_mode="HTML", reply_markup=del_kb)
+                except: await ctx.bot.send_message(uid, f"{caption}\n📥 <a href='{vurl}'>Link</a>", parse_mode="HTML", reply_markup=del_kb)
+            else:
+                await ctx.bot.send_message(uid, caption, parse_mode="HTML", reply_markup=del_kb)
+
+        # Send audio (no caption)
+        aurl = data.get("audio_url")
+        if aurl:
+            try: await ctx.bot.send_audio(uid, aurl, title="TikTok Audio", performer="TikTok", reply_markup=del_kb)
+            except: pass
+
+        CFG["total_dl"] = CFG.get("total_dl", 0) + 1
+        await save_cfg()
+        ud = await user_get(uid) or {}
+        await user_field(uid, "dl", ud.get("dl", 0) + 1)
 
     except Exception as e:
         log.error(f"Download Error: {e}")
-        try: await status.edit_text(tx(lang, "dl_fail"))
+        try: await ctx.bot.send_message(uid, tx(lang, "dl_fail"))
         except: pass
 
 # ==============================================================================
