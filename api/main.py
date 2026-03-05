@@ -75,7 +75,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ زمانی سەرەکی بۆتەکە گۆڕدرا بۆ: {lang}",
     "force_join"      : "🔒 جۆینی ناچاری\nتکایە سەرەتا ئەم چەناڵانە جۆین بکە، پاشان کلیک لە '✅ جۆینم کرد' بکە:",
     "processing"      : "🔍 دەگەڕێم بۆ لینکەکە...\nچەند چرکەیەک چاوەڕێبە ⏳",
-    "found"           : "✅ دۆزرایەوە!\n\n📝 سەردێڕ: {title}\n👤 خاوەن: {owner}\n\n📊 ئامارەکان:\n👁 بینەر: {views}  ❤️ لایک: {likes}  💬 کۆمێنت: {comments}",
+    "found"           : "✅ دۆزرایەوە!\n\n📝 سەردێڕ: {title}\n👤 خاوەن: {owner}\n\n📊 ئامارەکان:\n👁 بینەر: {views}  \n❤️ لایک: {likes}  \n💬 کۆمێنت: {comments}",
     "sending_photos"  : "📸 وێنەکان ئامادە دەکرێن...",
     "blocked_msg"     : "⛔ تۆ بلۆک کراویت.",
     "maintenance_msg" : "🛠 چاکسازی کاتی!\n\n⚙️ بۆتەکەمان لە ژێر نوێکردنەوەیەکی گەورەدایە.\n⏳ زووترین کاتێکدا دەگەڕێینەوە!\n\n📩 پەیوەندی: {dev}",
@@ -209,7 +209,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ Bot default language changed to: {lang}",
     "force_join"      : "🔒 Forced Join\nPlease join the channels below first, then click '✅ I Joined':",
     "processing"      : "🔍 Fetching your link...\nPlease wait a few seconds ⏳",
-    "found"           : "✅ Found!\n\n📝 Title: {title}\n👤 Author: {owner}\n\n📊 Stats:\n👁 Views: {views}  ❤️ Likes: {likes}  💬 Comments: {comments}",
+    "found"           : "✅ Found!\n\n📝 Title: {title}\n👤 Author: {owner}\n\n📊 Stats:\n👁 Views: {views}  \n❤️ Likes: {likes}  \n💬 Comments: {comments}",
     "sending_photos"  : "📸 Preparing photos...",
     "blocked_msg"     : "⛔ You have been blocked.",
     "maintenance_msg" : "🛠 Maintenance Mode!\n\n⚙️ The bot is under a major update.\n⏳ We'll be back soon!\n\n📩 Contact: {dev}",
@@ -343,7 +343,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ تم تغيير لغة البوت إلى: {lang}",
     "force_join"      : "🔒 انضمام إجباري\nالرجاء الانضمام للقنوات أدناه أولاً، ثم اضغط '✅ انضممت':",
     "processing"      : "🔍 جارٍ البحث عن الرابط...\nانتظر لحظة ⏳",
-    "found"           : "✅ تم الإيجاد!\n\n📝 العنوان: {title}\n👤 المالك: {owner}\n\n📊 الإحصائيات:\n👁 مشاهدة: {views}  ❤️ إعجاب: {likes}  💬 تعليق: {comments}",
+    "found"           : "✅ تم الإيجاد!\n\n📝 العنوان: {title}\n👤 المالك: {owner}\n\n📊 الإحصائيات:\n👁 مشاهدة: {views}  \n❤️ إعجاب: {likes}  \n💬 تعليق: {comments}",
     "sending_photos"  : "📸 جارٍ تجهيز الصور...",
     "blocked_msg"     : "⛔ أنت محظور.",
     "maintenance_msg" : "🛠 وضع الصيانة!\n\n⚙️ البوت تحت تحديث كبير.\n⏳ سنعود قريباً!\n\n📩 تواصل: {dev}",
@@ -1373,7 +1373,6 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             likes=fmt(data["likes"]),
             comments=fmt(data["comments"]),
         )
-        del_kb = InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_delete"), callback_data="close")]])
         audio_cap = f"🎵 {html.escape(clean_title(data['title']))}\n👤 {html.escape(data['creator'])}"
 
         try: await status.delete()
@@ -1396,18 +1395,18 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             try: await w.delete()
             except: pass
         else:
-            # Video post: send video with caption first
+            # Video post: send video with caption, no delete button
             vurl = data.get("video_url")
             if vurl:
-                try: await ctx.bot.send_video(uid, vurl, caption=caption, parse_mode="HTML", reply_markup=del_kb)
-                except: await ctx.bot.send_message(uid, f"{caption}\n📥 <a href='{vurl}'>Link</a>", parse_mode="HTML", reply_markup=del_kb)
+                try: await ctx.bot.send_video(uid, vurl, caption=caption, parse_mode="HTML")
+                except: await ctx.bot.send_message(uid, f"{caption}\n📥 <a href='{vurl}'>Link</a>", parse_mode="HTML")
             else:
-                await ctx.bot.send_message(uid, caption, parse_mode="HTML", reply_markup=del_kb)
+                await ctx.bot.send_message(uid, caption, parse_mode="HTML")
 
-        # Send audio (no caption)
+        # Send audio without caption and without delete button
         aurl = data.get("audio_url")
         if aurl:
-            try: await ctx.bot.send_audio(uid, aurl, title="TikTok Audio", performer="TikTok", reply_markup=del_kb)
+            try: await ctx.bot.send_audio(uid, aurl, title="TikTok Audio", performer="TikTok")
             except: pass
 
         CFG["total_dl"] = CFG.get("total_dl", 0) + 1
