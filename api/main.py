@@ -75,7 +75,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ زمانی سەرەکی بۆتەکە گۆڕدرا بۆ: {lang}",
     "force_join"      : "🔒 جۆینی ناچاری\nتکایە سەرەتا ئەم چەناڵانە جۆین بکە، پاشان کلیک لە '✅ جۆینم کرد' بکە:",
     "processing"      : "🔍 دەگەڕێم بۆ لینکەکە...\nچەند چرکەیەک چاوەڕێبە ⏳",
-    "found"           : "✅ دۆزرایەوە!\n\n📝 سەردێڕ: {title}\n👤 خاوەن: {owner}\n\n📊 ئامارەکان:\n👁 بینەر: {views}  \n❤️ لایک: {likes}  \n💬 کۆمێنت: {comments}",
+    "found"           : "📝 سەردێڕ: {title}\n👤 خاوەن: {owner}\n\n📊 ئامارەکان:\n👁 بینەر: {views}  \n❤️ لایک: {likes}  \n💬 کۆمێنت: {comments}",
     "sending_photos"  : "📸 وێنەکان ئامادە دەکرێن...",
     "blocked_msg"     : "⛔ تۆ بلۆک کراویت.",
     "maintenance_msg" : "🛠 چاکسازی کاتی!\n\n⚙️ بۆتەکەمان لە ژێر نوێکردنەوەیەکی گەورەدایە.\n⏳ زووترین کاتێکدا دەگەڕێینەوە!\n\n📩 پەیوەندی: {dev}",
@@ -209,7 +209,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ Bot default language changed to: {lang}",
     "force_join"      : "🔒 Forced Join\nPlease join the channels below first, then click '✅ I Joined':",
     "processing"      : "🔍 Fetching your link...\nPlease wait a few seconds ⏳",
-    "found"           : "✅ Found!\n\n📝 Title: {title}\n👤 Author: {owner}\n\n📊 Stats:\n👁 Views: {views}  \n❤️ Likes: {likes}  \n💬 Comments: {comments}",
+    "found"           : "📝 Title: {title}\n👤 Author: {owner}\n\n📊 Stats:\n👁 Views: {views}  \n❤️ Likes: {likes}  \n💬 Comments: {comments}",
     "sending_photos"  : "📸 Preparing photos...",
     "blocked_msg"     : "⛔ You have been blocked.",
     "maintenance_msg" : "🛠 Maintenance Mode!\n\n⚙️ The bot is under a major update.\n⏳ We'll be back soon!\n\n📩 Contact: {dev}",
@@ -343,7 +343,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ تم تغيير لغة البوت إلى: {lang}",
     "force_join"      : "🔒 انضمام إجباري\nالرجاء الانضمام للقنوات أدناه أولاً، ثم اضغط '✅ انضممت':",
     "processing"      : "🔍 جارٍ البحث عن الرابط...\nانتظر لحظة ⏳",
-    "found"           : "✅ تم الإيجاد!\n\n📝 العنوان: {title}\n👤 المالك: {owner}\n\n📊 الإحصائيات:\n👁 مشاهدة: {views}  \n❤️ إعجاب: {likes}  \n💬 تعليق: {comments}",
+    "found"           : "📝 العنوان: {title}\n👤 المالك: {owner}\n\n📊 الإحصائيات:\n👁 مشاهدة: {views}  \n❤️ إعجاب: {likes}  \n💬 تعليق: {comments}",
     "sending_photos"  : "📸 جارٍ تجهيز الصور...",
     "blocked_msg"     : "⛔ أنت محظور.",
     "maintenance_msg" : "🛠 وضع الصيانة!\n\n⚙️ البوت تحت تحديث كبير.\n⏳ سنعود قريباً!\n\n📩 تواصل: {dev}",
@@ -1356,10 +1356,26 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         kb.append([InlineKeyboardButton(tx(lang, "b_joined"), callback_data="check_join_btn")])
         await msg.reply_text(tx(lang, "force_join"), reply_markup=InlineKeyboardMarkup(kb)); return
 
-    status = await msg.reply_text(tx(lang, "processing"))
+    async def animated_progress(status_msg):
+        frames = [
+            "⬜⬜⬜⬜⬜",
+            "⬛⬜⬜⬜⬜",
+            "⬛⬛⬜⬜⬜",
+            "⬛⬛⬛⬜⬜",
+            "⬛⬛⬛⬛⬜",
+            "⬛⬛⬛⬛⬛",
+        ]
+        for frame in frames:
+            try: await status_msg.edit_text(f"🔍 {frame}")
+            except: pass
+            await asyncio.sleep(0.4)
+
+    status = await msg.reply_text("🔍 ⬜⬜⬜⬜⬜")
+    progress_task = asyncio.create_task(animated_progress(status))
 
     try:
         data = await fetch_tiktok(txt)
+        progress_task.cancel()
         if not data:
             await status.edit_text(tx(lang, "invalid_link")); return
 
@@ -1415,8 +1431,9 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await user_field(uid, "dl", ud.get("dl", 0) + 1)
 
     except Exception as e:
+        progress_task.cancel()
         log.error(f"Download Error: {e}")
-        try: await ctx.bot.send_message(uid, tx(lang, "dl_fail"))
+        try: await status.edit_text(tx(lang, "dl_fail"))
         except: pass
 
 # ==============================================================================
