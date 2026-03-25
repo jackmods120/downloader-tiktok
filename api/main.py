@@ -1,21 +1,10 @@
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║                                                                          ║
-# ║    ██╗ █████╗  ██████╗██╗  ██╗    ████████╗██╗██╗  ██╗                  ║
-# ║    ██║██╔══██╗██╔════╝██║ ██╔╝    ╚══██╔══╝██║██║ ██╔╝                  ║
-# ║    ██║███████║██║     █████╔╝        ██║   ██║█████╔╝                   ║
-# ║ ██ ██║██╔══██║██║     ██╔═██╗        ██║   ██║██╔═██╗                   ║
-# ║ ╚█████╔╝██║  ██║╚██████╗██║  ██╗    ██║   ██║██║  ██╗                  ║
-# ║  ╚════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝  ╚═╝                  ║
-# ║                                                                          ║
-# ║   Version  : v14.0 ULTRA PRO MAX                                         ║
-# ║   Owner    : @j4ck_721s                                                  ║
-# ║   Channel  : @jack_721_mod                                               ║
-# ║   Features : 3-Language · Unified Panel · Auto-Fallback · VIP System     ║
-# ║   Engine   : FastAPI + python-telegram-bot + Firebase                    ║
-# ║                                                                          ║
-# ║   ⚠️  All rights reserved. Unauthorized redistribution is prohibited.    ║
-# ║                                                                          ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
+# ==============================================================================
+# ==                                                                          ==
+# ==           TIKTOK DOWNLOADER BOT - V14.0 ULTRA PRO MAX (GOD MODE)         ==
+# ==           Developed exclusively for: @j4ck_721s                          ==
+# ==           Features: 3-Language, Unified Panel, Auto-Fallback             ==
+# ==                                                                          ==
+# ==============================================================================
 
 import os, time, logging, httpx, re, html, asyncio, json, io, traceback
 from datetime import datetime
@@ -47,18 +36,6 @@ SESSION_TTL  = 1800
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 log = logging.getLogger(__name__)
 app = FastAPI()
-
-# ── Startup Banner ─────────────────────────────────────────────────────────────
-_BANNER = """
-╔══════════════════════════════════════════════╗
-║   🎯  JackTik Bot  ·  v14.0 Ultra Pro Max    ║
-║   👑  Owner  : @j4ck_721s                    ║
-║   📢  Channel: @jack_721_mod                 ║
-║   ⚡  Engine : FastAPI · PTB · Firebase      ║
-╚══════════════════════════════════════════════╝"""
-
-for _line in _BANNER.strip().splitlines():
-    log.info(_line)
 
 super_admins_set : set  = {OWNER_ID}
 admins_set       : set  = {OWNER_ID}
@@ -782,41 +759,6 @@ async def cmd_ping(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if is_owner(update.effective_user.id):
         await update.message.reply_text("✅ PONG! Bot is alive.")
 
-async def cmd_version(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Show bot version and ownership info"""
-    uid = update.effective_user.id
-    if not is_admin(uid): return
-    uptime_sec = int(time.time() - START_TIME)
-    h, rem = divmod(uptime_sec, 3600)
-    m, s = divmod(rem, 60)
-    uptime_str = f"{h}h {m}m {s}s"
-    text = (
-        "<b>🤖 JackTik Bot — System Info</b>
-"
-        "━━━━━━━━━━━━━━━━━━━━━━━━
-"
-        "📦 Version  : <code>v14.0 ULTRA PRO MAX</code>
-"
-        "👑 Owner    : <a href='https://t.me/j4ck_721s'>@j4ck_721s</a>
-"
-        "📢 Channel  : <a href='https://t.me/jack_721_mod'>@jack_721_mod</a>
-"
-        "━━━━━━━━━━━━━━━━━━━━━━━━
-"
-        f"⏱ Uptime   : <code>{uptime_str}</code>
-"
-        f"📥 Downloads: <code>{CFG.get('total_dl', 0):,}</code>
-"
-        f"👥 Users    : <code>{CFG.get('total_users', 0):,}</code>
-"
-        "━━━━━━━━━━━━━━━━━━━━━━━━
-"
-        "⚙️ Engine   : FastAPI · PTB 21 · Firebase
-"
-        "🌍 Languages: کوردی · English · العربية"
-    )
-    await update.message.reply_text(text, parse_mode="HTML", disable_web_page_preview=True)
-
 # ── Main Callback Handler ──────────────────────────────────────────────────────
 async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     q    = update.callback_query
@@ -923,7 +865,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         sess = await session_get(uid)
         if not sess: await q.answer(tx(lang, "session_expired"), show_alert=True); return
 
-        cap    = f"🎬 {html.escape(sess.get('title',''))}\n👤 {html.escape(sess.get('creator',''))}\n\n━━━━━━━━━━━━━\n🤖 @{ctx.bot.username}  |  👑 @j4ck_721s"
+        cap    = f"🎬 {html.escape(sess.get('title',''))}\n👤 {html.escape(sess.get('creator',''))}\n\n🤖 @{ctx.bot.username}"
         del_kb = InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_delete"), callback_data="close")]])
 
         if data == "dl_photo":
@@ -1495,33 +1437,12 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         except: pass
 
 # ==============================================================================
-# ── 7. COPYRIGHT & OWNERSHIP ──────────────────────────────────────────────────
-# ==============================================================================
-#
-#   ██████╗  ██████╗ ██████╗ ██╗   ██╗██████╗  ██╗ ██████╗ ██╗  ██╗████████╗
-#  ██╔════╝ ██╔═══██╗██╔══██╗╚██╗ ██╔╝██╔══██╗██╔╝██╔════╝ ██║  ██║╚══██╔══╝
-#  ██║      ██║   ██║██████╔╝ ╚████╔╝ ██████╔╝██╔╝██║  ███╗███████║   ██║   
-#  ██║      ██║   ██║██╔═══╝   ╚██╔╝  ██╔══██╗╚██╗██║   ██║██╔══██║   ██║   
-#  ╚██████╗ ╚██████╔╝██║        ██║   ██║  ██║ ╚██╗╚██████╔╝██║  ██║   ██║   
-#   ╚═════╝  ╚═════╝ ╚═╝        ╚═╝   ╚═╝  ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   
-#
-#   © 2025 - 2026  All Rights Reserved
-#   Developer  : @j4ck_721s  (Telegram)
-#   Channel    : @jack_721_mod
-#   Version    : v14.0 ULTRA PRO MAX
-#
-#   This source code is the exclusive intellectual property of @j4ck_721s.
-#   Redistribution, reselling, or re-branding without written permission
-#   from the original author is strictly prohibited.
-#
-# ==============================================================================
-# ── 8. FASTAPI WEBHOOK ────────────────────────────────────────────────────────
+# ── 7. FASTAPI WEBHOOK ────────────────────────────────────────────────────────
 # ==============================================================================
 _token = TOKEN if TOKEN != "DUMMY_TOKEN" else "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
 ptb = ApplicationBuilder().token(_token).build()
 ptb.add_handler(CommandHandler(["start", "menu"], cmd_start))
 ptb.add_handler(CommandHandler("ping", cmd_ping))
-ptb.add_handler(CommandHandler("version", cmd_version))
 ptb.add_handler(CallbackQueryHandler(on_callback))
 ptb.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, on_message))
 
@@ -1566,13 +1487,6 @@ async def health_check():
             <li>DB_SECRET: {s}</li>
         </ul>
         <p style="color:red">ئەگەر ❌ بوو، بڕۆ Vercel → Settings → Environment Variables</p>
-        <hr style="margin:20px 0;border:none;border-top:1px solid #eee">
-        <p style="color:#888;font-size:13px;text-align:center">
-            🤖 JackTik Bot &nbsp;·&nbsp; Developed by 
-            <a href="https://t.me/j4ck_721s" style="color:#FF6B35;text-decoration:none">@j4ck_721s</a>
-            &nbsp;·&nbsp;
-            <a href="https://t.me/jack_721_mod" style="color:#FF6B35;text-decoration:none">@jack_721_mod</a>
-        </p>
     </div></body></html>
     """
     return HTMLResponse(content=html_content)
