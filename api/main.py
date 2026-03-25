@@ -81,7 +81,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ زمانی سەرەکی بۆتەکە گۆڕدرا بۆ: {lang}",
     "force_join"      : "🔒 جۆینی ناچاری\nتکایە سەرەتا ئەم چەناڵانە جۆین بکە، پاشان کلیک لە '✅ جۆینم کرد' بکە:",
     "processing"      : "🔍 دەگەڕێم بۆ لینکەکە...\nچەند چرکەیەک چاوەڕێبە ⏳",
-    "found"           : "📝 سەردێڕ: {title}\n👤 خاوەن: {owner}\n\n📊 ئامارەکان:\n👁 بینەر: {views}  \n❤️ لایک: {likes}  \n💬 کۆمێنت: {comments}\n\n🤖 @j4ck_721s",
+    "found"           : "📝 سەردێڕ: {title}\n👤 خاوەن: {owner}\n\n📊 ئامارەکان:\n👁 بینەر: {views}  \n❤️ لایک: {likes}  \n💬 کۆمێنت: {comments}\n\n🔗 <a href=\"https://t.me/TikTok_Downloader_Jack_Robot\">دروستکردنی لینک</a>",
     "sending_photos"  : "📸 وێنەکان ئامادە دەکرێن...",
     "blocked_msg"     : "⛔ تۆ بلۆک کراویت.",
     "maintenance_msg" : "🛠 چاکسازی کاتی!\n\n⚙️ بۆتەکەمان لە ژێر نوێکردنەوەیەکی گەورەدایە.\n⏳ زووترین کاتێکدا دەگەڕێینەوە!\n\n📩 پەیوەندی: {dev}",
@@ -215,7 +215,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ Bot default language changed to: {lang}",
     "force_join"      : "🔒 Forced Join\nPlease join the channels below first, then click '✅ I Joined':",
     "processing"      : "🔍 Fetching your link...\nPlease wait a few seconds ⏳",
-    "found"           : "📝 Title: {title}\n👤 Author: {owner}\n\n📊 Stats:\n👁 Views: {views}  \n❤️ Likes: {likes}  \n💬 Comments: {comments}\n\n🤖 @j4ck_721s",
+    "found"           : "📝 Title: {title}\n👤 Author: {owner}\n\n📊 Stats:\n👁 Views: {views}  \n❤️ Likes: {likes}  \n💬 Comments: {comments}\n\n🔗 <a href=\"https://t.me/TikTok_Downloader_Jack_Robot\">Create Link</a>",
     "sending_photos"  : "📸 Preparing photos...",
     "blocked_msg"     : "⛔ You have been blocked.",
     "maintenance_msg" : "🛠 Maintenance Mode!\n\n⚙️ The bot is under a major update.\n⏳ We'll be back soon!\n\n📩 Contact: {dev}",
@@ -349,7 +349,7 @@ L: dict = {
     "bot_lang_saved"  : "✅ تم تغيير لغة البوت إلى: {lang}",
     "force_join"      : "🔒 انضمام إجباري\nالرجاء الانضمام للقنوات أدناه أولاً، ثم اضغط '✅ انضممت':",
     "processing"      : "🔍 جارٍ البحث عن الرابط...\nانتظر لحظة ⏳",
-    "found"           : "📝 العنوان: {title}\n👤 المالك: {owner}\n\n📊 الإحصائيات:\n👁 مشاهدة: {views}  \n❤️ إعجاب: {likes}  \n💬 تعليق: {comments}\n\n🤖 @j4ck_721s",
+    "found"           : "📝 العنوان: {title}\n👤 المالك: {owner}\n\n📊 الإحصائيات:\n👁 مشاهدة: {views}  \n❤️ إعجاب: {likes}  \n💬 تعليق: {comments}\n\n🔗 <a href=\"https://t.me/TikTok_Downloader_Jack_Robot\">إنشاء رابط</a>",
     "sending_photos"  : "📸 جارٍ تجهيز الصور...",
     "blocked_msg"     : "⛔ أنت محظور.",
     "maintenance_msg" : "🛠 وضع الصيانة!\n\n⚙️ البوت تحت تحديث كبير.\n⏳ سنعود قريباً!\n\n📩 تواصل: {dev}",
@@ -871,7 +871,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         sess = await session_get(uid)
         if not sess: await q.answer(tx(lang, "session_expired"), show_alert=True); return
 
-        cap    = f"🎬 {html.escape(sess.get('title',''))}\n👤 {html.escape(sess.get('creator',''))}\n\n🤖 @{ctx.bot.username}  |  👑 @j4ck_721s"
+        cap    = f"🎬 {html.escape(sess.get('title',''))}\n👤 {html.escape(sess.get('creator',''))}\n\n🔗 <a href='https://t.me/TikTok_Downloader_Jack_Robot'>Create Link</a>"
         del_kb = InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_delete"), callback_data="close")]])
 
         if data == "dl_photo":
