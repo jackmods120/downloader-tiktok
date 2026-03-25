@@ -1,10 +1,16 @@
-# ==============================================================================
-# ==                                                                          ==
-# ==           TIKTOK DOWNLOADER BOT - V14.0 ULTRA PRO MAX (GOD MODE)         ==
-# ==           Developed exclusively for: @j4ck_721s                          ==
-# ==           Features: 3-Language, Unified Panel, Auto-Fallback             ==
-# ==                                                                          ==
-# ==============================================================================
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║   ░░░░░░░  ██╗ █████╗  ██████╗██╗  ██╗    ████████╗██╗██╗  ██╗  ░░░░░░  ║
+# ║   ░░░░░░░  ██║██╔══██╗██╔════╝██║ ██╔╝    ╚══██╔══╝██║██║ ██╔╝  ░░░░░░  ║
+# ║   ░░░░░░░  ██║███████║██║     █████╔╝        ██║   ██║█████╔╝   ░░░░░░  ║
+# ║   ░░░░░░   ██║██╔══██║██║     ██╔═██╗        ██║   ██║██╔═██╗   ░░░░░░  ║
+# ║   ░░░░░░   ██║██║  ██║╚██████╗██║  ██╗       ██║   ██║██║  ██╗  ░░░░░░  ║
+# ║   ░░░░░░   ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝       ╚═╝   ╚═╝╚═╝  ╚═╝  ░░░░░░  ║
+# ╠══════════════════════════════════════════════════════════════════════════╣
+# ║  Version  : v14.0 ULTRA PRO MAX                                          ║
+# ║  Owner    : @j4ck_721s          Channel : @jack_721_mod                  ║
+# ║  Stack    : FastAPI · python-telegram-bot · Firebase · Vercel            ║
+# ║  © 2025-2026  All rights reserved — Unauthorized resale is prohibited    ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
 
 import os, time, logging, httpx, re, html, asyncio, json, io, traceback
 from datetime import datetime
@@ -865,7 +871,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         sess = await session_get(uid)
         if not sess: await q.answer(tx(lang, "session_expired"), show_alert=True); return
 
-        cap    = f"🎬 {html.escape(sess.get('title',''))}\n👤 {html.escape(sess.get('creator',''))}\n\n🤖 @{ctx.bot.username}"
+        cap    = f"🎬 {html.escape(sess.get('title',''))}\n👤 {html.escape(sess.get('creator',''))}\n\n🤖 @{ctx.bot.username}  |  👑 @j4ck_721s"
         del_kb = InlineKeyboardMarkup([[InlineKeyboardButton(tx(lang, "b_delete"), callback_data="close")]])
 
         if data == "dl_photo":
