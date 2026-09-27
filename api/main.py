@@ -139,7 +139,8 @@ L["ku"] = {
         "<b>٣</b> · چەند چرکەیەک چاوەڕێ بکە — ئامادەیە ⚡\n\n"
         "<blockquote>🎬 ڤیدیۆ — بێ لۆگۆ و بە کوالێتی بەرز\n"
         "🖼 وێنە — هەموو وێنەکانی پۆستەکە وەک ئەلبوم\n"
-        "🎵 گۆرانی — دوگمەی <b>MP3</b> لە ژێر ڤیدیۆکە</blockquote>\n"
+        "🎵 گۆرانی — دوگمەی <b>MP3</b> لە ژێر ڤیدیۆکە\n"
+        "👤 پرۆفایل — یوزەرنەیمێک بنێرە بۆ وەرگرتنی وێنەی پرۆفایل بە HD</blockquote>\n"
         "💎 <b>VIP</b> — بێ جۆینی ناچاری و وێنەی زیاتر.\n"
         "📩 پەیوەندی: {dev}"
     ),
@@ -188,8 +189,8 @@ L["ku"] = {
         "دڵنیابە لینکەکە دروستە و پۆستەکە تایبەت (Private) نییە، پاشان دووبارە هەوڵبدەرەوە."
     ),
     "not_link": (
-        "🔗 تکایە <b>لینکی تیکتۆک</b> بنێرە.\n"
-        "نموونە: <code>https://vm.tiktok.com/xxxxxxx</code>"
+        "🔗 تکایە <b>لینکی تیکتۆک</b> یان <b>یوزەرنەیمێک</b> بنێرە.\n"
+        "نموونە: <code>https://vm.tiktok.com/xxxxxxx</code> یان <code>@username</code>"
     ),
     "dl_fail": "❌ <b>دابەزاندن سەرکەوتوو نەبوو</b>\nتکایە دوای چەند چرکەیەک دووبارە هەوڵبدەرەوە.",
     "no_photo": "❌ ئەم پۆستە وێنەی تێدا نییە!",
@@ -201,8 +202,13 @@ L["ku"] = {
     ),
     "photos_done": "🖼 <b>{n} وێنە</b> ئامادەیە ✅",
     "ask_link_prompt": "🔗 <b>لینکی تیکتۆکەکە بنێرە:</b>",
+    "ask_avatar_prompt": "👤 <b>یوزەرنەیمی تیکتۆک بنێرە:</b>\nنموونە: <code>@username</code>",
+    "avatar_caption": "👤 <b>وێنەی پرۆفایلی @{user}</b>\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
+    "no_avatar": "❌ وێنەی پرۆفایل نەدۆزرایەوە! ڕەنگە ئەکاونتەکە تایبەت بێت یان بوونی نەبێت.",
+    "private_account": "🔒 <b>ئەم ئەکاونتە تایبەتییە!</b>\nتەنیا ئەکاونتی گشتی پشتگیری دەکرێت.",
+    "st_avatar": "👤 <b>وێنەی پرۆفایل ئامادە دەکرێت…</b>\n{bar}",
     # ── buttons ───────────────────────────────────────────────────────────────
-    "b_dl": "📥 دابەزاندنی نوێ", "b_profile": "👤 پرۆفایل", "b_vip": "💎 VIP",
+    "b_dl": "📥 دابەزاندنی نوێ", "b_profile": "👤 پرۆفایل", "b_vip": "💎 VIP", "b_avatar": "🖼 وێنەی پرۆفایل",
     "b_lang": "🌐 زمان", "b_help": "📖 ڕێنمایی", "b_channel": "📢 کەناڵی بۆت",
     "b_panel": "🛠 پانێڵی کۆنتڕۆڵ", "b_back": "🔙 گەڕانەوە", "b_delete": "🗑 سڕینەوە",
     "b_joined": "✅ جۆینم کرد", "b_audio": "🎵 گۆرانی MP3", "b_orig": "🔗 لینکی ڕەسەن",
@@ -319,7 +325,8 @@ L["en"] = {
         "<b>3</b> · Wait a few seconds — done ⚡\n\n"
         "<blockquote>🎬 Video — no watermark, high quality\n"
         "🖼 Photos — the whole post as an album\n"
-        "🎵 Music — tap the <b>MP3</b> button under the video</blockquote>\n"
+        "🎵 Music — tap the <b>MP3</b> button under the video\n"
+        "👤 Profile — send a username for an HD profile picture</blockquote>\n"
         "💎 <b>VIP</b> — no forced join, more photos.\n"
         "📩 Contact: {dev}"
     ),
@@ -367,8 +374,8 @@ L["en"] = {
         "Make sure the link is valid and the post isn't private, then try again."
     ),
     "not_link": (
-        "🔗 Please send a <b>TikTok link</b>.\n"
-        "Example: <code>https://vm.tiktok.com/xxxxxxx</code>"
+        "🔗 Please send a <b>TikTok link</b> or a <b>username</b>.\n"
+        "Example: <code>https://vm.tiktok.com/xxxxxxx</code> or <code>@username</code>"
     ),
     "dl_fail": "❌ <b>Download failed</b>\nPlease try again in a few seconds.",
     "no_photo": "❌ This post has no photos!",
@@ -380,7 +387,12 @@ L["en"] = {
     ),
     "photos_done": "🖼 <b>{n} photos</b> ready ✅",
     "ask_link_prompt": "🔗 <b>Send the TikTok link:</b>",
-    "b_dl": "📥 New download", "b_profile": "👤 Profile", "b_vip": "💎 VIP",
+    "ask_avatar_prompt": "👤 <b>Send a TikTok username:</b>\nExample: <code>@username</code>",
+    "avatar_caption": "👤 <b>Profile picture of @{user}</b>\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
+    "no_avatar": "❌ Profile picture not found! The account may be private or not exist.",
+    "private_account": "🔒 <b>This account is private!</b>\nOnly public accounts are supported.",
+    "st_avatar": "👤 <b>Preparing the profile picture…</b>\n{bar}",
+    "b_dl": "📥 New download", "b_profile": "👤 Profile", "b_vip": "💎 VIP", "b_avatar": "🖼 Profile picture",
     "b_lang": "🌐 Language", "b_help": "📖 Help", "b_channel": "📢 Bot channel",
     "b_panel": "🛠 Control panel", "b_back": "🔙 Back", "b_delete": "🗑 Delete",
     "b_joined": "✅ I joined", "b_audio": "🎵 MP3 audio", "b_orig": "🔗 Original link",
@@ -496,7 +508,8 @@ L["ar"] = {
         "<b>٣</b> · انتظر ثوانٍ قليلة — جاهز ⚡\n\n"
         "<blockquote>🎬 الفيديو — بدون علامة مائية وبجودة عالية\n"
         "🖼 الصور — كل صور المنشور كألبوم\n"
-        "🎵 الموسيقى — زر <b>MP3</b> أسفل الفيديو</blockquote>\n"
+        "🎵 الموسيقى — زر <b>MP3</b> أسفل الفيديو\n"
+        "👤 الملف الشخصي — أرسل اسم مستخدم للحصول على صورة الملف الشخصي بجودة HD</blockquote>\n"
         "💎 <b>VIP</b> — بدون اشتراك إجباري وصور أكثر.\n"
         "📩 للتواصل: {dev}"
     ),
@@ -544,8 +557,8 @@ L["ar"] = {
         "تأكد أن الرابط صحيح وأن المنشور ليس خاصاً، ثم حاول مرة أخرى."
     ),
     "not_link": (
-        "🔗 من فضلك أرسل <b>رابط تيك توك</b>.\n"
-        "مثال: <code>https://vm.tiktok.com/xxxxxxx</code>"
+        "🔗 من فضلك أرسل <b>رابط تيك توك</b> أو <b>اسم مستخدم</b>.\n"
+        "مثال: <code>https://vm.tiktok.com/xxxxxxx</code> أو <code>@username</code>"
     ),
     "dl_fail": "❌ <b>فشل التحميل</b>\nحاول مرة أخرى بعد ثوانٍ.",
     "no_photo": "❌ هذا المنشور لا يحتوي على صور!",
@@ -557,7 +570,12 @@ L["ar"] = {
     ),
     "photos_done": "🖼 <b>{n} صورة</b> جاهزة ✅",
     "ask_link_prompt": "🔗 <b>أرسل رابط تيك توك:</b>",
-    "b_dl": "📥 تحميل جديد", "b_profile": "👤 الملف الشخصي", "b_vip": "💎 VIP",
+    "ask_avatar_prompt": "👤 <b>أرسل اسم مستخدم تيك توك:</b>\nمثال: <code>@username</code>",
+    "avatar_caption": "👤 <b>صورة الملف الشخصي لـ @{user}</b>\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
+    "no_avatar": "❌ لم يتم العثور على صورة الملف الشخصي! ربما الحساب خاص أو غير موجود.",
+    "private_account": "🔒 <b>هذا الحساب خاص!</b>\nيتم دعم الحسابات العامة فقط.",
+    "st_avatar": "👤 <b>جارٍ تجهيز صورة الملف الشخصي…</b>\n{bar}",
+    "b_dl": "📥 تحميل جديد", "b_profile": "👤 الملف الشخصي", "b_vip": "💎 VIP", "b_avatar": "🖼 صورة الملف الشخصي",
     "b_lang": "🌐 اللغة", "b_help": "📖 المساعدة", "b_channel": "📢 قناة البوت",
     "b_panel": "🛠 لوحة التحكم", "b_back": "🔙 رجوع", "b_delete": "🗑 حذف",
     "b_joined": "✅ اشتركت", "b_audio": "🎵 صوت MP3", "b_orig": "🔗 الرابط الأصلي",
@@ -1091,6 +1109,69 @@ async def fetch_tiktok(url: str) -> dict | None:
     return None
 
 
+# ── profile picture ───────────────────────────────────────────────────────────
+_USERNAME_RE = re.compile(r"^@?([\w.]{1,24})$")
+
+
+def extract_username(text: str) -> str | None:
+    """Pull a TikTok @handle out of a bare '@user', a profile link, or plain text."""
+    t = (text or "").strip()
+    m = _USERNAME_RE.match(t)
+    if m:
+        return m.group(1)
+    m = re.search(r"tiktok\.com/@([\w.]{1,24})", t, re.I)
+    return m.group(1) if m else None
+
+
+async def _avatar_via_tikwm(username: str) -> dict | None:
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    try:
+        r = await http().get("https://www.tikwm.com/api/user/info",
+                             params={"unique_id": f"@{username}"}, timeout=t)
+        j = r.json()
+    except Exception as e:
+        log.warning("tikwm avatar failed: %s", e)
+        return None
+    if j.get("code") != 0 or not isinstance(j.get("data"), dict):
+        return None
+    u = (j["data"].get("user") or {})
+    if not u:
+        return None
+    if u.get("privateAccount"):
+        return {"private": True, "user": u.get("uniqueId") or username}
+    pic = abs_url(u.get("avatarLarger") or u.get("avatarMedium") or u.get("avatarThumb"), "https://www.tikwm.com")
+    if not pic:
+        return None
+    return {"private": False, "user": u.get("uniqueId") or username, "pic": pic,
+            "full_name": u.get("nickname") or ""}
+
+
+async def _avatar_via_scrape(username: str) -> dict | None:
+    try:
+        r = await http().get(f"https://www.tiktok.com/@{username}",
+                             headers={"User-Agent": "facebookexternalhit/1.1",
+                                      "Accept-Language": "en-US,en;q=0.9"},
+                             timeout=min(int(CFG.get("api_timeout", 40)), 20))
+        if r.status_code != 200:
+            return None
+        m = re.search(r'<meta property="og:image" content="([^"]+)"', r.text)
+        if not m:
+            return None
+        return {"private": False, "user": username, "pic": html.unescape(m.group(1)), "full_name": ""}
+    except Exception as e:
+        log.warning("tiktok avatar scrape failed: %s", e)
+        return None
+
+
+async def fetch_avatar(username: str) -> dict | None:
+    """→ {'private': True, 'user': ...}  or  {'private': False, 'user','pic','full_name'}  or None."""
+    for fn in (_avatar_via_tikwm, _avatar_via_scrape):
+        r = await fn(username)
+        if r:
+            return r
+    return None
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 6 · MEDIA: download bytes → upload to Telegram
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1270,6 +1351,24 @@ async def send_audio_file(ctx, chat_id: int, s: dict, data: bytes, ctype: str, k
         await ctx.bot.send_document(chat_id, InputFile(data, filename=fn), reply_markup=kb, **_UP)
 
 
+async def send_avatar_photo(ctx, chat_id: int, lang: str, username: str, data: bytes, ctype: str,
+                            kb: Kb | None = None) -> None:
+    """Deliver a profile picture. HD avatars are usually a few hundred KB → send as photo,
+    but fall back to a document if Telegram's photo pipeline rejects it (rare, large PNGs)."""
+    ext = _ext(ctype, "jpg")
+    fn = f"{safe_name(username, 'profile')}.{ext}"
+    caption = tx(lang, "avatar_caption", user=esc(username), bot=esc(BOT_USERNAME))
+    try:
+        if len(data) <= TG_PHOTO_MAX:
+            await ctx.bot.send_photo(chat_id, InputFile(data, filename=fn), caption=caption,
+                                     reply_markup=kb, **_UP)
+        else:
+            raise BadRequest("avatar too large for sendPhoto")
+    except BadRequest:
+        await ctx.bot.send_document(chat_id, InputFile(data, filename=fn), caption=caption,
+                                    reply_markup=kb, **_UP)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 7 · UI BUILDERS + ACCESS GATES
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1296,7 +1395,8 @@ def menu_view(uid: int, lang: str, name: str) -> tuple[str, Kb]:
     text = (wm.replace("{name}", esc(name)).replace("{badge}", badge) if wm
             else tx(lang, "welcome", name=esc(name), badge=badge))
     rows = [
-        [Btn(tx(lang, "b_dl"), callback_data="ask_link")],
+        [Btn(tx(lang, "b_dl"), callback_data="ask_link"),
+         Btn(tx(lang, "b_avatar"), callback_data="ask_avatar")],
         [Btn(tx(lang, "b_profile"), callback_data="show_profile"),
          Btn(tx(lang, "b_vip"), callback_data="show_vip")],
         [Btn(tx(lang, "b_lang"), callback_data="show_settings"),
@@ -1513,6 +1613,10 @@ async def route(cb: CB, data: str):
     if data == "ask_link":
         await cb.answer()
         return await cb.q.message.reply_text(cb.t("ask_link_prompt"), reply_markup=ForceReply(selective=True))
+
+    if data == "ask_avatar":
+        await cb.answer()
+        return await cb.q.message.reply_text(cb.t("ask_avatar_prompt"), reply_markup=ForceReply(selective=True))
 
     if data == "show_profile":
         ud = await db_get(f"users/{uid}") or {}
@@ -2056,6 +2160,52 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
         await release_lock(uid)
 
 
+async def process_avatar(update: Update, ctx, username: str, lang: str, started: float) -> None:
+    """Fetch and deliver a public TikTok account's HD profile picture."""
+    msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
+
+    if not await gate_message(update, ctx, uid, lang):
+        return
+    if not await acquire_lock(uid):
+        return await msg.reply_text(tx(lang, "busy_msg"))
+
+    status = None
+    try:
+        status = await msg.reply_text(tx(lang, "st_search", bar=bar(1)))
+        info = await fetch_avatar(username)
+        if not info:
+            return await safe_edit(status, tx(lang, "no_avatar"))
+        if info.get("private"):
+            return await safe_edit(status, tx(lang, "private_account"))
+
+        await safe_edit(status, tx(lang, "st_avatar", bar=bar(3)))
+        try:
+            res = await download_bytes(info["pic"], max_bytes=20_000_000, timeout=25)
+        except TooBig:
+            res = None
+        if not res:
+            return await safe_edit(status, tx(lang, "no_avatar"))
+
+        await safe_edit(status, tx(lang, "st_upload", bar=bar(4)))
+        await chat_action(ctx, chat_id, ChatAction.UPLOAD_PHOTO)
+        await send_avatar_photo(ctx, chat_id, lang, info["user"], res[0], res[1],
+                                Kb([[Btn(tx(lang, "b_delete"), callback_data="close")]]))
+
+        await db_incr("sys/cfg/total_dl")
+        await db_incr(f"users/{uid}/dl")
+        try:
+            await status.delete()
+        except TelegramError:
+            pass
+
+    except Exception as e:                                              # noqa: BLE001
+        await report_error(ctx, e, "process_avatar")
+        if status:
+            await safe_edit(status, tx(lang, "dl_fail"))
+    finally:
+        await release_lock(uid)
+
+
 async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     started = time.monotonic()
     msg = update.effective_message
@@ -2063,9 +2213,8 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
     uid = update.effective_user.id
     private = update.effective_chat.type == "private"
-    url = extract_url(msg.text or msg.caption or "")
-    if not url and not private:
-        return                                          # ignore group chatter
+    text = msg.text or msg.caption or ""
+    url = extract_url(text)
 
     ud, lang = await ensure_user(update, ctx)
 
@@ -2074,11 +2223,19 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if state:
             return await handle_prompt(update, ctx, state, lang, started)
 
-    if not url:
-        if await gate_message(update, ctx, uid, lang):
-            await msg.reply_text(tx(lang, "not_link"))
-        return
-    await process_link(update, ctx, url, lang, started)
+    if url:
+        return await process_link(update, ctx, url, lang, started)
+
+    # not a TikTok link — is it a @username? (private chats only)
+    if private:
+        username = extract_username(text)
+        if username:
+            return await process_avatar(update, ctx, username, lang, started)
+
+    if not private:
+        return                                          # ignore group chatter
+    if await gate_message(update, ctx, uid, lang):
+        await msg.reply_text(tx(lang, "not_link"))
 
 
 async def on_error(update: object, ctx: ContextTypes.DEFAULT_TYPE):
