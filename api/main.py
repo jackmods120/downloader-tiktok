@@ -79,6 +79,14 @@ DEV            = os.getenv("DEV_USERNAME", "@j4ck_721s")
 CHANNEL_URL    = os.getenv("CHANNEL_URL", "https://t.me/jack_721_mod")
 BOT_USERNAME   = os.getenv("BOT_USERNAME", "TikTok_Downloader_Jack_Robot").lstrip("@")
 
+# Secret story viewer — optional extra provider. Use {username} as the placeholder, e.g.
+#   STORY_API_URL     = https://your-provider.example/tiktok/story?username={username}
+#   STORY_API_HEADERS = {"x-api-key": "..."}        (JSON, optional)
+STORY_API_URL     = os.getenv("STORY_API_URL", "").strip()
+STORY_API_HEADERS = os.getenv("STORY_API_HEADERS", "").strip()
+STORY_MAX         = 10               # stories per request (VIP: STORY_MAX_VIP)
+STORY_MAX_VIP     = 20
+
 START_TIME     = time.time()
 SESSION_TTL    = 3600                # seconds an audio/"again" session stays valid
 WAIT_TTL       = 600                 # seconds an admin "type the ID" prompt stays valid
@@ -140,7 +148,8 @@ L["ku"] = {
         "<blockquote>🎬 ڤیدیۆ — بێ لۆگۆ و بە کوالێتی بەرز\n"
         "🖼 وێنە — هەموو وێنەکانی پۆستەکە وەک ئەلبوم\n"
         "🎵 گۆرانی — دوگمەی <b>MP3</b> لە ژێر ڤیدیۆکە\n"
-        "👤 پرۆفایل — یوزەرنەیمێک بنێرە بۆ وەرگرتنی وێنەی پرۆفایل بە HD</blockquote>\n"
+        "👤 پرۆفایل — یوزەرنەیمێک بنێرە بۆ وەرگرتنی وێنەی پرۆفایل بە HD\n"
+        "🕵️ ستۆری — دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیمێک بنێرە</blockquote>\n"
         "💎 <b>VIP</b> — بێ جۆینی ناچاری و وێنەی زیاتر.\n"
         "📩 پەیوەندی: {dev}"
     ),
@@ -207,6 +216,21 @@ L["ku"] = {
     "no_avatar": "❌ وێنەی پرۆفایل نەدۆزرایەوە! ڕەنگە ئەکاونتەکە تایبەت بێت یان بوونی نەبێت.",
     "private_account": "🔒 <b>ئەم ئەکاونتە تایبەتییە!</b>\nتەنیا ئەکاونتی گشتی پشتگیری دەکرێت.",
     "st_avatar": "👤 <b>وێنەی پرۆفایل ئامادە دەکرێت…</b>\n{bar}",
+    # ── secret story viewer ───────────────────────────────────────────────────
+    "ask_story_prompt": "🕵️ <b>بینینی ستۆری نهێنی</b>\n\nیوزەرنەیمی تیکتۆکی کەسەکە بنێرە:\nنموونە: <code>@username</code>",
+    "st_story": "🕵️ <b>بە نهێنی دەگەڕێم بۆ ستۆرییەکان…</b>\n{bar}",
+    "story_header": (
+        "🕵️ <b>ستۆری نهێنی · @{user}</b>\n\n"
+        "<blockquote>📖 ستۆری چالاک: <b>{n}</b>\n"
+        "🎬 ڤیدیۆ: <b>{v}</b>   🖼 وێنە: <b>{p}</b>\n"
+        "👻 بێ شوێنپێ — لە لیستی بینەران دەرناکەویت</blockquote>"
+    ),
+    "story_caption": "🕵️ <b>@{user}</b> · ستۆری <b>{i}/{n}</b>\n🕒 {when}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
+    "story_done": "✅ <b>{n} ستۆری</b> نێردرا 👻",
+    "story_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> ستۆری نێردرا، <b>{left}</b> ماوە. دووبارە هەوڵبدەرەوە.",
+    "no_story": "📭 <b>@{user}</b> ئێستا ستۆری چالاکی نییە.\nستۆری تیکتۆک ٢٤ کاتژمێر دەمێنێتەوە.",
+    "story_unavailable": "⚠️ ستۆری ئەم ئەکاونتە بەردەست نییە (ڕەنگە تایبەت بێت یان سەرچاوەکە پشتگیری نەکات).",
+    "b_story": "🕵️ ستۆری نهێنی", "b_story_again": "🔄 ستۆری کەسێکی تر",
     # ── buttons ───────────────────────────────────────────────────────────────
     "b_dl": "📥 دابەزاندنی نوێ", "b_profile": "👤 پرۆفایل", "b_vip": "💎 VIP", "b_avatar": "🖼 وێنەی پرۆفایل",
     "b_lang": "🌐 زمان", "b_help": "📖 ڕێنمایی", "b_channel": "📢 کەناڵی بۆت",
@@ -326,7 +350,8 @@ L["en"] = {
         "<blockquote>🎬 Video — no watermark, high quality\n"
         "🖼 Photos — the whole post as an album\n"
         "🎵 Music — tap the <b>MP3</b> button under the video\n"
-        "👤 Profile — send a username for an HD profile picture</blockquote>\n"
+        "👤 Profile — send a username for an HD profile picture\n"
+        "🕵️ Stories — tap <b>Secret story</b> and send a username</blockquote>\n"
         "💎 <b>VIP</b> — no forced join, more photos.\n"
         "📩 Contact: {dev}"
     ),
@@ -392,6 +417,20 @@ L["en"] = {
     "no_avatar": "❌ Profile picture not found! The account may be private or not exist.",
     "private_account": "🔒 <b>This account is private!</b>\nOnly public accounts are supported.",
     "st_avatar": "👤 <b>Preparing the profile picture…</b>\n{bar}",
+    "ask_story_prompt": "🕵️ <b>Secret story viewer</b>\n\nSend the TikTok username:\nExample: <code>@username</code>",
+    "st_story": "🕵️ <b>Quietly looking for stories…</b>\n{bar}",
+    "story_header": (
+        "🕵️ <b>Secret stories · @{user}</b>\n\n"
+        "<blockquote>📖 Active stories: <b>{n}</b>\n"
+        "🎬 Videos: <b>{v}</b>   🖼 Photos: <b>{p}</b>\n"
+        "👻 Zero trace — you won't appear in the viewer list</blockquote>"
+    ),
+    "story_caption": "🕵️ <b>@{user}</b> · story <b>{i}/{n}</b>\n🕒 {when}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
+    "story_done": "✅ <b>{n} stories</b> delivered 👻",
+    "story_partial": "⏱ Time limit reached — <b>{n}</b> stories sent, <b>{left}</b> left. Try again.",
+    "no_story": "📭 <b>@{user}</b> has no active stories right now.\nTikTok stories last 24 hours.",
+    "story_unavailable": "⚠️ This account's stories aren't available (it may be private, or the source doesn't support them).",
+    "b_story": "🕵️ Secret story", "b_story_again": "🔄 Another story",
     "b_dl": "📥 New download", "b_profile": "👤 Profile", "b_vip": "💎 VIP", "b_avatar": "🖼 Profile picture",
     "b_lang": "🌐 Language", "b_help": "📖 Help", "b_channel": "📢 Bot channel",
     "b_panel": "🛠 Control panel", "b_back": "🔙 Back", "b_delete": "🗑 Delete",
@@ -509,7 +548,8 @@ L["ar"] = {
         "<blockquote>🎬 الفيديو — بدون علامة مائية وبجودة عالية\n"
         "🖼 الصور — كل صور المنشور كألبوم\n"
         "🎵 الموسيقى — زر <b>MP3</b> أسفل الفيديو\n"
-        "👤 الملف الشخصي — أرسل اسم مستخدم للحصول على صورة الملف الشخصي بجودة HD</blockquote>\n"
+        "👤 الملف الشخصي — أرسل اسم مستخدم للحصول على صورة الملف الشخصي بجودة HD\n"
+        "🕵️ القصص — اضغط <b>قصة سرية</b> وأرسل اسم مستخدم</blockquote>\n"
         "💎 <b>VIP</b> — بدون اشتراك إجباري وصور أكثر.\n"
         "📩 للتواصل: {dev}"
     ),
@@ -575,6 +615,20 @@ L["ar"] = {
     "no_avatar": "❌ لم يتم العثور على صورة الملف الشخصي! ربما الحساب خاص أو غير موجود.",
     "private_account": "🔒 <b>هذا الحساب خاص!</b>\nيتم دعم الحسابات العامة فقط.",
     "st_avatar": "👤 <b>جارٍ تجهيز صورة الملف الشخصي…</b>\n{bar}",
+    "ask_story_prompt": "🕵️ <b>مشاهدة القصص السرية</b>\n\nأرسل اسم مستخدم تيك توك:\nمثال: <code>@username</code>",
+    "st_story": "🕵️ <b>جارٍ البحث عن القصص بسرّية…</b>\n{bar}",
+    "story_header": (
+        "🕵️ <b>قصص سرية · @{user}</b>\n\n"
+        "<blockquote>📖 القصص النشطة: <b>{n}</b>\n"
+        "🎬 فيديو: <b>{v}</b>   🖼 صور: <b>{p}</b>\n"
+        "👻 بلا أثر — لن تظهر في قائمة المشاهدين</blockquote>"
+    ),
+    "story_caption": "🕵️ <b>@{user}</b> · قصة <b>{i}/{n}</b>\n🕒 {when}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
+    "story_done": "✅ تم إرسال <b>{n} قصة</b> 👻",
+    "story_partial": "⏱ انتهى الوقت — أُرسلت <b>{n}</b> قصة وتبقّت <b>{left}</b>. حاول مجدداً.",
+    "no_story": "📭 <b>@{user}</b> لا يملك قصصاً نشطة حالياً.\nقصص تيك توك تبقى 24 ساعة.",
+    "story_unavailable": "⚠️ قصص هذا الحساب غير متاحة (ربما الحساب خاص أو المصدر لا يدعمها).",
+    "b_story": "🕵️ قصة سرية", "b_story_again": "🔄 قصة أخرى",
     "b_dl": "📥 تحميل جديد", "b_profile": "👤 الملف الشخصي", "b_vip": "💎 VIP", "b_avatar": "🖼 صورة الملف الشخصي",
     "b_lang": "🌐 اللغة", "b_help": "📖 المساعدة", "b_channel": "📢 قناة البوت",
     "b_panel": "🛠 لوحة التحكم", "b_back": "🔙 رجوع", "b_delete": "🗑 حذف",
@@ -1172,6 +1226,120 @@ async def fetch_avatar(username: str) -> dict | None:
     return None
 
 
+# ── secret stories ────────────────────────────────────────────────────────────
+def _first_url(v, base: str = "") -> str:
+    """Find the first http(s) URL inside a str / dict / list (providers differ a lot)."""
+    if isinstance(v, str):
+        return abs_url(v, base)
+    if isinstance(v, dict):
+        for k in ("url", "play", "play_addr", "playAddr", "download_addr", "downloadAddr", "url_list", "src"):
+            if k in v:
+                r = _first_url(v[k], base)
+                if r:
+                    return r
+        return ""
+    if isinstance(v, list):
+        for x in v:
+            r = _first_url(x, base)
+            if r:
+                return r
+    return ""
+
+
+def _story_list(data) -> list:
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        for k in ("stories", "story", "storyItems", "list", "items", "itemList", "videos", "data"):
+            v = data.get(k)
+            if isinstance(v, (list, dict)):
+                r = _story_list(v)
+                if r:
+                    return r
+    return []
+
+
+def parse_story_items(data, base: str = "") -> list:
+    """Normalise whatever a provider returns → [{'type','url','cover','ts','dur'}]."""
+    out = []
+    for it in _story_list(data):
+        if not isinstance(it, dict):
+            continue
+        vurl = ""
+        for k in ("hdplay", "play", "playAddr", "video_url", "video", "downloadAddr", "download_addr"):
+            vurl = _first_url(it.get(k), base)
+            if vurl:
+                break
+        cover = ""
+        for k in ("cover", "origin_cover", "originCover", "thumbnail", "dynamicCover"):
+            cover = _first_url(it.get(k), base)
+            if cover:
+                break
+        ts = _to_int(it.get("create_time") or it.get("createTime") or it.get("time") or it.get("timestamp"))
+        dur = _to_int(it.get("duration"))
+        if vurl:
+            out.append({"type": "video", "url": vurl, "cover": cover, "ts": ts, "dur": dur})
+            continue
+        iurl = _first_url(it.get("images")) or _first_url(it.get("image")) or _first_url(it.get("photo")) or cover
+        if iurl:
+            out.append({"type": "photo", "url": iurl, "cover": iurl, "ts": ts, "dur": 0})
+    seen, uniq = set(), []
+    for x in out:
+        if x["url"] not in seen:
+            seen.add(x["url"]); uniq.append(x)
+    uniq.sort(key=lambda x: x["ts"] or 0)           # oldest → newest, like the TikTok app
+    return uniq
+
+
+async def _story_via_tikwm(username: str) -> list | None:
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    for _ in range(2):
+        try:
+            r = await http().get("https://www.tikwm.com/api/user/story",
+                                 params={"unique_id": f"@{username}"}, timeout=t)
+            j = r.json()
+        except Exception as e:
+            log.info("tikwm story failed: %s", e)
+            return None
+        if j.get("code") == 0:
+            return parse_story_items(j.get("data"), "https://www.tikwm.com")
+        if "limit" in str(j.get("msg", "")).lower():
+            await asyncio.sleep(1.3)
+            continue
+        return None
+    return None
+
+
+async def _story_via_custom(username: str) -> list | None:
+    if not STORY_API_URL:
+        return None
+    try:
+        headers = json.loads(STORY_API_HEADERS) if STORY_API_HEADERS else {}
+        r = await http().get(STORY_API_URL.replace("{username}", username), headers=headers,
+                             timeout=min(int(CFG.get("api_timeout", 40)), 20))
+        return parse_story_items(r.json()) if r.status_code == 200 else None
+    except Exception as e:
+        log.info("custom story provider failed: %s", e)
+        return None
+
+
+async def fetch_story(username: str) -> list | None:
+    """→ list of stories (maybe empty = none active) · None = every provider failed."""
+    reached = False
+    for fn in (_story_via_custom, _story_via_tikwm):
+        res = await fn(username)
+        if res:
+            return res
+        reached = reached or res == []
+    return [] if reached else None
+
+
+def story_when(ts: int) -> str:
+    if not ts:
+        return "—"
+    return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 6 · MEDIA: download bytes → upload to Telegram
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1397,6 +1565,7 @@ def menu_view(uid: int, lang: str, name: str) -> tuple[str, Kb]:
     rows = [
         [Btn(tx(lang, "b_dl"), callback_data="ask_link"),
          Btn(tx(lang, "b_avatar"), callback_data="ask_avatar")],
+        [Btn(tx(lang, "b_story"), callback_data="ask_story")],
         [Btn(tx(lang, "b_profile"), callback_data="show_profile"),
          Btn(tx(lang, "b_vip"), callback_data="show_vip")],
         [Btn(tx(lang, "b_lang"), callback_data="show_settings"),
@@ -1617,6 +1786,10 @@ async def route(cb: CB, data: str):
     if data == "ask_avatar":
         await cb.answer()
         return await cb.q.message.reply_text(cb.t("ask_avatar_prompt"), reply_markup=ForceReply(selective=True))
+
+    if data == "ask_story":
+        await cb.answer()
+        return await cb.q.message.reply_text(cb.t("ask_story_prompt"), reply_markup=ForceReply(selective=True))
 
     if data == "show_profile":
         ud = await db_get(f"users/{uid}") or {}
@@ -2206,6 +2379,110 @@ async def process_avatar(update: Update, ctx, username: str, lang: str, started:
         await release_lock(uid)
 
 
+def story_kb(lang: str) -> Kb:
+    return Kb([[Btn(tx(lang, "b_story_again"), callback_data="ask_story")],
+               [Btn(tx(lang, "b_delete"), callback_data="close")]])
+
+
+async def process_story(update: Update, ctx, username: str, lang: str, started: float) -> None:
+    """Secret story viewer: the bot (never the user's account) fetches the stories,
+    so nothing is registered in the target's viewer list."""
+    msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
+
+    if not await gate_message(update, ctx, uid, lang):
+        return
+    if not await acquire_lock(uid):
+        return await msg.reply_text(tx(lang, "busy_msg"))
+
+    status = None
+    try:
+        status = await msg.reply_text(tx(lang, "st_story", bar=bar(1)))
+        items = await fetch_story(username)
+        if items is None:
+            return await safe_edit(status, tx(lang, "story_unavailable"))
+        if not items:
+            return await safe_edit(status, tx(lang, "no_story", user=esc(username)), story_kb(lang))
+
+        limit = STORY_MAX_VIP if is_vip(uid) else STORY_MAX
+        items = items[-limit:]                           # newest N
+        total = len(items)
+        n_vid = sum(1 for x in items if x["type"] == "video")
+        await safe_edit(status, tx(lang, "story_header", user=esc(username), n=total,
+                                   v=n_vid, p=total - n_vid))
+
+        sent = 0
+        for i, it in enumerate(items, 1):
+            if deadline_left(started) < 10:
+                break
+            await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO if it["type"] == "video" else ChatAction.UPLOAD_PHOTO)
+            try:
+                res = await download_bytes(it["url"], max_bytes=TG_MAX_BYTES, timeout=30)
+            except TooBig:
+                res = None
+            if not res:
+                continue
+            data, ctype = res
+            cap = tx(lang, "story_caption", user=esc(username), i=i, n=total,
+                     when=story_when(it["ts"]), bot=esc(BOT_USERNAME))
+            name = f"{safe_name(username)}_story_{i}"
+            try:
+                if it["type"] == "video":
+                    try:
+                        await ctx.bot.send_video(chat_id, InputFile(data, filename=name + ".mp4"), caption=cap,
+                                                 duration=it.get("dur") or None, supports_streaming=True, **_UP)
+                    except BadRequest:
+                        await ctx.bot.send_document(chat_id, InputFile(data, filename=name + ".mp4"), caption=cap, **_UP)
+                else:
+                    ext = _ext(ctype, "jpg")
+                    try:
+                        if len(data) > TG_PHOTO_MAX:
+                            raise BadRequest("too large")
+                        await ctx.bot.send_photo(chat_id, InputFile(data, filename=f"{name}.{ext}"), caption=cap, **_UP)
+                    except BadRequest:
+                        await ctx.bot.send_document(chat_id, InputFile(data, filename=f"{name}.{ext}"), caption=cap, **_UP)
+                sent += 1
+            except TelegramError as e:
+                log.info("story item %s not sent: %s", i, e)
+
+        if not sent:
+            return await safe_edit(status, tx(lang, "dl_fail"))
+
+        left = total - sent
+        await ctx.bot.send_message(
+            chat_id,
+            tx(lang, "story_partial", n=sent, left=left) if left and deadline_left(started) < 10
+            else tx(lang, "story_done", n=sent),
+            reply_markup=story_kb(lang))
+        await db_incr("sys/cfg/total_dl")
+        await db_incr(f"users/{uid}/dl")      # the header card stays as a summary of the batch
+
+    except Exception as e:                                              # noqa: BLE001
+        await report_error(ctx, e, "process_story")
+        if status:
+            await safe_edit(status, tx(lang, "dl_fail"))
+    finally:
+        await release_lock(uid)
+
+
+async def cmd_story(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    started = time.monotonic()
+    ud, lang = await ensure_user(update, ctx)
+    username = extract_username(" ".join(ctx.args or []))
+    if not username:
+        return await update.effective_message.reply_text(tx(lang, "ask_story_prompt"),
+                                                         reply_markup=ForceReply(selective=True))
+    await process_story(update, ctx, username, lang, started)
+
+
+def _is_story_reply(msg) -> bool:
+    """True when the user is replying to the bot's 'send the username' story prompt."""
+    r = getattr(msg, "reply_to_message", None)
+    if not r or not r.from_user or not r.from_user.is_bot or not r.text:
+        return False
+    heads = {plain(tx(l, "ask_story_prompt")).split("\n")[0] for l in L}
+    return r.text.split("\n")[0].strip() in heads
+
+
 async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     started = time.monotonic()
     msg = update.effective_message
@@ -2222,6 +2499,12 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         state = await pop_wait(uid)
         if state:
             return await handle_prompt(update, ctx, state, lang, started)
+
+    if private and _is_story_reply(msg):                 # answer to the "secret story" prompt
+        username = extract_username(text)
+        if username:
+            return await process_story(update, ctx, username, lang, started)
+        return await msg.reply_text(tx(lang, "ask_story_prompt"), reply_markup=ForceReply(selective=True))
 
     if url:
         return await process_link(update, ctx, url, lang, started)
@@ -2258,6 +2541,7 @@ def build_application() -> Application:
     ptb.add_handler(CommandHandler(["start", "menu"], cmd_start))
     ptb.add_handler(CommandHandler("help", cmd_help))
     ptb.add_handler(CommandHandler("ping", cmd_ping))
+    ptb.add_handler(CommandHandler("story", cmd_story))
     ptb.add_handler(CallbackQueryHandler(on_callback))
     ptb.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND & ~filters.StatusUpdate.ALL, on_message))
     ptb.add_error_handler(on_error)
