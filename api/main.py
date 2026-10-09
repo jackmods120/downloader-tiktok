@@ -1,18 +1,24 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║   JackSnap  ·  Snapchat Downloader Bot for Telegram                      ║
-# ║   Stack : FastAPI · PTB 21 · Firebase       Deploy: Vercel (serverless)  ║
+# ║   JackTik  ·  TikTok Downloader Bot for Telegram                         ║
+# ║   Version : v15.0 (Pro)         Stack : FastAPI · PTB 21 · Firebase      ║
+# ║   Owner   : @j4ck_721s          Deploy: Vercel (Python serverless)       ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 """
-JackSnap — Snapchat bot for Telegram (webhook, Vercel serverless).
+JackTik v15 — TikTok downloader bot (Telegram webhook, Vercel serverless).
 
-  • Spotlight / shared-story links  → video (or photos) uploaded to Telegram
-  • 🕵️ Secret story viewer          → username → the PUBLIC stories of that profile
-  • Profile picture by @username
-
-Snapchat has no official API. Everything here reads the public web pages
-(snapchat.com/add/<user>, snapchat.com/spotlight/<id>), so it only works for PUBLIC
-profiles. Private accounts are not accessible and never will be.
+What changed in v15 (short version)
+  • Media is DOWNLOADED by the bot and UPLOADED to Telegram (v14 handed the
+    TikTok CDN URL to Telegram, which fails for a large share of videos/audio).
+  • Robust URL extraction, TikWM rate-limit retry, HD preference, size limits,
+    multiple candidate URLs per media, and a clean "too big" fallback.
+  • Serverless-safe state (Firebase instead of in-memory), atomic counters,
+    one HTTP client per invocation, per-user lock, duplicate-update guard.
+  • Fixed crashes: PTB objects are immutable (`q.data = ...` raised), callback
+    queries were answered twice, silent bare `except:` everywhere.
+  • Optional webhook secret verification (WEBHOOK_SECRET).
+  • Fully redesigned messages and menus (HTML, ku / en / ar).
 """
+
 import asyncio
 import hashlib
 import hmac
@@ -22,8 +28,6 @@ import json
 import logging
 import os
 import re
-import shutil
-import tempfile
 import time
 import traceback
 from contextvars import ContextVar
@@ -73,10 +77,10 @@ WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "").strip()      # optional but rec
 OWNER_ID       = _int_env("OWNER_ID", 5977475208)
 DEV            = os.getenv("DEV_USERNAME", "@j4ck_721s")
 CHANNEL_URL    = os.getenv("CHANNEL_URL", "https://t.me/jack_721_mod")
-BOT_USERNAME   = os.getenv("BOT_USERNAME", "YourSnapBot").lstrip("@")
+BOT_USERNAME   = os.getenv("BOT_USERNAME", "TikTok_Downloader_Jack_Robot").lstrip("@")
 
 # Secret story viewer — optional extra provider. Use {username} as the placeholder, e.g.
-#   STORY_API_URL     = https://your-provider.example/snapchat/story?username={username}
+#   STORY_API_URL     = https://your-provider.example/tiktok/story?username={username}
 #   STORY_API_HEADERS = {"x-api-key": "..."}        (JSON, optional)
 STORY_API_URL     = os.getenv("STORY_API_URL", "").strip()
 STORY_API_HEADERS = os.getenv("STORY_API_HEADERS", "").strip()
@@ -93,7 +97,7 @@ TG_MAX_BYTES   = 49_000_000          # Telegram bot upload limit is 50 MB
 TG_PHOTO_MAX   = 10_000_000          # photo limit for sendPhoto
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
-log = logging.getLogger("jacksnap")
+log = logging.getLogger("jacktik")
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # In-memory cache of the shared config (reloaded from Firebase every CFG_TTL s)
@@ -129,16 +133,16 @@ L["ku"] = {
     # ── user-facing ───────────────────────────────────────────────────────────
     "welcome": (
         "✨ <b>بەخێربێیت، {name}</b> {badge}\n\n"
-        "بە یەک لینک، ڤیدیۆ و وێنە و گۆرانییەکانی <b>سناپچات</b> دابەزێنە — "
+        "بە یەک لینک، ڤیدیۆ و وێنە و گۆرانییەکانی <b>تیکتۆک</b> دابەزێنە — "
         "<b>بێ لۆگۆ</b> و بە کوالێتی بەرز.\n\n"
         "<blockquote>🎬  ڤیدیۆی HD بێ واتەرمارک\n"
         "🖼  هەموو وێنەکانی پۆستەکە\n"
         "🎵  گۆرانی بە فۆرماتی MP3</blockquote>\n"
-        "👇 <b>لینکی سناپچاتەکە بنێرە</b> و چەند چرکەیەک چاوەڕێ بکە."
+        "👇 <b>لینکی تیکتۆکەکە بنێرە</b> و چەند چرکەیەک چاوەڕێ بکە."
     ),
     "help": (
         "<b>📖 ڕێنمایی بەکارهێنان</b>\n\n"
-        "<b>١</b> · لە سناپچات دوگمەی <b>Share</b> دابگرە و <b>Copy link</b> هەڵبژێرە.\n"
+        "<b>١</b> · لە تیکتۆک دوگمەی <b>Share</b> دابگرە و <b>Copy link</b> هەڵبژێرە.\n"
         "<b>٢</b> · لینکەکە لێرە پەیست بکە و بینێرە.\n"
         "<b>٣</b> · چەند چرکەیەک چاوەڕێ بکە — ئامادەیە ⚡\n\n"
         "<blockquote>🎬 ڤیدیۆ — بێ لۆگۆ و بە کوالێتی بەرز\n"
@@ -194,8 +198,8 @@ L["ku"] = {
         "دڵنیابە لینکەکە دروستە و پۆستەکە تایبەت (Private) نییە، پاشان دووبارە هەوڵبدەرەوە."
     ),
     "not_link": (
-        "🔗 تکایە <b>لینکی سناپچات</b> یان <b>یوزەرنەیمێک</b> بنێرە.\n"
-        "نموونە: <code>https://www.snapchat.com/spotlight/xxxx</code> یان <code>@username</code>"
+        "🔗 تکایە <b>لینکی تیکتۆک</b> یان <b>یوزەرنەیمێک</b> بنێرە.\n"
+        "نموونە: <code>https://vm.tiktok.com/xxxxxxx</code> یان <code>@username</code>"
     ),
     "dl_fail": "❌ <b>دابەزاندن سەرکەوتوو نەبوو</b>\nتکایە دوای چەند چرکەیەک دووبارە هەوڵبدەرەوە.",
     "no_photo": "❌ ئەم پۆستە وێنەی تێدا نییە!",
@@ -206,14 +210,14 @@ L["ku"] = {
         "لە دوگمەی خوارەوە ڕاستەوخۆ دایبەزێنە 👇"
     ),
     "photos_done": "🖼 <b>{n} وێنە</b> ئامادەیە ✅",
-    "ask_link_prompt": "🔗 <b>لینکی سناپچاتەکە بنێرە:</b>",
-    "ask_avatar_prompt": "📸 <b>لینکی وێنەی گشتیی سناپچات بنێرە:</b>",
+    "ask_link_prompt": "🔗 <b>لینکی تیکتۆکەکە بنێرە:</b>",
+    "ask_avatar_prompt": "👤 <b>یوزەرنەیمی تیکتۆک بنێرە:</b>\nنموونە: <code>@username</code>",
     "avatar_caption": "👤 <b>وێنەی پرۆفایلی @{user}</b>\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "no_avatar": "❌ وێنەی پرۆفایل نەدۆزرایەوە! ڕەنگە ئەکاونتەکە تایبەت بێت یان بوونی نەبێت.",
     "private_account": "🔒 <b>ئەم ئەکاونتە تایبەتییە!</b>\nتەنیا ئەکاونتی گشتی پشتگیری دەکرێت.",
     "st_avatar": "👤 <b>وێنەی پرۆفایل ئامادە دەکرێت…</b>\n{bar}",
     # ── secret story viewer ───────────────────────────────────────────────────
-    "ask_story_prompt": "🕵️ <b>بینینی ستۆری نهێنی</b>\n\nیوزەرنەیمی سناپچاتی کەسەکە بنێرە:\nنموونە: <code>@username</code>",
+    "ask_story_prompt": "🕵️ <b>بینینی ستۆری نهێنی</b>\n\nیوزەرنەیمی تیکتۆکی کەسەکە بنێرە:\nنموونە: <code>@username</code>",
     "st_story": "🕵️ <b>بە نهێنی دەگەڕێم بۆ ستۆرییەکان…</b>\n{bar}",
     "story_header": (
         "🕵️ <b>ستۆری نهێنی · @{user}</b>\n\n"
@@ -224,11 +228,11 @@ L["ku"] = {
     "story_caption": "🕵️ <b>@{user}</b> · ستۆری <b>{i}/{n}</b>\n🕒 {when}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "story_done": "✅ <b>{n} ستۆری</b> نێردرا 👻",
     "story_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> ستۆری نێردرا، <b>{left}</b> ماوە. دووبارە هەوڵبدەرەوە.",
-    "no_story": "📭 <b>@{user}</b> ئێستا ستۆری چالاکی نییە.\nستۆری سناپچات ٢٤ کاتژمێر دەمێنێتەوە.",
+    "no_story": "📭 <b>@{user}</b> ئێستا ستۆری چالاکی نییە.\nستۆری تیکتۆک ٢٤ کاتژمێر دەمێنێتەوە.",
     "story_unavailable": "⚠️ ستۆری ئەم ئەکاونتە بەردەست نییە (ڕەنگە تایبەت بێت یان سەرچاوەکە پشتگیری نەکات).",
     "b_story": "🕵️ ستۆری نهێنی", "b_story_again": "🔄 ستۆری کەسێکی تر",
     # ── buttons ───────────────────────────────────────────────────────────────
-    "b_dl": "📥 دابەزاندنی نوێ", "b_profile": "👤 پرۆفایل", "b_vip": "💎 VIP", "b_avatar": "📸 وێنەی گشتی",
+    "b_dl": "📥 دابەزاندنی نوێ", "b_profile": "👤 پرۆفایل", "b_vip": "💎 VIP", "b_avatar": "🖼 وێنەی پرۆفایل",
     "b_lang": "🌐 زمان", "b_help": "📖 ڕێنمایی", "b_channel": "📢 کەناڵی بۆت",
     "b_panel": "🛠 پانێڵی کۆنتڕۆڵ", "b_back": "🔙 گەڕانەوە", "b_delete": "🗑 سڕینەوە",
     "b_joined": "✅ جۆینم کرد", "b_audio": "🎵 گۆرانی MP3", "b_orig": "🔗 لینکی ڕەسەن",
@@ -331,16 +335,16 @@ L["ku"] = {
 L["en"] = {
     "welcome": (
         "✨ <b>Welcome, {name}</b> {badge}\n\n"
-        "Download <b>Snapchat</b> videos, photos and music with a single link — "
+        "Download <b>TikTok</b> videos, photos and music with a single link — "
         "<b>no watermark</b>, high quality.\n\n"
         "<blockquote>🎬  HD video without watermark\n"
         "🖼  Every photo of a post\n"
         "🎵  Music as MP3</blockquote>\n"
-        "👇 <b>Send a Snapchat link</b> and wait a few seconds."
+        "👇 <b>Send a TikTok link</b> and wait a few seconds."
     ),
     "help": (
         "<b>📖 How to use</b>\n\n"
-        "<b>1</b> · In Snapchat tap <b>Share</b> and choose <b>Copy link</b>.\n"
+        "<b>1</b> · In TikTok tap <b>Share</b> and choose <b>Copy link</b>.\n"
         "<b>2</b> · Paste the link here and send it.\n"
         "<b>3</b> · Wait a few seconds — done ⚡\n\n"
         "<blockquote>🎬 Video — no watermark, high quality\n"
@@ -395,8 +399,8 @@ L["en"] = {
         "Make sure the link is valid and the post isn't private, then try again."
     ),
     "not_link": (
-        "🔗 Please send a <b>Snapchat link</b> or a <b>username</b>.\n"
-        "Example: <code>https://www.snapchat.com/spotlight/xxxx</code> or <code>@username</code>"
+        "🔗 Please send a <b>TikTok link</b> or a <b>username</b>.\n"
+        "Example: <code>https://vm.tiktok.com/xxxxxxx</code> or <code>@username</code>"
     ),
     "dl_fail": "❌ <b>Download failed</b>\nPlease try again in a few seconds.",
     "no_photo": "❌ This post has no photos!",
@@ -407,13 +411,13 @@ L["en"] = {
         "Use the button below to download it directly 👇"
     ),
     "photos_done": "🖼 <b>{n} photos</b> ready ✅",
-    "ask_link_prompt": "🔗 <b>Send the Snapchat link:</b>",
-    "ask_avatar_prompt": "📸 <b>Send the link of the public Snapchat photo:</b>",
+    "ask_link_prompt": "🔗 <b>Send the TikTok link:</b>",
+    "ask_avatar_prompt": "👤 <b>Send a TikTok username:</b>\nExample: <code>@username</code>",
     "avatar_caption": "👤 <b>Profile picture of @{user}</b>\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "no_avatar": "❌ Profile picture not found! The account may be private or not exist.",
     "private_account": "🔒 <b>This account is private!</b>\nOnly public accounts are supported.",
     "st_avatar": "👤 <b>Preparing the profile picture…</b>\n{bar}",
-    "ask_story_prompt": "🕵️ <b>Secret story viewer</b>\n\nSend the Snapchat username:\nExample: <code>@username</code>",
+    "ask_story_prompt": "🕵️ <b>Secret story viewer</b>\n\nSend the TikTok username:\nExample: <code>@username</code>",
     "st_story": "🕵️ <b>Quietly looking for stories…</b>\n{bar}",
     "story_header": (
         "🕵️ <b>Secret stories · @{user}</b>\n\n"
@@ -424,10 +428,10 @@ L["en"] = {
     "story_caption": "🕵️ <b>@{user}</b> · story <b>{i}/{n}</b>\n🕒 {when}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "story_done": "✅ <b>{n} stories</b> delivered 👻",
     "story_partial": "⏱ Time limit reached — <b>{n}</b> stories sent, <b>{left}</b> left. Try again.",
-    "no_story": "📭 <b>@{user}</b> has no active stories right now.\nSnapchat stories last 24 hours.",
+    "no_story": "📭 <b>@{user}</b> has no active stories right now.\nTikTok stories last 24 hours.",
     "story_unavailable": "⚠️ This account's stories aren't available (it may be private, or the source doesn't support them).",
     "b_story": "🕵️ Secret story", "b_story_again": "🔄 Another story",
-    "b_dl": "📥 New download", "b_profile": "👤 Profile", "b_vip": "💎 VIP", "b_avatar": "📸 Public photo",
+    "b_dl": "📥 New download", "b_profile": "👤 Profile", "b_vip": "💎 VIP", "b_avatar": "🖼 Profile picture",
     "b_lang": "🌐 Language", "b_help": "📖 Help", "b_channel": "📢 Bot channel",
     "b_panel": "🛠 Control panel", "b_back": "🔙 Back", "b_delete": "🗑 Delete",
     "b_joined": "✅ I joined", "b_audio": "🎵 MP3 audio", "b_orig": "🔗 Original link",
@@ -529,16 +533,16 @@ L["en"] = {
 L["ar"] = {
     "welcome": (
         "✨ <b>أهلاً بك، {name}</b> {badge}\n\n"
-        "حمّل فيديوهات <b>سناب شات</b> وصورها وموسيقاها برابط واحد — "
+        "حمّل فيديوهات <b>تيك توك</b> وصورها وموسيقاها برابط واحد — "
         "<b>بدون علامة مائية</b> وبجودة عالية.\n\n"
         "<blockquote>🎬  فيديو HD بدون علامة مائية\n"
         "🖼  جميع صور المنشور\n"
         "🎵  الموسيقى بصيغة MP3</blockquote>\n"
-        "👇 <b>أرسل رابط سناب شات</b> وانتظر ثوانٍ قليلة."
+        "👇 <b>أرسل رابط تيك توك</b> وانتظر ثوانٍ قليلة."
     ),
     "help": (
         "<b>📖 طريقة الاستخدام</b>\n\n"
-        "<b>١</b> · في سناب شات اضغط <b>Share</b> ثم اختر <b>Copy link</b>.\n"
+        "<b>١</b> · في تيك توك اضغط <b>Share</b> ثم اختر <b>Copy link</b>.\n"
         "<b>٢</b> · الصق الرابط هنا وأرسله.\n"
         "<b>٣</b> · انتظر ثوانٍ قليلة — جاهز ⚡\n\n"
         "<blockquote>🎬 الفيديو — بدون علامة مائية وبجودة عالية\n"
@@ -593,8 +597,8 @@ L["ar"] = {
         "تأكد أن الرابط صحيح وأن المنشور ليس خاصاً، ثم حاول مرة أخرى."
     ),
     "not_link": (
-        "🔗 من فضلك أرسل <b>رابط سناب شات</b> أو <b>اسم مستخدم</b>.\n"
-        "مثال: <code>https://www.snapchat.com/spotlight/xxxx</code> أو <code>@username</code>"
+        "🔗 من فضلك أرسل <b>رابط تيك توك</b> أو <b>اسم مستخدم</b>.\n"
+        "مثال: <code>https://vm.tiktok.com/xxxxxxx</code> أو <code>@username</code>"
     ),
     "dl_fail": "❌ <b>فشل التحميل</b>\nحاول مرة أخرى بعد ثوانٍ.",
     "no_photo": "❌ هذا المنشور لا يحتوي على صور!",
@@ -605,13 +609,13 @@ L["ar"] = {
         "استخدم الزر أدناه للتحميل المباشر 👇"
     ),
     "photos_done": "🖼 <b>{n} صورة</b> جاهزة ✅",
-    "ask_link_prompt": "🔗 <b>أرسل رابط سناب شات:</b>",
-    "ask_avatar_prompt": "📸 <b>أرسل رابط الصورة العامة من سناب شات:</b>",
+    "ask_link_prompt": "🔗 <b>أرسل رابط تيك توك:</b>",
+    "ask_avatar_prompt": "👤 <b>أرسل اسم مستخدم تيك توك:</b>\nمثال: <code>@username</code>",
     "avatar_caption": "👤 <b>صورة الملف الشخصي لـ @{user}</b>\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "no_avatar": "❌ لم يتم العثور على صورة الملف الشخصي! ربما الحساب خاص أو غير موجود.",
     "private_account": "🔒 <b>هذا الحساب خاص!</b>\nيتم دعم الحسابات العامة فقط.",
     "st_avatar": "👤 <b>جارٍ تجهيز صورة الملف الشخصي…</b>\n{bar}",
-    "ask_story_prompt": "🕵️ <b>مشاهدة القصص السرية</b>\n\nأرسل اسم مستخدم سناب شات:\nمثال: <code>@username</code>",
+    "ask_story_prompt": "🕵️ <b>مشاهدة القصص السرية</b>\n\nأرسل اسم مستخدم تيك توك:\nمثال: <code>@username</code>",
     "st_story": "🕵️ <b>جارٍ البحث عن القصص بسرّية…</b>\n{bar}",
     "story_header": (
         "🕵️ <b>قصص سرية · @{user}</b>\n\n"
@@ -622,10 +626,10 @@ L["ar"] = {
     "story_caption": "🕵️ <b>@{user}</b> · قصة <b>{i}/{n}</b>\n🕒 {when}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "story_done": "✅ تم إرسال <b>{n} قصة</b> 👻",
     "story_partial": "⏱ انتهى الوقت — أُرسلت <b>{n}</b> قصة وتبقّت <b>{left}</b>. حاول مجدداً.",
-    "no_story": "📭 <b>@{user}</b> لا يملك قصصاً نشطة حالياً.\nقصص سناب شات تبقى 24 ساعة.",
+    "no_story": "📭 <b>@{user}</b> لا يملك قصصاً نشطة حالياً.\nقصص تيك توك تبقى 24 ساعة.",
     "story_unavailable": "⚠️ قصص هذا الحساب غير متاحة (ربما الحساب خاص أو المصدر لا يدعمها).",
     "b_story": "🕵️ قصة سرية", "b_story_again": "🔄 قصة أخرى",
-    "b_dl": "📥 تحميل جديد", "b_profile": "👤 الملف الشخصي", "b_vip": "💎 VIP", "b_avatar": "📸 صورة عامة",
+    "b_dl": "📥 تحميل جديد", "b_profile": "👤 الملف الشخصي", "b_vip": "💎 VIP", "b_avatar": "🖼 صورة الملف الشخصي",
     "b_lang": "🌐 اللغة", "b_help": "📖 المساعدة", "b_channel": "📢 قناة البوت",
     "b_panel": "🛠 لوحة التحكم", "b_back": "🔙 رجوع", "b_delete": "🗑 حذف",
     "b_joined": "✅ اشتركت", "b_audio": "🎵 صوت MP3", "b_orig": "🔗 الرابط الأصلي",
@@ -726,87 +730,6 @@ L["ar"] = {
 
 LANG_NAMES = {"ku": "🔴🔆🟢 کوردی", "en": "🇺🇸 English", "ar": "🇸🇦 العربية"}
 
-
-
-# ── Snapchat-specific wording (overrides the generic strings above) ───────────
-L["ku"].update({
-    "welcome": (
-        "👻 <b>بەخێربێیت، {name}</b> {badge}\n\n"
-        "بە یەک لینک ڤیدیۆی <b>سناپچات</b> دابەزێنە، و ستۆری <b>گشتی</b>ی هەر ئەکاونتێک بە نهێنی ببینە.\n\n"
-        "<blockquote>🎬  ڤیدیۆی Spotlight\n"
-        "🕵️  ستۆری نهێنی (ئەکاونتی گشتی)\n"
-        "📸  وێنەی گشتی (لینک)</blockquote>\n"
-        "👇 <b>لینکێک یان یوزەرنەیمێک بنێرە</b>."
-    ),
-    "help": (
-        "<b>📖 ڕێنمایی بەکارهێنان</b>\n\n"
-        "<b>١</b> · لینکی Spotlight لە سناپچات کۆپی بکە و لێرە بینێرە.\n"
-        "<b>٢</b> · بۆ ستۆری: دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیم بنێرە.\n"
-        "<b>٣</b> · چەند چرکەیەک چاوەڕێ بکە ⚡\n\n"
-        "<blockquote>🎬 ڤیدیۆ — لینکی Spotlight\n"
-        "🕵️ ستۆری — تەنیا ئەکاونتی <b>گشتی</b>\n"
-        "📸 وێنە — لینکی وێنەی گشتی بنێرە</blockquote>\n"
-        "💎 <b>VIP</b> — بێ جۆینی ناچاری و ستۆری زیاتر.\n"
-        "📩 پەیوەندی: {dev}"
-    ),
-    "not_link": (
-        "🔗 تکایە <b>لینکی سناپچات</b> بنێرە یان دوگمەی «ستۆری نهێنی» بەکاربێنە.\n"
-        "نموونە: <code>https://www.snapchat.com/spotlight/xxxx</code>\n"
-        "یان لینکی وێنەیەکی گشتی"
-    ),
-})
-L["en"].update({
-    "welcome": (
-        "👻 <b>Welcome, {name}</b> {badge}\n\n"
-        "Download <b>Snapchat</b> videos with one link, and quietly view the <b>public</b> stories of any profile.\n\n"
-        "<blockquote>🎬  Spotlight videos\n"
-        "🕵️  Secret story viewer (public profiles)\n"
-        "📸  Public photos (link)</blockquote>\n"
-        "👇 <b>Send a link or a username</b>."
-    ),
-    "help": (
-        "<b>📖 How to use</b>\n\n"
-        "<b>1</b> · Copy a Spotlight link from Snapchat and send it here.\n"
-        "<b>2</b> · For stories: tap <b>Secret story</b> and send a username.\n"
-        "<b>3</b> · Wait a few seconds ⚡\n\n"
-        "<blockquote>🎬 Video — Spotlight links\n"
-        "🕵️ Stories — <b>public</b> profiles only\n"
-        "📸 Photos — send the link of a public photo</blockquote>\n"
-        "💎 <b>VIP</b> — no forced join, more stories.\n"
-        "📩 Contact: {dev}"
-    ),
-    "not_link": (
-        "🔗 Please send a <b>Snapchat link</b> or use the “Secret story” button.\n"
-        "Example: <code>https://www.snapchat.com/spotlight/xxxx</code>\n"
-        "or the link of a public photo"
-    ),
-})
-L["ar"].update({
-    "welcome": (
-        "👻 <b>أهلاً بك، {name}</b> {badge}\n\n"
-        "حمّل فيديوهات <b>سناب شات</b> برابط واحد، وشاهد القصص <b>العامة</b> لأي حساب بسرّية.\n\n"
-        "<blockquote>🎬  فيديوهات Spotlight\n"
-        "🕵️  مشاهدة القصص سراً (الحسابات العامة)\n"
-        "📸  الصور العامة (رابط)</blockquote>\n"
-        "👇 <b>أرسل رابطاً أو اسم مستخدم</b>."
-    ),
-    "help": (
-        "<b>📖 طريقة الاستخدام</b>\n\n"
-        "<b>١</b> · انسخ رابط Spotlight من سناب شات وأرسله هنا.\n"
-        "<b>٢</b> · للقصص: اضغط <b>قصة سرية</b> وأرسل اسم مستخدم.\n"
-        "<b>٣</b> · انتظر ثوانٍ قليلة ⚡\n\n"
-        "<blockquote>🎬 الفيديو — روابط Spotlight\n"
-        "🕵️ القصص — الحسابات <b>العامة</b> فقط\n"
-        "📸 الصور — أرسل رابط صورة عامة</blockquote>\n"
-        "💎 <b>VIP</b> — بدون اشتراك إجباري وقصص أكثر.\n"
-        "📩 للتواصل: {dev}"
-    ),
-    "not_link": (
-        "🔗 من فضلك أرسل <b>رابط سناب شات</b> أو استخدم زر «قصة سرية».\n"
-        "مثال: <code>https://www.snapchat.com/spotlight/xxxx</code>\n"
-        "أو رابط صورة عامة"
-    ),
-})
 
 def tx(lang: str, key: str, **kw) -> str:
     """Translate `key` into `lang` (falls back to Kurdish, then to the key)."""
@@ -1106,36 +1029,20 @@ async def display_name(uid: int) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5 · SNAPCHAT PROVIDERS  (public web pages — no login, no API key)
+# 5 · TIKTOK PROVIDERS
 # ══════════════════════════════════════════════════════════════════════════════
 _URL_RE = re.compile(
-    r"(?<![\w@.\-])(?:https?://)?(?:[a-z0-9\-]+\.)*snapchat\.com/[^\s<>\"']+", re.I
+    r"(?<![\w@.\-])(?:https?://)?(?:[a-z0-9\-]+\.)*tiktok\.com/[^\s<>\"']+", re.I
 )
-_SNAP_USER_RE = re.compile(r"snapchat\.com/(?:add|@)/([\w.\-]{3,15})", re.I)
-_USERNAME_RE = re.compile(r"^@?([A-Za-z][\w.\-]{2,14})$")
-SNAP_HEADERS = {"Accept-Language": "en-US,en;q=0.9",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}
 
 
 def extract_url(text: str) -> str | None:
-    """Pull the first Snapchat URL out of arbitrary text."""
+    """Pull the first TikTok URL out of arbitrary text (people paste 'Look at this <link>')."""
     m = _URL_RE.search(text or "")
     if not m:
         return None
     u = m.group(0).rstrip(".,;:!?)]}>»«’”،؟")
     return u if u.lower().startswith("http") else "https://" + u
-
-
-def story_user_from_url(text: str) -> str | None:
-    m = _SNAP_USER_RE.search(text or "")
-    return m.group(1) if m else None
-
-
-def extract_username(text: str, need_at: bool = False) -> str | None:
-    """'@user' / bare 'user' (unless need_at) / a snapchat.com/add/<user> link."""
-    t = (text or "").strip()
-    m = re.match(r"^@([\w.\-]{3,15})$", t) if need_at else _USERNAME_RE.match(t)
-    return m.group(1) if m else story_user_from_url(t)
 
 
 def abs_url(u, base: str = "") -> str:
@@ -1157,15 +1064,175 @@ def _to_int(v) -> int:
 
 
 def _media_key(vid: str, url: str) -> str:
-    return hashlib.md5(f"{vid}{url}".encode()).hexdigest()[:14]
+    vid = str(vid or "")
+    return vid if vid.isdigit() and len(vid) <= 24 else hashlib.md5(url.encode()).hexdigest()[:14]
 
 
+def parse_tikwm(d: dict, src: str) -> dict:
+    base = "https://www.tikwm.com"
+    cands: list = []
+    for key, skey in (("hdplay", "hd_size"), ("play", "size"), ("wmplay", "wm_size")):
+        u = abs_url(d.get(key), base)
+        if u and u not in [c[0] for c in cands]:
+            cands.append((u, _to_int(d.get(skey))))
+    mi = d.get("music_info") if isinstance(d.get("music_info"), dict) else {}
+    au = d.get("author") if isinstance(d.get("author"), dict) else {}
+    return {
+        "key":      _media_key(d.get("id"), src),
+        "src":      src,
+        "creator":  au.get("nickname") or au.get("unique_id") or "TikTok",
+        "title":    d.get("title") or "",
+        "cover":    abs_url(d.get("cover"), base),
+        "duration": _to_int(d.get("duration")),
+        "videos":   cands,
+        "audio":    abs_url(d.get("music") or mi.get("play"), base),
+        "a_title":  mi.get("title") or "",
+        "a_author": mi.get("author") or au.get("nickname") or "TikTok",
+        "images":   [abs_url(i, base) for i in (d.get("images") or []) if isinstance(i, str) and abs_url(i, base)],
+        "views":    _to_int(d.get("play_count")),
+        "likes":    _to_int(d.get("digg_count")),
+        "comments": _to_int(d.get("comment_count")),
+        "shares":   _to_int(d.get("share_count")),
+    }
+
+
+def parse_hyper(d: dict, src: str) -> dict:
+    det   = d.get("details") or {}
+    stats = det.get("stats") or {}
+    vurl  = abs_url((det.get("video") or {}).get("play"))
+    return {
+        "key":      _media_key("", src),
+        "src":      src,
+        "creator":  d.get("creator") or "TikTok",
+        "title":    det.get("title") or "",
+        "cover":    abs_url((det.get("cover") or {}).get("cover")),
+        "duration": 0,
+        "videos":   [(vurl, 0)] if vurl else [],
+        "audio":    abs_url((det.get("audio") or {}).get("play")),
+        "a_title":  "",
+        "a_author": d.get("creator") or "TikTok",
+        "images":   [i for i in (det.get("images") or []) if isinstance(i, str) and i.startswith("http")],
+        "views":    _to_int(stats.get("views")),
+        "likes":    _to_int(stats.get("likes")),
+        "comments": _to_int(stats.get("comments")),
+        "shares":   _to_int(stats.get("shares")),
+    }
+
+
+async def _via_tikwm(url: str) -> dict | None:
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    for attempt in range(3):
+        try:
+            r = await http().post("https://www.tikwm.com/api/", data={"url": url, "hd": 1}, timeout=t)
+            j = r.json()
+        except Exception as e:
+            log.warning("tikwm attempt %s failed: %s", attempt + 1, e)
+            await asyncio.sleep(0.8)
+            continue
+        if j.get("code") == 0 and isinstance(j.get("data"), dict):
+            return parse_tikwm(j["data"], url)
+        msg = str(j.get("msg", "")).lower()
+        if "limit" in msg or "second" in msg:          # free tier: 1 request / second
+            await asyncio.sleep(1.3)
+            continue
+        log.info("tikwm rejected %s: %s", url, msg)
+        return None
+    return None
+
+
+async def _via_hyper(url: str) -> dict | None:
+    try:
+        r = await http().get("https://www.api.hyper-bd.site/Tiktok/", params={"url": url},
+                             timeout=min(int(CFG.get("api_timeout", 40)), 20))
+        j = r.json()
+        if r.status_code == 200 and j.get("ok"):
+            return parse_hyper(j.get("data") or {}, url)
+    except Exception as e:
+        log.warning("hyper failed: %s", e)
+    return None
+
+
+async def fetch_tiktok(url: str) -> dict | None:
+    """Try the configured provider(s); returns a normalised media dict or None."""
+    active = CFG.get("active_api", "auto")
+    for name, fn in (("tikwm", _via_tikwm), ("hyper", _via_hyper)):
+        if active in ("auto", name):
+            m = await fn(url)
+            if m and (m["videos"] or m["images"] or m["audio"]):
+                return m
+    return None
+
+
+# ── profile picture ───────────────────────────────────────────────────────────
+_USERNAME_RE = re.compile(r"^@?([\w.]{1,24})$")
+
+
+def extract_username(text: str) -> str | None:
+    """Pull a TikTok @handle out of a bare '@user', a profile link, or plain text."""
+    t = (text or "").strip()
+    m = _USERNAME_RE.match(t)
+    if m:
+        return m.group(1)
+    m = re.search(r"tiktok\.com/@([\w.]{1,24})", t, re.I)
+    return m.group(1) if m else None
+
+
+async def _avatar_via_tikwm(username: str) -> dict | None:
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    try:
+        r = await http().get("https://www.tikwm.com/api/user/info",
+                             params={"unique_id": f"@{username}"}, timeout=t)
+        j = r.json()
+    except Exception as e:
+        log.warning("tikwm avatar failed: %s", e)
+        return None
+    if j.get("code") != 0 or not isinstance(j.get("data"), dict):
+        return None
+    u = (j["data"].get("user") or {})
+    if not u:
+        return None
+    if u.get("privateAccount"):
+        return {"private": True, "user": u.get("uniqueId") or username}
+    pic = abs_url(u.get("avatarLarger") or u.get("avatarMedium") or u.get("avatarThumb"), "https://www.tikwm.com")
+    if not pic:
+        return None
+    return {"private": False, "user": u.get("uniqueId") or username, "pic": pic,
+            "full_name": u.get("nickname") or ""}
+
+
+async def _avatar_via_scrape(username: str) -> dict | None:
+    try:
+        r = await http().get(f"https://www.tiktok.com/@{username}",
+                             headers={"User-Agent": "facebookexternalhit/1.1",
+                                      "Accept-Language": "en-US,en;q=0.9"},
+                             timeout=min(int(CFG.get("api_timeout", 40)), 20))
+        if r.status_code != 200:
+            return None
+        m = re.search(r'<meta property="og:image" content="([^"]+)"', r.text)
+        if not m:
+            return None
+        return {"private": False, "user": username, "pic": html.unescape(m.group(1)), "full_name": ""}
+    except Exception as e:
+        log.warning("tiktok avatar scrape failed: %s", e)
+        return None
+
+
+async def fetch_avatar(username: str) -> dict | None:
+    """→ {'private': True, 'user': ...}  or  {'private': False, 'user','pic','full_name'}  or None."""
+    for fn in (_avatar_via_tikwm, _avatar_via_scrape):
+        r = await fn(username)
+        if r:
+            return r
+    return None
+
+
+# ── secret stories ────────────────────────────────────────────────────────────
 def _first_url(v, base: str = "") -> str:
-    """First http(s) URL inside a str / dict / list (Snapchat wraps many URLs as {'value': ...})."""
+    """Find the first http(s) URL inside a str / dict / list (providers differ a lot)."""
     if isinstance(v, str):
         return abs_url(v, base)
     if isinstance(v, dict):
-        for k in ("value", "url", "mediaUrl", "src"):
+        for k in ("url", "play", "play_addr", "playAddr", "download_addr", "downloadAddr", "url_list", "src"):
             if k in v:
                 r = _first_url(v[k], base)
                 if r:
@@ -1179,85 +1246,11 @@ def _first_url(v, base: str = "") -> str:
     return ""
 
 
-async def _get_page(url: str) -> tuple[int, str]:
-    try:
-        r = await http().get(url, headers=SNAP_HEADERS, timeout=min(int(CFG.get("api_timeout", 40)), 20))
-        return r.status_code, r.text
-    except Exception as e:
-        log.info("page fetch failed %s: %s", url[:80], e)
-        return 0, ""
-
-
-def _meta(page: str, prop: str) -> str:
-    p = re.escape(prop)
-    for pat in (rf'<meta[^>]+(?:property|name)=["\']{p}["\'][^>]*content=["\']([^"\']*)["\']',
-                rf'<meta[^>]+content=["\']([^"\']*)["\'][^>]*(?:property|name)=["\']{p}["\']'):
-        m = re.search(pat, page, re.I)
-        if m:
-            return html.unescape(m.group(1))
-    return ""
-
-
-def _next_data(page: str):
-    m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', page, re.S)
-    if not m:
-        return None
-    try:
-        return json.loads(m.group(1))
-    except ValueError:
-        return None
-
-
-def _find_key(obj, key: str, depth: int = 0):
-    """Depth-first search for the first non-empty value stored under `key`."""
-    if depth > 14:
-        return None
-    if isinstance(obj, dict):
-        if obj.get(key):
-            return obj[key]
-        for v in obj.values():
-            r = _find_key(v, key, depth + 1)
-            if r:
-                return r
-    elif isinstance(obj, list):
-        for v in obj:
-            r = _find_key(v, key, depth + 1)
-            if r:
-                return r
-    return None
-
-
-def _clean_items(out: list) -> list:
-    seen, uniq = set(), []
-    for x in out:
-        if x["url"] not in seen:
-            seen.add(x["url"]); uniq.append(x)
-    uniq.sort(key=lambda x: x["ts"] or 0)           # oldest → newest, like the app
-    return uniq
-
-
-def parse_snaps(snaps) -> list:
-    """Snapchat's own `snapList` → [{'type','url','cover','ts','dur'}]."""
-    out = []
-    for s in snaps if isinstance(snaps, list) else []:
-        if not isinstance(s, dict):
-            continue
-        su = s.get("snapUrls") if isinstance(s.get("snapUrls"), dict) else {}
-        url = _first_url(su.get("mediaUrl")) or _first_url(s.get("mediaUrl"))
-        if not url:
-            continue
-        ts_raw = s.get("timestampInSec")
-        ts = _to_int(ts_raw.get("value") if isinstance(ts_raw, dict) else ts_raw)
-        out.append({"type": "video" if _to_int(s.get("snapMediaType")) == 1 else "photo",
-                    "url": url, "cover": _first_url(su.get("mediaPreviewUrl")), "ts": ts, "dur": 0})
-    return _clean_items(out)
-
-
 def _story_list(data) -> list:
     if isinstance(data, list):
         return data
     if isinstance(data, dict):
-        for k in ("stories", "story", "snapList", "list", "items", "data"):
+        for k in ("stories", "story", "storyItems", "list", "items", "itemList", "videos", "data"):
             v = data.get(k)
             if isinstance(v, (list, dict)):
                 r = _story_list(v)
@@ -1266,85 +1259,55 @@ def _story_list(data) -> list:
     return []
 
 
-def parse_story_items(data) -> list:
-    """Generic parser for a custom STORY_API_URL provider (keys vary a lot)."""
+def parse_story_items(data, base: str = "") -> list:
+    """Normalise whatever a provider returns → [{'type','url','cover','ts','dur'}]."""
     out = []
     for it in _story_list(data):
         if not isinstance(it, dict):
             continue
         vurl = ""
-        for k in ("video_url", "video", "videoUrl", "play", "mediaUrl", "url"):
-            vurl = _first_url(it.get(k))
+        for k in ("hdplay", "play", "playAddr", "video_url", "video", "downloadAddr", "download_addr"):
+            vurl = _first_url(it.get(k), base)
             if vurl:
                 break
-        is_video = bool(vurl) and (str(it.get("type", "")).lower() == "video" or ".mp4" in vurl.lower()
-                                   or _to_int(it.get("snapMediaType")) == 1)
-        img = _first_url(it.get("image")) or _first_url(it.get("thumbnail")) or _first_url(it.get("cover"))
-        ts = _to_int(it.get("timestamp") or it.get("create_time") or it.get("time"))
-        if vurl and is_video:
-            out.append({"type": "video", "url": vurl, "cover": img, "ts": ts, "dur": _to_int(it.get("duration"))})
-        elif vurl or img:
-            out.append({"type": "photo", "url": vurl or img, "cover": img, "ts": ts, "dur": 0})
-    return _clean_items(out)
+        cover = ""
+        for k in ("cover", "origin_cover", "originCover", "thumbnail", "dynamicCover"):
+            cover = _first_url(it.get(k), base)
+            if cover:
+                break
+        ts = _to_int(it.get("create_time") or it.get("createTime") or it.get("time") or it.get("timestamp"))
+        dur = _to_int(it.get("duration"))
+        if vurl:
+            out.append({"type": "video", "url": vurl, "cover": cover, "ts": ts, "dur": dur})
+            continue
+        iurl = _first_url(it.get("images")) or _first_url(it.get("image")) or _first_url(it.get("photo")) or cover
+        if iurl:
+            out.append({"type": "photo", "url": iurl, "cover": iurl, "ts": ts, "dur": 0})
+    seen, uniq = set(), []
+    for x in out:
+        if x["url"] not in seen:
+            seen.add(x["url"]); uniq.append(x)
+    uniq.sort(key=lambda x: x["ts"] or 0)           # oldest → newest, like the TikTok app
+    return uniq
 
 
-# ── spotlight / shared-story links ────────────────────────────────────────────
-async def fetch_snap(url: str) -> dict | None:
-    """Normalised media dict (same shape the pipeline expects) or None."""
-    status, page = await _get_page(url)
-    if status != 200 or not page:
+async def _story_via_tikwm(username: str) -> list | None:
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    for _ in range(2):
+        try:
+            r = await http().get("https://www.tikwm.com/api/user/story",
+                                 params={"unique_id": f"@{username}"}, timeout=t)
+            j = r.json()
+        except Exception as e:
+            log.info("tikwm story failed: %s", e)
+            return None
+        if j.get("code") == 0:
+            return parse_story_items(j.get("data"), "https://www.tikwm.com")
+        if "limit" in str(j.get("msg", "")).lower():
+            await asyncio.sleep(1.3)
+            continue
         return None
-    title = _meta(page, "og:title") or _meta(page, "twitter:title")
-    desc = _meta(page, "og:description")
-    cover = abs_url(_meta(page, "og:image"))
-    creator = ""
-    m = re.match(r"^(.*?)\s+on\s+(?:Snapchat|Spotlight)", title, re.I)
-    if m:
-        creator = m.group(1).strip()
-
-    vurl = abs_url(_meta(page, "og:video:secure_url") or _meta(page, "og:video:url") or _meta(page, "og:video"))
-    if not vurl:
-        m = re.search(r'"contentUrl"\s*:\s*"([^"]+)"', page)
-        if m:
-            try:
-                vurl = abs_url(json.loads('"' + m.group(1) + '"'))
-            except ValueError:
-                vurl = abs_url(m.group(1))
-    videos, images = ([(vurl, 0)] if vurl else []), []
-
-    if not vurl:                                       # shared story page → its snaps
-        nd = _next_data(page)
-        snaps = parse_snaps(_find_key(nd, "snapList")) if nd else []
-        videos = [(s["url"], 0) for s in snaps if s["type"] == "video"][:1]
-        images = [s["url"] for s in snaps if s["type"] == "photo"]
-    if not videos and not images and cover and "sc-cdn.net" in cover:
-        images = [cover]                               # public photo link → its picture
-    if not videos and not images:
-        return None
-    return {
-        "key": _media_key("", url), "src": url, "creator": creator or "Snapchat",
-        "title": desc or title or "", "cover": cover, "duration": 0,
-        "videos": videos, "audio": "", "a_title": "", "a_author": creator or "Snapchat",
-        "images": images, "views": 0, "likes": 0, "comments": 0, "shares": 0,
-    }
-
-
-# ── profile page: stories + profile picture ───────────────────────────────────
-async def _profile_page(username: str) -> tuple[str, dict | None]:
-    """→ ('ok', {...}) | ('missing', None)  (private / unknown account) | ('error', None)"""
-    status, page = await _get_page(f"https://www.snapchat.com/add/{username}")
-    if status == 404:
-        return "missing", None
-    if status != 200 or not page:
-        return "error", None
-    return "ok", {"page": page, "nd": _next_data(page)}
-
-
-async def _story_via_web(username: str) -> list | None:
-    state, d = await _profile_page(username)
-    if state != "ok" or d["nd"] is None:
-        return None                                    # private / not found / page layout changed
-    return parse_snaps(_find_key(d["nd"], "snapList"))  # [] = public profile without an active story
+    return None
 
 
 async def _story_via_custom(username: str) -> list | None:
@@ -1361,29 +1324,14 @@ async def _story_via_custom(username: str) -> list | None:
 
 
 async def fetch_story(username: str) -> list | None:
-    """→ list of stories (maybe empty = none active) · None = nothing could be read."""
+    """→ list of stories (maybe empty = none active) · None = every provider failed."""
     reached = False
-    for fn in (_story_via_custom, _story_via_web):
+    for fn in (_story_via_custom, _story_via_tikwm):
         res = await fn(username)
         if res:
             return res
         reached = reached or res == []
     return [] if reached else None
-
-
-async def fetch_avatar(username: str) -> dict | None:
-    state, d = await _profile_page(username)
-    if state != "ok":
-        return None
-    pic, name = "", ""
-    info = _find_key(d["nd"], "publicProfileInfo") if d["nd"] else None
-    if isinstance(info, dict):
-        pic = _first_url(info.get("profilePictureUrl"))
-        name = info.get("title") or info.get("displayName") or ""
-    pic = pic or abs_url(_meta(d["page"], "og:image"))
-    if not pic:
-        return None
-    return {"private": False, "user": username, "pic": pic, "full_name": name}
 
 
 def story_when(ts: int) -> str:
@@ -1401,7 +1349,7 @@ class TooBig(Exception):
 
 async def download_bytes(url: str, max_bytes: int = TG_MAX_BYTES, timeout: float = 40.0) -> tuple[bytes, str] | None:
     """Stream `url` into memory. → (data, content_type) · None on failure · raises TooBig."""
-    headers = {"User-Agent": UA, "Referer": "https://www.snapchat.com/", "Accept": "*/*"}
+    headers = {"User-Agent": UA, "Referer": "https://www.tiktok.com/", "Accept": "*/*"}
 
     async def _run():
         async with http().stream("GET", url, headers=headers,
@@ -1470,16 +1418,18 @@ def _ext(ctype: str, default: str) -> str:
     return default
 
 
-def safe_name(s: str, default: str = "snapchat") -> str:
+def safe_name(s: str, default: str = "tiktok") -> str:
     s = re.sub(r"[^\w\- ]+", "", s or "", flags=re.U).strip()[:40]
     return s or default
 
 
 def build_caption(m: dict) -> str:
-    title = esc(clip(m["title"], 200)) or "Snapchat"
-    who = esc(clip(m["creator"], 60))
-    head = f"👻 <b>{title}</b>" + (f"\n👤 {who}" if who else "")
-    return f"{head}\n\n⚡ <a href=\"https://t.me/{BOT_USERNAME}\">@{esc(BOT_USERNAME)}</a>"
+    title = esc(clip(m["title"], 200)) or "TikTok"
+    stats = (f"👁 {fmt_num(m['views'])}   ❤️ {fmt_num(m['likes'])}   "
+             f"💬 {fmt_num(m['comments'])}   🔁 {fmt_num(m['shares'])}")
+    return (f"🎬 <b>{title}</b>\n👤 {esc(clip(m['creator'], 60))}\n\n"
+            f"<blockquote>{stats}</blockquote>\n"
+            f"⚡ <a href=\"https://t.me/{BOT_USERNAME}\">@{esc(BOT_USERNAME)}</a>")
 
 
 def _valid_button_url(u: str) -> bool:
@@ -1499,149 +1449,6 @@ def result_kb(lang: str, m: dict, with_audio: bool, direct: str | None = None) -
         rows.append([Btn(tx(lang, "b_direct"), url=direct)])
     rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
     return Kb(rows)
-
-
-# ── watermark removal ─────────────────────────────────────────────────────────
-# Snapchat burns its logo + @username into the BLACK BARS above/below the picture
-# (the picture sits in the middle of a 9:16 canvas). We find the picture band and
-# crop the bars away, which removes the watermark wherever it moves to.
-# Needs an ffmpeg binary: add `imageio-ffmpeg` to requirements.txt (bundles one).
-# Set SNAP_CROP_BARS=0 to disable.
-CROP_BARS = os.getenv("SNAP_CROP_BARS", "1").strip().lower() not in ("0", "false", "no", "off")
-_GW, _GH = 72, 128                                   # analysis grid (tiny gray frames)
-
-
-def _ffmpeg_exe() -> str | None:
-    try:
-        import imageio_ffmpeg                         # type: ignore
-        return imageio_ffmpeg.get_ffmpeg_exe()
-    except Exception:
-        return shutil.which("ffmpeg")
-
-
-async def _exec(cmd: list, timeout: float):
-    try:
-        p = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
-                                                 stderr=asyncio.subprocess.PIPE)
-    except Exception as e:
-        log.info("exec failed: %s", e)
-        return None
-    try:
-        out, err = await asyncio.wait_for(p.communicate(), timeout)
-    except asyncio.TimeoutError:
-        p.kill()
-        await p.wait()
-        return None
-    return p.returncode, out, err
-
-
-def find_content_band(frames: list) -> tuple[float, float] | None:
-    """frames: raw gray frames (_GW×_GH bytes each) → (top, bottom) as 0..1 fractions of the
-    picture band, or None when there are no bars (nothing to crop) / it can't be told safely."""
-    if not frames:
-        return None
-    rows = []
-    for y in range(_GH):
-        tot = 0
-        for fr in frames:
-            tot += sum(1 for v in fr[y * _GW:(y + 1) * _GW] if v > 28)
-        rows.append(tot / (_GW * len(frames)))
-    live = [r >= 0.5 for r in rows]                  # rows that are mostly "picture", not bar + text
-    best, cur_start, gap = (0, 0), None, 0
-    for y, ok in enumerate(live + [False] * 4):
-        if ok:
-            if cur_start is None:
-                cur_start = y
-            gap = 0
-            end = y
-        elif cur_start is not None:
-            gap += 1
-            if gap > 2:                              # tolerate tiny dark rows inside the picture
-                if end - cur_start > best[1] - best[0]:
-                    best = (cur_start, end)
-                cur_start = None
-    y0, y1 = best[0], best[1] + 1
-    h = y1 - y0
-    if h < _GH * 0.25 or h > _GH * 0.93:             # too small = unreliable · too big = no bars
-        return None
-    y0, y1 = y0 + 2, y1 - 2                          # stay inside the picture (kills edge fringes)
-    return y0 / _GH, y1 / _GH
-
-
-# Where Snapchat stamps its logo + @username, as fractions of the 9:16 frame (measured from
-# real downloads). It starts top-left and later hops to the bottom-right; the exact moment
-# isn't known, so each spot is erased for its half of the video plus an overlap (SWITCH ± 0.12).
-DELOGO = os.getenv("SNAP_DELOGO", "1").strip().lower() not in ("0", "false", "no", "off")
-WM_SWITCH = float(os.getenv("SNAP_WM_SWITCH", "0.5") or 0.5)
-_WM_TL = (0.02, 0.05, 0.40, 0.18)                    # x, y, w, h
-_WM_BR = (0.50, 0.79, 0.485, 0.17)
-
-
-async def _delogo_filter(ff: str, src: str) -> str | None:
-    r = await _exec([ff, "-i", src], 8)               # ffmpeg prints size + duration on stderr
-    if not r:
-        return None
-    err = r[2].decode("utf-8", "ignore")
-    m = re.search(r"Video:.*?(\d{3,4})x(\d{3,4})", err)
-    d = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", err)
-    if not m or not d:
-        return None
-    w, h = int(m.group(1)), int(m.group(2))
-    dur = int(d.group(1)) * 3600 + int(d.group(2)) * 60 + float(d.group(3))
-    if dur <= 0 or abs(h / w - 16 / 9) > 0.12:       # only the 9:16 layout was measured
-        return None
-
-    def box(fr):
-        x, y = max(2, int(fr[0] * w) // 2 * 2), max(2, int(fr[1] * h) // 2 * 2)
-        bw = min(int(fr[2] * w) // 2 * 2, w - x - 2)
-        bh = min(int(fr[3] * h) // 2 * 2, h - y - 2)
-        return x, y, bw, bh
-
-    sw, ov = min(max(WM_SWITCH, 0.2), 0.8), 0.12
-    x1, y1, w1, h1 = box(_WM_TL)
-    x2, y2, w2, h2 = box(_WM_BR)
-    return (f"delogo=x={x1}:y={y1}:w={w1}:h={h1}:enable='lt(t,{dur * (sw + ov):.2f})',"
-            f"delogo=x={x2}:y={y2}:w={w2}:h={h2}:enable='gte(t,{dur * (sw - ov):.2f})'")
-
-
-async def strip_snap_bars(data: bytes, budget: float) -> bytes:
-    """Return the video without its watermark bars, or the original when anything is unsure."""
-    ff = _ffmpeg_exe()
-    if not (CROP_BARS and ff) or budget < 14:
-        return data
-    try:
-        with tempfile.TemporaryDirectory(dir="/tmp") as d:
-            src, dst = f"{d}/in.mp4", f"{d}/out.mp4"
-            with open(src, "wb") as f:
-                f.write(data)
-            r = await _exec([ff, "-v", "error", "-i", src, "-vf",
-                             f"fps=1/2,scale={_GW}:{_GH}:flags=area,format=gray",
-                             "-frames:v", "8", "-f", "rawvideo", "-"], min(10.0, budget / 3))
-            if not r or r[0] != 0:
-                return data
-            raw, size = r[1], _GW * _GH
-            band = find_content_band([raw[i:i + size] for i in range(0, len(raw) - size + 1, size)])
-            if not band:
-                # No bars → the watermark sits ON the picture. Erase its two corner spots instead.
-                if not DELOGO:
-                    return data
-                vf = await _delogo_filter(ff, src)
-                if not vf:
-                    return data
-            else:
-                top, bot = band
-                vf = f"crop=iw:trunc(ih*{bot - top:.5f}/2)*2:0:trunc(ih*{top:.5f}/2)*2"
-            r = await _exec([ff, "-y", "-v", "error", "-i", src, "-vf", vf, "-c:v", "libx264",
-                             "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
-                             "-c:a", "copy", "-movflags", "+faststart", dst], budget - 6)
-            if not r or r[0] != 0 or not os.path.exists(dst):
-                return data
-            with open(dst, "rb") as f:
-                out = f.read()
-            return out if 1024 < len(out) <= TG_MAX_BYTES else data
-    except Exception as e:                           # never lose the video because cleanup failed
-        log.info("strip_snap_bars failed: %s", e)
-        return data
 
 
 # ── Telegram uploaders (all have generous timeouts: uploads are slow) ────────
@@ -1701,9 +1508,9 @@ async def send_photo_album(ctx, chat_id: int, m: dict, files: list) -> int:
 
 async def send_audio_file(ctx, chat_id: int, s: dict, data: bytes, ctype: str, kb: Kb | None = None) -> None:
     ext = _ext(ctype, "mp3")
-    title = clip(s.get("a_title") or s.get("title") or "Snapchat", 60)
+    title = clip(s.get("a_title") or s.get("title") or "TikTok", 60)
     fn = f"{safe_name(title, 'audio')}.{ext}"
-    performer = clip(s.get("a_author") or s.get("creator") or "Snapchat", 60)
+    performer = clip(s.get("a_author") or s.get("creator") or "TikTok", 60)
     try:
         await ctx.bot.send_audio(chat_id, InputFile(data, filename=fn), title=title, performer=performer,
                                  caption=f"🎵 <a href=\"https://t.me/{BOT_USERNAME}\">@{esc(BOT_USERNAME)}</a>",
@@ -2095,9 +1902,12 @@ async def show_panel(cb: CB):
         rows.append([Btn("▬▬▬  🌌  ▬▬▬", callback_data="noop")])
         rows.append([Btn(cb.t("b_sup_admins"), callback_data="sup_admins"),
                      Btn(cb.t("b_sup_vip"), callback_data="sup_vips")])
-        rows.append([Btn(cb.t("b_sup_channels"), callback_data="sup_channels")])
+        rows.append([Btn(cb.t("b_sup_channels"), callback_data="sup_channels"),
+                     Btn(cb.t("b_sup_api"), callback_data="sup_api_settings")])
         rows.append([Btn(cb.t("b_sup_maint", status=status_word(lang, CFG.get("maintenance", False))),
                          callback_data="sup_toggle_maint")])
+        rows.append([Btn(cb.t("b_sup_audio", status=status_word(lang, CFG.get("auto_audio", False))),
+                         callback_data="sup_toggle_audio")])
         rows.append([Btn(cb.t("b_sup_botlang"), callback_data="sup_bot_lang")])
     if is_owner(uid):
         rows.append([Btn("▬▬▬  👑  ▬▬▬", callback_data="noop")])
@@ -2454,7 +2264,7 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
     status = None
     try:
         status = await msg.reply_text(tx(lang, "st_search", bar=bar(1)))
-        media = await fetch_snap(url)
+        media = await fetch_tiktok(url)
         if not media:
             return await safe_edit(status, tx(lang, "invalid_link"))
 
@@ -2482,7 +2292,6 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
         elif media["videos"]:                                          # ── video post
             data, big = await fetch_video(media)
             if data:
-                data = await strip_snap_bars(data, deadline_left(started) - 12)
                 await safe_edit(status, tx(lang, "st_upload", bar=bar(4)))
                 await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
                 await send_video_file(ctx, chat_id, media, data, kb)
@@ -2525,7 +2334,7 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
 
 
 async def process_avatar(update: Update, ctx, username: str, lang: str, started: float) -> None:
-    """Fetch and deliver a public Snapchat account's HD profile picture."""
+    """Fetch and deliver a public TikTok account's HD profile picture."""
     msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
 
     if not await gate_message(update, ctx, uid, lang):
@@ -2613,12 +2422,11 @@ async def process_story(update: Update, ctx, username: str, lang: str, started: 
             if not res:
                 continue
             data, ctype = res
-            is_video = ctype.startswith("video") or (it["type"] == "video" and not ctype.startswith("image"))
             cap = tx(lang, "story_caption", user=esc(username), i=i, n=total,
                      when=story_when(it["ts"]), bot=esc(BOT_USERNAME))
             name = f"{safe_name(username)}_story_{i}"
             try:
-                if is_video:
+                if it["type"] == "video":
                     try:
                         await ctx.bot.send_video(chat_id, InputFile(data, filename=name + ".mp4"), caption=cap,
                                                  duration=it.get("dur") or None, supports_streaming=True, **_UP)
@@ -2699,10 +2507,13 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return await msg.reply_text(tx(lang, "ask_story_prompt"), reply_markup=ForceReply(selective=True))
 
     if url:
-        who = story_user_from_url(url)                   # snapchat.com/add/<user> → stories
-        if who:
-            return await process_story(update, ctx, who, lang, started)
         return await process_link(update, ctx, url, lang, started)
+
+    # not a TikTok link — is it a @username? (private chats only)
+    if private:
+        username = extract_username(text)
+        if username:
+            return await process_avatar(update, ctx, username, lang, started)
 
     if not private:
         return                                          # ignore group chatter
@@ -2837,7 +2648,7 @@ code{direction:ltr;unicode-bidi:embed;background:#0d1322;border:1px solid var(--
 .foot a{color:var(--acc);text-decoration:none}
 </style></head><body><div class="wrap">
 <div class="hero"><div class="logo">🎬</div><h1>JackTik Bot</h1>
-<div class="sub">Snapchat Downloader · Telegram · v15</div>
+<div class="sub">TikTok Downloader · Telegram · v15</div>
 <div class="badge __BADGE__"><span class="dot"></span>__BADGE_TEXT__</div></div>
 __BODY__
 <div class="foot">Made with ♥ by <a href="https://t.me/__DEV__">__DEV_TXT__</a> · <a href="__CH__">Channel</a></div>
@@ -2895,4 +2706,3 @@ async def status_page(req: Request, full_path: str = ""):
                  .replace("__DEV__", esc(DEV.lstrip("@"))).replace("__DEV_TXT__", esc(DEV))
                  .replace("__CH__", esc(CHANNEL_URL)))
     return HTMLResponse(page, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
-
