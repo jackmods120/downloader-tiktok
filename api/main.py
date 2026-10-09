@@ -22,6 +22,8 @@ import json
 import logging
 import os
 import re
+import shutil
+import tempfile
 import time
 import traceback
 from contextvars import ContextVar
@@ -1497,6 +1499,107 @@ def result_kb(lang: str, m: dict, with_audio: bool, direct: str | None = None) -
     return Kb(rows)
 
 
+# ── watermark removal ─────────────────────────────────────────────────────────
+# Snapchat burns its logo + @username into the BLACK BARS above/below the picture
+# (the picture sits in the middle of a 9:16 canvas). We find the picture band and
+# crop the bars away, which removes the watermark wherever it moves to.
+# Needs an ffmpeg binary: add `imageio-ffmpeg` to requirements.txt (bundles one).
+# Set SNAP_CROP_BARS=0 to disable.
+CROP_BARS = os.getenv("SNAP_CROP_BARS", "1").strip().lower() not in ("0", "false", "no", "off")
+_GW, _GH = 72, 128                                   # analysis grid (tiny gray frames)
+
+
+def _ffmpeg_exe() -> str | None:
+    try:
+        import imageio_ffmpeg                         # type: ignore
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return shutil.which("ffmpeg")
+
+
+async def _exec(cmd: list, timeout: float):
+    try:
+        p = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
+                                                 stderr=asyncio.subprocess.PIPE)
+    except Exception as e:
+        log.info("exec failed: %s", e)
+        return None
+    try:
+        out, err = await asyncio.wait_for(p.communicate(), timeout)
+    except asyncio.TimeoutError:
+        p.kill()
+        await p.wait()
+        return None
+    return p.returncode, out, err
+
+
+def find_content_band(frames: list) -> tuple[float, float] | None:
+    """frames: raw gray frames (_GW×_GH bytes each) → (top, bottom) as 0..1 fractions of the
+    picture band, or None when there are no bars (nothing to crop) / it can't be told safely."""
+    if not frames:
+        return None
+    rows = []
+    for y in range(_GH):
+        tot = 0
+        for fr in frames:
+            tot += sum(1 for v in fr[y * _GW:(y + 1) * _GW] if v > 28)
+        rows.append(tot / (_GW * len(frames)))
+    live = [r >= 0.5 for r in rows]                  # rows that are mostly "picture", not bar + text
+    best, cur_start, gap = (0, 0), None, 0
+    for y, ok in enumerate(live + [False] * 4):
+        if ok:
+            if cur_start is None:
+                cur_start = y
+            gap = 0
+            end = y
+        elif cur_start is not None:
+            gap += 1
+            if gap > 2:                              # tolerate tiny dark rows inside the picture
+                if end - cur_start > best[1] - best[0]:
+                    best = (cur_start, end)
+                cur_start = None
+    y0, y1 = best[0], best[1] + 1
+    h = y1 - y0
+    if h < _GH * 0.25 or h > _GH * 0.93:             # too small = unreliable · too big = no bars
+        return None
+    y0, y1 = y0 + 2, y1 - 2                          # stay inside the picture (kills edge fringes)
+    return y0 / _GH, y1 / _GH
+
+
+async def strip_snap_bars(data: bytes, budget: float) -> bytes:
+    """Return the video without its watermark bars, or the original when anything is unsure."""
+    ff = _ffmpeg_exe()
+    if not (CROP_BARS and ff) or budget < 14:
+        return data
+    try:
+        with tempfile.TemporaryDirectory(dir="/tmp") as d:
+            src, dst = f"{d}/in.mp4", f"{d}/out.mp4"
+            with open(src, "wb") as f:
+                f.write(data)
+            r = await _exec([ff, "-v", "error", "-i", src, "-vf",
+                             f"fps=1/2,scale={_GW}:{_GH}:flags=area,format=gray",
+                             "-frames:v", "8", "-f", "rawvideo", "-"], min(10.0, budget / 3))
+            if not r or r[0] != 0:
+                return data
+            raw, size = r[1], _GW * _GH
+            band = find_content_band([raw[i:i + size] for i in range(0, len(raw) - size + 1, size)])
+            if not band:
+                return data
+            top, bot = band
+            vf = f"crop=iw:trunc(ih*{bot - top:.5f}/2)*2:0:trunc(ih*{top:.5f}/2)*2"
+            r = await _exec([ff, "-y", "-v", "error", "-i", src, "-vf", vf, "-c:v", "libx264",
+                             "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
+                             "-c:a", "copy", "-movflags", "+faststart", dst], budget - 6)
+            if not r or r[0] != 0 or not os.path.exists(dst):
+                return data
+            with open(dst, "rb") as f:
+                out = f.read()
+            return out if 1024 < len(out) <= TG_MAX_BYTES else data
+    except Exception as e:                           # never lose the video because cleanup failed
+        log.info("strip_snap_bars failed: %s", e)
+        return data
+
+
 # ── Telegram uploaders (all have generous timeouts: uploads are slow) ────────
 _UP = dict(read_timeout=120, write_timeout=120, connect_timeout=20, pool_timeout=20)
 
@@ -2335,6 +2438,7 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
         elif media["videos"]:                                          # ── video post
             data, big = await fetch_video(media)
             if data:
+                data = await strip_snap_bars(data, deadline_left(started) - 12)
                 await safe_edit(status, tx(lang, "st_upload", bar=bar(4)))
                 await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
                 await send_video_file(ctx, chat_id, media, data, kb)
