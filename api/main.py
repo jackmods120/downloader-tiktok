@@ -207,7 +207,7 @@ L["ku"] = {
     ),
     "photos_done": "🖼 <b>{n} وێنە</b> ئامادەیە ✅",
     "ask_link_prompt": "🔗 <b>لینکی سناپچاتەکە بنێرە:</b>",
-    "ask_avatar_prompt": "👤 <b>یوزەرنەیمی سناپچات بنێرە:</b>\nنموونە: <code>@username</code>",
+    "ask_avatar_prompt": "📸 <b>لینکی وێنەی گشتیی سناپچات بنێرە:</b>",
     "avatar_caption": "👤 <b>وێنەی پرۆفایلی @{user}</b>\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "no_avatar": "❌ وێنەی پرۆفایل نەدۆزرایەوە! ڕەنگە ئەکاونتەکە تایبەت بێت یان بوونی نەبێت.",
     "private_account": "🔒 <b>ئەم ئەکاونتە تایبەتییە!</b>\nتەنیا ئەکاونتی گشتی پشتگیری دەکرێت.",
@@ -228,7 +228,7 @@ L["ku"] = {
     "story_unavailable": "⚠️ ستۆری ئەم ئەکاونتە بەردەست نییە (ڕەنگە تایبەت بێت یان سەرچاوەکە پشتگیری نەکات).",
     "b_story": "🕵️ ستۆری نهێنی", "b_story_again": "🔄 ستۆری کەسێکی تر",
     # ── buttons ───────────────────────────────────────────────────────────────
-    "b_dl": "📥 دابەزاندنی نوێ", "b_profile": "👤 پرۆفایل", "b_vip": "💎 VIP", "b_avatar": "🖼 وێنەی پرۆفایل",
+    "b_dl": "📥 دابەزاندنی نوێ", "b_profile": "👤 پرۆفایل", "b_vip": "💎 VIP", "b_avatar": "📸 وێنەی گشتی",
     "b_lang": "🌐 زمان", "b_help": "📖 ڕێنمایی", "b_channel": "📢 کەناڵی بۆت",
     "b_panel": "🛠 پانێڵی کۆنتڕۆڵ", "b_back": "🔙 گەڕانەوە", "b_delete": "🗑 سڕینەوە",
     "b_joined": "✅ جۆینم کرد", "b_audio": "🎵 گۆرانی MP3", "b_orig": "🔗 لینکی ڕەسەن",
@@ -408,7 +408,7 @@ L["en"] = {
     ),
     "photos_done": "🖼 <b>{n} photos</b> ready ✅",
     "ask_link_prompt": "🔗 <b>Send the Snapchat link:</b>",
-    "ask_avatar_prompt": "👤 <b>Send a Snapchat username:</b>\nExample: <code>@username</code>",
+    "ask_avatar_prompt": "📸 <b>Send the link of the public Snapchat photo:</b>",
     "avatar_caption": "👤 <b>Profile picture of @{user}</b>\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "no_avatar": "❌ Profile picture not found! The account may be private or not exist.",
     "private_account": "🔒 <b>This account is private!</b>\nOnly public accounts are supported.",
@@ -427,7 +427,7 @@ L["en"] = {
     "no_story": "📭 <b>@{user}</b> has no active stories right now.\nSnapchat stories last 24 hours.",
     "story_unavailable": "⚠️ This account's stories aren't available (it may be private, or the source doesn't support them).",
     "b_story": "🕵️ Secret story", "b_story_again": "🔄 Another story",
-    "b_dl": "📥 New download", "b_profile": "👤 Profile", "b_vip": "💎 VIP", "b_avatar": "🖼 Profile picture",
+    "b_dl": "📥 New download", "b_profile": "👤 Profile", "b_vip": "💎 VIP", "b_avatar": "📸 Public photo",
     "b_lang": "🌐 Language", "b_help": "📖 Help", "b_channel": "📢 Bot channel",
     "b_panel": "🛠 Control panel", "b_back": "🔙 Back", "b_delete": "🗑 Delete",
     "b_joined": "✅ I joined", "b_audio": "🎵 MP3 audio", "b_orig": "🔗 Original link",
@@ -606,7 +606,7 @@ L["ar"] = {
     ),
     "photos_done": "🖼 <b>{n} صورة</b> جاهزة ✅",
     "ask_link_prompt": "🔗 <b>أرسل رابط سناب شات:</b>",
-    "ask_avatar_prompt": "👤 <b>أرسل اسم مستخدم سناب شات:</b>\nمثال: <code>@username</code>",
+    "ask_avatar_prompt": "📸 <b>أرسل رابط الصورة العامة من سناب شات:</b>",
     "avatar_caption": "👤 <b>صورة الملف الشخصي لـ @{user}</b>\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "no_avatar": "❌ لم يتم العثور على صورة الملف الشخصي! ربما الحساب خاص أو غير موجود.",
     "private_account": "🔒 <b>هذا الحساب خاص!</b>\nيتم دعم الحسابات العامة فقط.",
@@ -625,7 +625,7 @@ L["ar"] = {
     "no_story": "📭 <b>@{user}</b> لا يملك قصصاً نشطة حالياً.\nقصص سناب شات تبقى 24 ساعة.",
     "story_unavailable": "⚠️ قصص هذا الحساب غير متاحة (ربما الحساب خاص أو المصدر لا يدعمها).",
     "b_story": "🕵️ قصة سرية", "b_story_again": "🔄 قصة أخرى",
-    "b_dl": "📥 تحميل جديد", "b_profile": "👤 الملف الشخصي", "b_vip": "💎 VIP", "b_avatar": "🖼 صورة الملف الشخصي",
+    "b_dl": "📥 تحميل جديد", "b_profile": "👤 الملف الشخصي", "b_vip": "💎 VIP", "b_avatar": "📸 صورة عامة",
     "b_lang": "🌐 اللغة", "b_help": "📖 المساعدة", "b_channel": "📢 قناة البوت",
     "b_panel": "🛠 لوحة التحكم", "b_back": "🔙 رجوع", "b_delete": "🗑 حذف",
     "b_joined": "✅ اشتركت", "b_audio": "🎵 صوت MP3", "b_orig": "🔗 الرابط الأصلي",
@@ -735,7 +735,7 @@ L["ku"].update({
         "بە یەک لینک ڤیدیۆی <b>سناپچات</b> دابەزێنە، و ستۆری <b>گشتی</b>ی هەر ئەکاونتێک بە نهێنی ببینە.\n\n"
         "<blockquote>🎬  ڤیدیۆی Spotlight\n"
         "🕵️  ستۆری نهێنی (ئەکاونتی گشتی)\n"
-        "🖼  وێنەی پرۆفایل</blockquote>\n"
+        "📸  وێنەی گشتی (لینک)</blockquote>\n"
         "👇 <b>لینکێک یان یوزەرنەیمێک بنێرە</b>."
     ),
     "help": (
@@ -745,14 +745,14 @@ L["ku"].update({
         "<b>٣</b> · چەند چرکەیەک چاوەڕێ بکە ⚡\n\n"
         "<blockquote>🎬 ڤیدیۆ — لینکی Spotlight\n"
         "🕵️ ستۆری — تەنیا ئەکاونتی <b>گشتی</b>\n"
-        "👤 پرۆفایل — <code>@username</code> بنێرە بۆ وێنەی پرۆفایل</blockquote>\n"
+        "📸 وێنە — لینکی وێنەی گشتی بنێرە</blockquote>\n"
         "💎 <b>VIP</b> — بێ جۆینی ناچاری و ستۆری زیاتر.\n"
         "📩 پەیوەندی: {dev}"
     ),
     "not_link": (
         "🔗 تکایە <b>لینکی سناپچات</b> بنێرە یان دوگمەی «ستۆری نهێنی» بەکاربێنە.\n"
         "نموونە: <code>https://www.snapchat.com/spotlight/xxxx</code>\n"
-        "یان <code>@username</code> بۆ وێنەی پرۆفایل"
+        "یان لینکی وێنەیەکی گشتی"
     ),
 })
 L["en"].update({
@@ -761,7 +761,7 @@ L["en"].update({
         "Download <b>Snapchat</b> videos with one link, and quietly view the <b>public</b> stories of any profile.\n\n"
         "<blockquote>🎬  Spotlight videos\n"
         "🕵️  Secret story viewer (public profiles)\n"
-        "🖼  Profile picture</blockquote>\n"
+        "📸  Public photos (link)</blockquote>\n"
         "👇 <b>Send a link or a username</b>."
     ),
     "help": (
@@ -771,14 +771,14 @@ L["en"].update({
         "<b>3</b> · Wait a few seconds ⚡\n\n"
         "<blockquote>🎬 Video — Spotlight links\n"
         "🕵️ Stories — <b>public</b> profiles only\n"
-        "👤 Profile — send <code>@username</code> for the profile picture</blockquote>\n"
+        "📸 Photos — send the link of a public photo</blockquote>\n"
         "💎 <b>VIP</b> — no forced join, more stories.\n"
         "📩 Contact: {dev}"
     ),
     "not_link": (
         "🔗 Please send a <b>Snapchat link</b> or use the “Secret story” button.\n"
         "Example: <code>https://www.snapchat.com/spotlight/xxxx</code>\n"
-        "or <code>@username</code> for the profile picture"
+        "or the link of a public photo"
     ),
 })
 L["ar"].update({
@@ -787,7 +787,7 @@ L["ar"].update({
         "حمّل فيديوهات <b>سناب شات</b> برابط واحد، وشاهد القصص <b>العامة</b> لأي حساب بسرّية.\n\n"
         "<blockquote>🎬  فيديوهات Spotlight\n"
         "🕵️  مشاهدة القصص سراً (الحسابات العامة)\n"
-        "🖼  صورة الملف الشخصي</blockquote>\n"
+        "📸  الصور العامة (رابط)</blockquote>\n"
         "👇 <b>أرسل رابطاً أو اسم مستخدم</b>."
     ),
     "help": (
@@ -797,14 +797,14 @@ L["ar"].update({
         "<b>٣</b> · انتظر ثوانٍ قليلة ⚡\n\n"
         "<blockquote>🎬 الفيديو — روابط Spotlight\n"
         "🕵️ القصص — الحسابات <b>العامة</b> فقط\n"
-        "👤 الملف الشخصي — أرسل <code>@username</code> لصورة الملف</blockquote>\n"
+        "📸 الصور — أرسل رابط صورة عامة</blockquote>\n"
         "💎 <b>VIP</b> — بدون اشتراك إجباري وقصص أكثر.\n"
         "📩 للتواصل: {dev}"
     ),
     "not_link": (
         "🔗 من فضلك أرسل <b>رابط سناب شات</b> أو استخدم زر «قصة سرية».\n"
         "مثال: <code>https://www.snapchat.com/spotlight/xxxx</code>\n"
-        "أو <code>@username</code> لصورة الملف الشخصي"
+        "أو رابط صورة عامة"
     ),
 })
 
@@ -1317,6 +1317,8 @@ async def fetch_snap(url: str) -> dict | None:
         snaps = parse_snaps(_find_key(nd, "snapList")) if nd else []
         videos = [(s["url"], 0) for s in snaps if s["type"] == "video"][:1]
         images = [s["url"] for s in snaps if s["type"] == "photo"]
+    if not videos and not images and cover and "sc-cdn.net" in cover:
+        images = [cover]                               # public photo link → its picture
     if not videos and not images:
         return None
     return {
@@ -2701,12 +2703,6 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if who:
             return await process_story(update, ctx, who, lang, started)
         return await process_link(update, ctx, url, lang, started)
-
-    # not a Snapchat link — is it a @username? (private chats only)
-    if private:
-        username = extract_username(text, need_at=True)
-        if username:
-            return await process_avatar(update, ctx, username, lang, started)
 
     if not private:
         return                                          # ignore group chatter
