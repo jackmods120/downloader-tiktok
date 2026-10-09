@@ -1566,6 +1566,42 @@ def find_content_band(frames: list) -> tuple[float, float] | None:
     return y0 / _GH, y1 / _GH
 
 
+# Where Snapchat stamps its logo + @username, as fractions of the 9:16 frame (measured from
+# real downloads). It starts top-left and later hops to the bottom-right; the exact moment
+# isn't known, so each spot is erased for its half of the video plus an overlap (SWITCH ± 0.12).
+DELOGO = os.getenv("SNAP_DELOGO", "1").strip().lower() not in ("0", "false", "no", "off")
+WM_SWITCH = float(os.getenv("SNAP_WM_SWITCH", "0.5") or 0.5)
+_WM_TL = (0.02, 0.05, 0.40, 0.18)                    # x, y, w, h
+_WM_BR = (0.50, 0.79, 0.485, 0.17)
+
+
+async def _delogo_filter(ff: str, src: str) -> str | None:
+    r = await _exec([ff, "-i", src], 8)               # ffmpeg prints size + duration on stderr
+    if not r:
+        return None
+    err = r[2].decode("utf-8", "ignore")
+    m = re.search(r"Video:.*?(\d{3,4})x(\d{3,4})", err)
+    d = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", err)
+    if not m or not d:
+        return None
+    w, h = int(m.group(1)), int(m.group(2))
+    dur = int(d.group(1)) * 3600 + int(d.group(2)) * 60 + float(d.group(3))
+    if dur <= 0 or abs(h / w - 16 / 9) > 0.12:       # only the 9:16 layout was measured
+        return None
+
+    def box(fr):
+        x, y = max(2, int(fr[0] * w) // 2 * 2), max(2, int(fr[1] * h) // 2 * 2)
+        bw = min(int(fr[2] * w) // 2 * 2, w - x - 2)
+        bh = min(int(fr[3] * h) // 2 * 2, h - y - 2)
+        return x, y, bw, bh
+
+    sw, ov = min(max(WM_SWITCH, 0.2), 0.8), 0.12
+    x1, y1, w1, h1 = box(_WM_TL)
+    x2, y2, w2, h2 = box(_WM_BR)
+    return (f"delogo=x={x1}:y={y1}:w={w1}:h={h1}:enable='lt(t,{dur * (sw + ov):.2f})',"
+            f"delogo=x={x2}:y={y2}:w={w2}:h={h2}:enable='gte(t,{dur * (sw - ov):.2f})'")
+
+
 async def strip_snap_bars(data: bytes, budget: float) -> bytes:
     """Return the video without its watermark bars, or the original when anything is unsure."""
     ff = _ffmpeg_exe()
@@ -1584,9 +1620,15 @@ async def strip_snap_bars(data: bytes, budget: float) -> bytes:
             raw, size = r[1], _GW * _GH
             band = find_content_band([raw[i:i + size] for i in range(0, len(raw) - size + 1, size)])
             if not band:
-                return data
-            top, bot = band
-            vf = f"crop=iw:trunc(ih*{bot - top:.5f}/2)*2:0:trunc(ih*{top:.5f}/2)*2"
+                # No bars → the watermark sits ON the picture. Erase its two corner spots instead.
+                if not DELOGO:
+                    return data
+                vf = await _delogo_filter(ff, src)
+                if not vf:
+                    return data
+            else:
+                top, bot = band
+                vf = f"crop=iw:trunc(ih*{bot - top:.5f}/2)*2:0:trunc(ih*{top:.5f}/2)*2"
             r = await _exec([ff, "-y", "-v", "error", "-i", src, "-vf", vf, "-c:v", "libx264",
                              "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
                              "-c:a", "copy", "-movflags", "+faststart", dst], budget - 6)
