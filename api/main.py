@@ -84,8 +84,9 @@ BOT_USERNAME   = os.getenv("BOT_USERNAME", "TikTok_Downloader_Jack_Robot").lstri
 #   STORY_API_HEADERS = {"x-api-key": "..."}        (JSON, optional)
 STORY_API_URL     = os.getenv("STORY_API_URL", "").strip()
 STORY_API_HEADERS = os.getenv("STORY_API_HEADERS", "").strip()
-STORY_MAX         = 10               # stories per request (VIP: STORY_MAX_VIP)
-STORY_MAX_VIP     = 20
+STORY_MAX         = 40               # newest stories per request (VIP: STORY_MAX_VIP)
+STORY_MAX_VIP     = 80
+STORY_PAGES       = 8                # max provider pages fetched per username
 
 START_TIME     = time.time()
 SESSION_TTL    = 3600                # seconds an audio/"again" session stays valid
@@ -227,7 +228,9 @@ L["ku"] = {
     ),
     "story_caption": "🕵️ <b>@{user}</b> · ستۆری <b>{i}/{n}</b>\n🕒 {when}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "story_done": "✅ <b>{n} ستۆری</b> نێردرا 👻",
-    "story_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> ستۆری نێردرا، <b>{left}</b> ماوە. دووبارە هەوڵبدەرەوە.",
+    "story_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> ستۆری نێردرا، <b>{left}</b> ماوە. دوگمەی خوارەوە دابگرە بۆ بەردەوامبوون.",
+    "b_story_more": "▶️ بەردەوامبە ({left} ماوە)",
+    "story_expired": "⌛ ئەم بەردەوامبوونە بەسەرچووە. دووبارە داوای ستۆری بکەرەوە.",
     "no_story": "📭 <b>@{user}</b> ئێستا ستۆری چالاکی نییە.\nستۆری تیکتۆک ٢٤ کاتژمێر دەمێنێتەوە.",
     "story_unavailable": "⚠️ ستۆری ئەم ئەکاونتە بەردەست نییە (ڕەنگە تایبەت بێت یان سەرچاوەکە پشتگیری نەکات).",
     "b_story": "🕵️ ستۆری نهێنی", "b_story_again": "🔄 ستۆری کەسێکی تر",
@@ -427,7 +430,9 @@ L["en"] = {
     ),
     "story_caption": "🕵️ <b>@{user}</b> · story <b>{i}/{n}</b>\n🕒 {when}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "story_done": "✅ <b>{n} stories</b> delivered 👻",
-    "story_partial": "⏱ Time limit reached — <b>{n}</b> stories sent, <b>{left}</b> left. Try again.",
+    "story_partial": "⏱ Time limit reached — <b>{n}</b> stories sent, <b>{left}</b> left. Tap the button below to continue.",
+    "b_story_more": "▶️ Continue ({left} left)",
+    "story_expired": "⌛ This continuation expired. Request the stories again.",
     "no_story": "📭 <b>@{user}</b> has no active stories right now.\nTikTok stories last 24 hours.",
     "story_unavailable": "⚠️ This account's stories aren't available (it may be private, or the source doesn't support them).",
     "b_story": "🕵️ Secret story", "b_story_again": "🔄 Another story",
@@ -625,7 +630,9 @@ L["ar"] = {
     ),
     "story_caption": "🕵️ <b>@{user}</b> · قصة <b>{i}/{n}</b>\n🕒 {when}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "story_done": "✅ تم إرسال <b>{n} قصة</b> 👻",
-    "story_partial": "⏱ انتهى الوقت — أُرسلت <b>{n}</b> قصة وتبقّت <b>{left}</b>. حاول مجدداً.",
+    "story_partial": "⏱ انتهى الوقت — أُرسلت <b>{n}</b> قصة وتبقّت <b>{left}</b>. اضغط الزر أدناه للمتابعة.",
+    "b_story_more": "▶️ متابعة (تبقّى {left})",
+    "story_expired": "⌛ انتهت صلاحية المتابعة. اطلب القصص مجدداً.",
     "no_story": "📭 <b>@{user}</b> لا يملك قصصاً نشطة حالياً.\nقصص تيك توك تبقى 24 ساعة.",
     "story_unavailable": "⚠️ قصص هذا الحساب غير متاحة (ربما الحساب خاص أو المصدر لا يدعمها).",
     "b_story": "🕵️ قصة سرية", "b_story_again": "🔄 قصة أخرى",
@@ -1275,7 +1282,8 @@ def _story_list(data) -> list:
 def parse_story_items(data, base: str = "") -> list:
     """Normalise whatever a provider returns → [{'type','url','cover','ts','dur'}]."""
     out = []
-    for it in _story_list(data):
+    raw = _story_list(data)
+    for it in raw:
         if not isinstance(it, dict):
             continue
         vurl = ""
@@ -1308,26 +1316,121 @@ def parse_story_items(data, base: str = "") -> list:
         if x["url"] not in seen:
             seen.add(x["url"]); uniq.append(x)
     uniq.sort(key=lambda x: x["ts"] or 0)           # oldest → newest, like the TikTok app
+    if len(raw) != len(uniq):
+        log.info("story parse: %s raw entries → %s usable items", len(raw), len(uniq))
     return uniq
 
 
+def _page_meta(data) -> tuple:
+    """(next_cursor, has_more) under whatever names the provider uses · has_more None = unknown."""
+    d = data if isinstance(data, dict) else {}
+    nxt = None
+    for k in ("cursor", "next_cursor", "nextCursor", "max_cursor", "maxCursor"):
+        if d.get(k) not in (None, "", 0, "0"):
+            nxt = d[k]
+            break
+    more = None
+    for k in ("hasMore", "has_more", "hasmore", "more"):
+        if k in d:
+            more = bool(d[k]) and str(d[k]).strip().lower() not in ("0", "false")
+            break
+    return nxt, more
+
+
 async def _story_via_tikwm(username: str) -> list | None:
+    """ALL active stories: the endpoint answers page by page (a page holds only a few stories)."""
     t = min(int(CFG.get("api_timeout", 40)), 20)
-    for _ in range(2):
+    t0 = time.monotonic()
+    items, seen, cursor, reached = [], set(), None, False
+    for page in range(STORY_PAGES):
+        params = {"unique_id": f"@{username}", "count": 30}
+        if cursor is not None:
+            params["cursor"] = cursor
+        j = None
+        for _ in range(2):
+            try:
+                r = await http().get("https://www.tikwm.com/api/user/story", params=params, timeout=t)
+                j = r.json()
+            except Exception as e:
+                log.info("tikwm story page %s failed: %s", page, e)
+                j = None
+                break
+            if j.get("code") == 0:
+                break
+            if "limit" in str(j.get("msg", "")).lower():       # tikwm: ~1 request / second
+                await asyncio.sleep(1.3)
+                continue
+            break
+        if not j or j.get("code") != 0:
+            break
+        reached = True
+        data = j.get("data")
+        got = parse_story_items(data, "https://www.tikwm.com")
+        new = [x for x in got if x["url"] not in seen]
+        nxt, more = _page_meta(data)
+        log.info("tikwm story page %s: %s items (%s new) next=%r more=%r keys=%s", page, len(got), len(new),
+                 nxt, more, sorted(data)[:12] if isinstance(data, dict) else type(data).__name__)
+        for x in new:
+            seen.add(x["url"])
+        items += new
+        if not new or more is False or time.monotonic() - t0 > 14:
+            break
+        if nxt is None or nxt == cursor:
+            nxt = len(items)                                   # no cursor given → offset-style probe
+        cursor = nxt
+        await asyncio.sleep(1.1)
+    if not reached:
+        return None
+    items.sort(key=lambda x: x["ts"] or 0)                     # oldest → newest, like the app
+    return items
+
+
+def _shorten(o):
+    if isinstance(o, str):
+        return o if len(o) <= 70 else o[:67] + "…"
+    if isinstance(o, dict):
+        return {k: _shorten(v) for k, v in list(o.items())[:40]}
+    if isinstance(o, list):
+        return [_shorten(v) for v in o[:3]] + ([f"…+{len(o) - 3} more"] if len(o) > 3 else [])
+    return o
+
+
+async def story_debug(username: str) -> str:
+    """Admin tool: the SHAPE of the provider's answer (keys, cursors, counts) — URLs are shortened."""
+    out = [f"story debug @{username}"]
+    cursor = None
+    for page in range(3):
+        params = {"unique_id": f"@{username}", "count": 30}
+        if cursor is not None:
+            params["cursor"] = cursor
         try:
-            r = await http().get("https://www.tikwm.com/api/user/story",
-                                 params={"unique_id": f"@{username}"}, timeout=t)
+            r = await http().get("https://www.tikwm.com/api/user/story", params=params, timeout=20)
             j = r.json()
         except Exception as e:
-            log.info("tikwm story failed: %s", e)
-            return None
-        if j.get("code") == 0:
-            return parse_story_items(j.get("data"), "https://www.tikwm.com")
-        if "limit" in str(j.get("msg", "")).lower():
-            await asyncio.sleep(1.3)
-            continue
-        return None
-    return None
+            out.append(f"\npage {page}: ERROR {e}")
+            break
+        data = j.get("data")
+        out.append(f"\n── page {page}  params={params}\ncode={j.get('code')} msg={j.get('msg')!r}")
+        if isinstance(data, dict):
+            out.append("scalar fields: " + json.dumps(
+                {k: _shorten(v) for k, v in data.items() if not isinstance(v, (list, dict))}, ensure_ascii=False))
+            for k, v in data.items():
+                if isinstance(v, (list, dict)):
+                    out.append(f"{type(v).__name__} '{k}': {len(v)} entries")
+        lst = _story_list(data)
+        out.append(f"stories found: {len(lst)}")
+        out.append("create_time values: " + ", ".join(
+            str(_to_int(x.get("create_time") or x.get("createTime"))) for x in lst if isinstance(x, dict)))
+        for n, it in enumerate(lst[:2]):
+            out.append(f"item {n}: " + json.dumps(_shorten(it), ensure_ascii=False)[:1800])
+        nxt, more = _page_meta(data)
+        out.append(f"next_cursor={nxt!r} has_more={more!r} → parsed: "
+                   f"{[(x['type'], x['ts']) for x in parse_story_items(data, 'https://www.tikwm.com')]}")
+        if nxt is None:
+            break
+        cursor = nxt
+        await asyncio.sleep(1.2)
+    return "\n".join(out)
 
 
 async def _story_via_custom(username: str) -> list | None:
@@ -1834,6 +1937,21 @@ async def route(cb: CB, data: str):
     if data == "ask_story":
         await cb.answer()
         return await cb.q.message.reply_text(cb.t("ask_story_prompt"), reply_markup=ForceReply(selective=True))
+
+    if data == "story_more":
+        await cb.answer()
+        s = await session_get(f"story_{uid}")
+        items = s.get("items") if s else None
+        if isinstance(items, dict):                      # Firebase may hand a list back as {"0":…, "1":…}
+            items = [items[k] for k in sorted(items, key=lambda x: int(x))]
+        if not items:
+            return await cb.q.message.reply_text(cb.t("story_expired"))
+        try:
+            await cb.q.message.edit_reply_markup(reply_markup=None)    # a used button can't be tapped twice
+        except TelegramError:
+            pass
+        s["items"] = items
+        return await process_story(cb.update, cb.ctx, s.get("user", ""), cb.lang, time.monotonic(), resume=s)
 
     if data == "show_profile":
         ud = await db_get(f"users/{uid}") or {}
@@ -2423,14 +2541,70 @@ async def process_avatar(update: Update, ctx, username: str, lang: str, started:
         await release_lock(uid)
 
 
-def story_kb(lang: str) -> Kb:
-    return Kb([[Btn(tx(lang, "b_story_again"), callback_data="ask_story")],
-               [Btn(tx(lang, "b_delete"), callback_data="close")]])
+def story_kb(lang: str, left: int = 0) -> Kb:
+    rows = []
+    if left > 0:
+        rows.append([Btn(tx(lang, "b_story_more", left=left), callback_data="story_more")])
+    rows.append([Btn(tx(lang, "b_story_again"), callback_data="ask_story")])
+    rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
+    return Kb(rows)
 
 
-async def process_story(update: Update, ctx, username: str, lang: str, started: float) -> None:
+async def _send_story_item(ctx, chat_id: int, username: str, lang: str, it: dict, i: int, total: int) -> bool:
+    """Download ONE story item and upload it to Telegram → True when it was delivered."""
+    await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO if it.get("type") == "video" else ChatAction.UPLOAD_PHOTO)
+    try:
+        res = await download_bytes(it["url"], max_bytes=TG_MAX_BYTES, timeout=30)
+    except TooBig:
+        res = None
+    if not res:
+        return False
+    data, ctype = res
+    kind = sniff_kind(data)
+    if kind == "audio":                              # link gave only the music → show the picture instead
+        res2 = None
+        if it.get("cover"):
+            try:
+                res2 = await download_bytes(it["cover"], max_bytes=20_000_000, timeout=20)
+            except TooBig:
+                res2 = None
+        if not res2 or sniff_kind(res2[0]) not in ("jpg", "png", "webp"):
+            return False
+        data, ctype = res2
+        kind = sniff_kind(data)
+    is_video = kind == "video" or (kind == "unknown" and it.get("type") == "video"
+                                   and not ctype.startswith("image"))
+    cap = tx(lang, "story_caption", user=esc(username), i=i, n=total,
+             when=story_when(it.get("ts") or 0), bot=esc(BOT_USERNAME))
+    name = f"{safe_name(username)}_story_{i}"
+    try:
+        if kind == "heic":                           # Telegram can't show HEIC as a photo
+            await ctx.bot.send_document(chat_id, InputFile(data, filename=name + ".heic"), caption=cap, **_UP)
+        elif is_video:
+            try:
+                await ctx.bot.send_video(chat_id, InputFile(data, filename=name + ".mp4"), caption=cap,
+                                         duration=it.get("dur") or None, supports_streaming=True, **_UP)
+            except BadRequest:
+                await ctx.bot.send_document(chat_id, InputFile(data, filename=name + ".mp4"), caption=cap, **_UP)
+        else:
+            ext = kind if kind in ("jpg", "png", "webp") else _ext(ctype, "jpg")
+            try:
+                if len(data) > TG_PHOTO_MAX:
+                    raise BadRequest("too large")
+                await ctx.bot.send_photo(chat_id, InputFile(data, filename=f"{name}.{ext}"), caption=cap, **_UP)
+            except BadRequest:
+                await ctx.bot.send_document(chat_id, InputFile(data, filename=f"{name}.{ext}"), caption=cap, **_UP)
+        return True
+    except TelegramError as e:
+        log.info("story item %s not sent: %s", i, e)
+        return False
+
+
+async def process_story(update: Update, ctx, username: str, lang: str, started: float,
+                        resume: dict | None = None) -> None:
     """Secret story viewer: the bot (never the user's account) fetches the stories,
-    so nothing is registered in the target's viewer list."""
+    so nothing is registered in the target's viewer list.
+    A long list is sent in time-boxed batches; `resume` continues where the last batch stopped."""
     msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
 
     if not await gate_message(update, ctx, uid, lang):
@@ -2440,81 +2614,44 @@ async def process_story(update: Update, ctx, username: str, lang: str, started: 
 
     status = None
     try:
-        status = await msg.reply_text(tx(lang, "st_story", bar=bar(1)))
-        items = await fetch_story(username)
-        if items is None:
-            return await safe_edit(status, tx(lang, "story_unavailable"))
-        if not items:
-            return await safe_edit(status, tx(lang, "no_story", user=esc(username)), story_kb(lang))
-
-        limit = STORY_MAX_VIP if is_vip(uid) else STORY_MAX
-        items = items[-limit:]                           # newest N
+        if resume is None:
+            status = await msg.reply_text(tx(lang, "st_story", bar=bar(1)))
+            items = await fetch_story(username)
+            if items is None:
+                return await safe_edit(status, tx(lang, "story_unavailable"))
+            if not items:
+                return await safe_edit(status, tx(lang, "no_story", user=esc(username)), story_kb(lang))
+            limit = STORY_MAX_VIP if is_vip(uid) else STORY_MAX
+            items = items[-limit:]                       # newest N, oldest → newest like the app
+            n_vid = sum(1 for x in items if x.get("type") == "video")
+            await safe_edit(status, tx(lang, "story_header", user=esc(username), n=len(items),
+                                       v=n_vid, p=len(items) - n_vid))
+            idx = 0
+        else:
+            items, idx = resume["items"], int(resume.get("next") or 0)
         total = len(items)
-        n_vid = sum(1 for x in items if x["type"] == "video")
-        await safe_edit(status, tx(lang, "story_header", user=esc(username), n=total,
-                                   v=n_vid, p=total - n_vid))
 
         sent = 0
-        for i, it in enumerate(items, 1):
-            if deadline_left(started) < 10:
-                break
-            await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO if it["type"] == "video" else ChatAction.UPLOAD_PHOTO)
-            try:
-                res = await download_bytes(it["url"], max_bytes=TG_MAX_BYTES, timeout=30)
-            except TooBig:
-                res = None
-            if not res:
-                continue
-            data, ctype = res
-            kind = sniff_kind(data)
-            if kind == "audio":                      # link gave only the music → show the picture instead
-                res2 = None
-                if it.get("cover"):
-                    try:
-                        res2 = await download_bytes(it["cover"], max_bytes=20_000_000, timeout=20)
-                    except TooBig:
-                        res2 = None
-                if not res2 or sniff_kind(res2[0]) not in ("jpg", "png", "webp"):
-                    continue
-                data, ctype = res2
-                kind = sniff_kind(data)
-            is_video = kind == "video" or (kind == "unknown" and it["type"] == "video"
-                                           and not ctype.startswith("image"))
-            cap = tx(lang, "story_caption", user=esc(username), i=i, n=total,
-                     when=story_when(it["ts"]), bot=esc(BOT_USERNAME))
-            name = f"{safe_name(username)}_story_{i}"
-            try:
-                if kind == "heic":                   # Telegram can't show HEIC as a photo
-                    await ctx.bot.send_document(chat_id, InputFile(data, filename=name + ".heic"), caption=cap, **_UP)
-                elif is_video:
-                    try:
-                        await ctx.bot.send_video(chat_id, InputFile(data, filename=name + ".mp4"), caption=cap,
-                                                 duration=it.get("dur") or None, supports_streaming=True, **_UP)
-                    except BadRequest:
-                        await ctx.bot.send_document(chat_id, InputFile(data, filename=name + ".mp4"), caption=cap, **_UP)
-                else:
-                    ext = kind if kind in ("jpg", "png", "webp") else _ext(ctype, "jpg")
-                    try:
-                        if len(data) > TG_PHOTO_MAX:
-                            raise BadRequest("too large")
-                        await ctx.bot.send_photo(chat_id, InputFile(data, filename=f"{name}.{ext}"), caption=cap, **_UP)
-                    except BadRequest:
-                        await ctx.bot.send_document(chat_id, InputFile(data, filename=f"{name}.{ext}"), caption=cap, **_UP)
+        while idx < total and deadline_left(started) >= 10:
+            if await _send_story_item(ctx, chat_id, username, lang, items[idx], idx + 1, total):
                 sent += 1
-            except TelegramError as e:
-                log.info("story item %s not sent: %s", i, e)
+            idx += 1
 
-        if not sent:
-            return await safe_edit(status, tx(lang, "dl_fail"))
+        left = total - idx
+        if left > 0:                                     # out of time → remember the rest for the button
+            await session_save(f"story_{uid}", {"user": username, "items": items, "next": idx})
+        if not sent and left <= 0:
+            if status:
+                return await safe_edit(status, tx(lang, "dl_fail"))
+            return await msg.reply_text(tx(lang, "dl_fail"))
 
-        left = total - sent
         await ctx.bot.send_message(
             chat_id,
-            tx(lang, "story_partial", n=sent, left=left) if left and deadline_left(started) < 10
-            else tx(lang, "story_done", n=sent),
-            reply_markup=story_kb(lang))
-        await db_incr("sys/cfg/total_dl")
-        await db_incr(f"users/{uid}/dl")      # the header card stays as a summary of the batch
+            tx(lang, "story_partial", n=sent, left=left) if left > 0 else tx(lang, "story_done", n=sent),
+            reply_markup=story_kb(lang, left))
+        if resume is None and sent:
+            await db_incr("sys/cfg/total_dl")
+            await db_incr(f"users/{uid}/dl")      # the header card stays as a summary of the batch
 
     except Exception as e:                                              # noqa: BLE001
         await report_error(ctx, e, "process_story")
@@ -2532,6 +2669,18 @@ async def cmd_story(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return await update.effective_message.reply_text(tx(lang, "ask_story_prompt"),
                                                          reply_markup=ForceReply(selective=True))
     await process_story(update, ctx, username, lang, started)
+
+
+async def cmd_storydebug(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Admins only: /storydebug @username → text file with the shape of the provider's answer."""
+    ud, lang = await ensure_user(update, ctx)
+    if not is_admin(update.effective_user.id):
+        return
+    username = extract_username(" ".join(ctx.args or []))
+    if not username:
+        return await update.effective_message.reply_text("/storydebug @username")
+    text = await story_debug(username)
+    await update.effective_message.reply_document(InputFile(text.encode("utf-8"), filename="story_debug.txt"))
 
 
 def _is_story_reply(msg) -> bool:
@@ -2602,6 +2751,7 @@ def build_application() -> Application:
     ptb.add_handler(CommandHandler("help", cmd_help))
     ptb.add_handler(CommandHandler("ping", cmd_ping))
     ptb.add_handler(CommandHandler("story", cmd_story))
+    ptb.add_handler(CommandHandler("storydebug", cmd_storydebug))
     ptb.add_handler(CallbackQueryHandler(on_callback))
     ptb.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND & ~filters.StatusUpdate.ALL, on_message))
     ptb.add_error_handler(on_error)
