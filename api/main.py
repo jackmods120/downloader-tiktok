@@ -1246,6 +1246,19 @@ def _first_url(v, base: str = "") -> str:
     return ""
 
 
+def _all_urls(v, base: str = "") -> list:
+    """Every image URL in a str / dict / list (a photo story can hold several pictures)."""
+    if isinstance(v, str):
+        u = abs_url(v, base)
+        return [u] if u else []
+    if isinstance(v, list):
+        return [u for u in (_first_url(x, base) for x in v) if u]
+    if isinstance(v, dict):
+        u = _first_url(v, base)
+        return [u] if u else []
+    return []
+
+
 def _story_list(data) -> list:
     if isinstance(data, list):
         return data
@@ -1277,6 +1290,13 @@ def parse_story_items(data, base: str = "") -> list:
                 break
         ts = _to_int(it.get("create_time") or it.get("createTime") or it.get("time") or it.get("timestamp"))
         dur = _to_int(it.get("duration"))
+        # Photo story: its `play` link is only the background MUSIC, so pictures win over `play`.
+        pics = (_all_urls(it.get("images"), base) or _all_urls(it.get("image"), base)
+                or _all_urls(it.get("photos"), base) or _all_urls(it.get("photo"), base))
+        if pics:
+            for u in pics:
+                out.append({"type": "photo", "url": u, "cover": u, "ts": ts, "dur": 0})
+            continue
         if vurl:
             out.append({"type": "video", "url": vurl, "cover": cover, "ts": ts, "dur": dur})
             continue
@@ -1416,6 +1436,30 @@ def _ext(ctype: str, default: str) -> str:
         if needle in ctype:
             return ext
     return default
+
+
+def sniff_kind(data: bytes) -> str:
+    """What the bytes REALLY are (a CDN link may hand back audio/other for a 'video' URL):
+    jpg · png · webp · heic · video · audio · unknown."""
+    h = data[:16]
+    if h[:3] == b"\xff\xd8\xff":
+        return "jpg"
+    if h[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if h[:4] == b"RIFF" and h[8:12] == b"WEBP":
+        return "webp"
+    if h[4:8] == b"ftyp":
+        brand = h[8:12]
+        if brand in (b"M4A ", b"M4B ", b"F4A "):
+            return "audio"
+        if brand[:3] == b"hei" or brand in (b"mif1", b"msf1"):
+            return "heic"
+        return "video"
+    if h[:4] == b"\x1aE\xdf\xa3":                       # webm / mkv
+        return "video"
+    if h[:3] == b"ID3" or (len(h) > 1 and h[0] == 0xFF and (h[1] & 0xE0) == 0xE0) or h[:4] == b"OggS":
+        return "audio"
+    return "unknown"
 
 
 def safe_name(s: str, default: str = "tiktok") -> str:
@@ -2422,18 +2466,34 @@ async def process_story(update: Update, ctx, username: str, lang: str, started: 
             if not res:
                 continue
             data, ctype = res
+            kind = sniff_kind(data)
+            if kind == "audio":                      # link gave only the music → show the picture instead
+                res2 = None
+                if it.get("cover"):
+                    try:
+                        res2 = await download_bytes(it["cover"], max_bytes=20_000_000, timeout=20)
+                    except TooBig:
+                        res2 = None
+                if not res2 or sniff_kind(res2[0]) not in ("jpg", "png", "webp"):
+                    continue
+                data, ctype = res2
+                kind = sniff_kind(data)
+            is_video = kind == "video" or (kind == "unknown" and it["type"] == "video"
+                                           and not ctype.startswith("image"))
             cap = tx(lang, "story_caption", user=esc(username), i=i, n=total,
                      when=story_when(it["ts"]), bot=esc(BOT_USERNAME))
             name = f"{safe_name(username)}_story_{i}"
             try:
-                if it["type"] == "video":
+                if kind == "heic":                   # Telegram can't show HEIC as a photo
+                    await ctx.bot.send_document(chat_id, InputFile(data, filename=name + ".heic"), caption=cap, **_UP)
+                elif is_video:
                     try:
                         await ctx.bot.send_video(chat_id, InputFile(data, filename=name + ".mp4"), caption=cap,
                                                  duration=it.get("dur") or None, supports_streaming=True, **_UP)
                     except BadRequest:
                         await ctx.bot.send_document(chat_id, InputFile(data, filename=name + ".mp4"), caption=cap, **_UP)
                 else:
-                    ext = _ext(ctype, "jpg")
+                    ext = kind if kind in ("jpg", "png", "webp") else _ext(ctype, "jpg")
                     try:
                         if len(data) > TG_PHOTO_MAX:
                             raise BadRequest("too large")
