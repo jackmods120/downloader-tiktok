@@ -41,7 +41,9 @@ from telegram import (
     InlineKeyboardButton as Btn,
     InlineKeyboardMarkup as Kb,
     InputFile,
+    InputMediaAudio,
     InputMediaPhoto,
+    ReplyParameters,
     Update,
 )
 from telegram.constants import ChatAction, ChatMemberStatus, ParseMode
@@ -231,6 +233,17 @@ L["ku"] = {
     "story_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> ستۆری نێردرا، <b>{left}</b> ماوە. دوگمەی خوارەوە دابگرە بۆ بەردەوامبوون.",
     "b_story_more": "▶️ بەردەوامبە ({left} ماوە)",
     "story_expired": "⌛ ئەم بەردەوامبوونە بەسەرچووە. دووبارە داوای ستۆری بکەرەوە.",
+    # ── edit audio title / artist ─────────────────────────────────────────────
+    "b_aedit": "✏️ دەستکاری ناو",
+    "b_aedit_title": "🎵 ناوی دەنگ", "b_aedit_perf": "👤 ناوی گۆرانیبێژ", "b_aedit_back": "↩️ گەڕانەوە",
+    "ask_aedit_title": "✏️ <b>ناوی نوێی دەنگ بنووسە</b>\n\nئێستا: <code>{cur}</code>\n<i>(وەڵامی ئەم پەیامە بدەرەوە)</i>",
+    "ask_aedit_perf": "✏️ <b>ناوی نوێی گۆرانیبێژ بنووسە</b>\n\nئێستا: <code>{cur}</code>\n<i>(وەڵامی ئەم پەیامە بدەرەوە)</i>",
+    "aedit_done": "✅ <b>ناوەکان نوێ کرانەوە</b>\n🎵 {title}\n👤 {perf}",
+    "aedit_fail": "❌ نەتوانرا ناوەکە بگۆڕدرێت. دووبارە دەنگەکە دابەزێنە و هەوڵبدەرەوە.",
+    "aedit_expired": "⌛ کاتی دەستکاریکردنەکە بەسەرچوو. دووبارە دوگمەی ✏️ دابگرە.",
+    "aedit_empty": "⚠️ ناوێکی ڕاست بنووسە (نووسین).",
+    "aedit_noaudio": "ئەم فایلە وەک گۆرانی نەنێردراوە، ناتوانرێت ناوەکەی بگۆڕدرێت.",
+    "aedit_same": "ℹ️ ئەمە هەمان ناوی ئێستایە.",
     "no_story": "📭 <b>@{user}</b> ئێستا ستۆری چالاکی نییە.\nستۆری تیکتۆک ٢٤ کاتژمێر دەمێنێتەوە.",
     "story_unavailable": "⚠️ ستۆری ئەم ئەکاونتە بەردەست نییە (ڕەنگە تایبەت بێت یان سەرچاوەکە پشتگیری نەکات).",
     "b_story": "🕵️ ستۆری نهێنی", "b_story_again": "🔄 ستۆری کەسێکی تر",
@@ -433,6 +446,17 @@ L["en"] = {
     "story_partial": "⏱ Time limit reached — <b>{n}</b> stories sent, <b>{left}</b> left. Tap the button below to continue.",
     "b_story_more": "▶️ Continue ({left} left)",
     "story_expired": "⌛ This continuation expired. Request the stories again.",
+    # ── edit audio title / artist ─────────────────────────────────────────────
+    "b_aedit": "✏️ Edit names",
+    "b_aedit_title": "🎵 Sound title", "b_aedit_perf": "👤 Artist name", "b_aedit_back": "↩️ Back",
+    "ask_aedit_title": "✏️ <b>Type the new sound title</b>\n\nCurrent: <code>{cur}</code>\n<i>(reply to this message)</i>",
+    "ask_aedit_perf": "✏️ <b>Type the new artist name</b>\n\nCurrent: <code>{cur}</code>\n<i>(reply to this message)</i>",
+    "aedit_done": "✅ <b>Names updated</b>\n🎵 {title}\n👤 {perf}",
+    "aedit_fail": "❌ Couldn't change the name. Download the audio again and retry.",
+    "aedit_expired": "⌛ This edit expired. Tap ✏️ again.",
+    "aedit_empty": "⚠️ Please send a valid name (text).",
+    "aedit_noaudio": "This file wasn't sent as audio, so its name can't be changed.",
+    "aedit_same": "ℹ️ That is already the current name.",
     "no_story": "📭 <b>@{user}</b> has no active stories right now.\nTikTok stories last 24 hours.",
     "story_unavailable": "⚠️ This account's stories aren't available (it may be private, or the source doesn't support them).",
     "b_story": "🕵️ Secret story", "b_story_again": "🔄 Another story",
@@ -633,6 +657,17 @@ L["ar"] = {
     "story_partial": "⏱ انتهى الوقت — أُرسلت <b>{n}</b> قصة وتبقّت <b>{left}</b>. اضغط الزر أدناه للمتابعة.",
     "b_story_more": "▶️ متابعة (تبقّى {left})",
     "story_expired": "⌛ انتهت صلاحية المتابعة. اطلب القصص مجدداً.",
+    # ── edit audio title / artist ─────────────────────────────────────────────
+    "b_aedit": "✏️ تعديل الأسماء",
+    "b_aedit_title": "🎵 اسم الصوت", "b_aedit_perf": "👤 اسم الفنان", "b_aedit_back": "↩️ رجوع",
+    "ask_aedit_title": "✏️ <b>اكتب اسم الصوت الجديد</b>\n\nالحالي: <code>{cur}</code>\n<i>(رُدّ على هذه الرسالة)</i>",
+    "ask_aedit_perf": "✏️ <b>اكتب اسم الفنان الجديد</b>\n\nالحالي: <code>{cur}</code>\n<i>(رُدّ على هذه الرسالة)</i>",
+    "aedit_done": "✅ <b>تم تحديث الأسماء</b>\n🎵 {title}\n👤 {perf}",
+    "aedit_fail": "❌ تعذّر تغيير الاسم. حمّل الصوت مجدداً وحاول.",
+    "aedit_expired": "⌛ انتهت صلاحية التعديل. اضغط ✏️ مجدداً.",
+    "aedit_empty": "⚠️ أرسل اسماً صالحاً (نص).",
+    "aedit_noaudio": "لم يُرسل هذا الملف كصوت لذا لا يمكن تغيير اسمه.",
+    "aedit_same": "ℹ️ هذا هو الاسم الحالي بالفعل.",
     "no_story": "📭 <b>@{user}</b> لا يملك قصصاً نشطة حالياً.\nقصص تيك توك تبقى 24 ساعة.",
     "story_unavailable": "⚠️ قصص هذا الحساب غير متاحة (ربما الحساب خاص أو المصدر لا يدعمها).",
     "b_story": "🕵️ قصة سرية", "b_story_again": "🔄 قصة أخرى",
@@ -1653,6 +1688,17 @@ async def send_photo_album(ctx, chat_id: int, m: dict, files: list) -> int:
     return sent
 
 
+def audio_kb(lang: str) -> Kb:
+    return Kb([[Btn(tx(lang, "b_aedit"), callback_data="aedit")],
+               [Btn(tx(lang, "b_delete"), callback_data="close")]])
+
+
+def aedit_menu_kb(lang: str) -> Kb:
+    return Kb([[Btn(tx(lang, "b_aedit_title"), callback_data="aedit_t"),
+                Btn(tx(lang, "b_aedit_perf"), callback_data="aedit_p")],
+               [Btn(tx(lang, "b_aedit_back"), callback_data="aedit_x")]])
+
+
 async def send_audio_file(ctx, chat_id: int, s: dict, data: bytes, ctype: str, kb: Kb | None = None) -> None:
     ext = _ext(ctype, "mp3")
     title = clip(s.get("a_title") or s.get("title") or "TikTok", 60)
@@ -1934,6 +1980,42 @@ async def route(cb: CB, data: str):
         await cb.answer()
         return await cb.q.message.reply_text(cb.t("ask_avatar_prompt"), reply_markup=ForceReply(selective=True))
 
+    if data == "aedit":                                  # open the 2-button menu under an audio message
+        if not cb.q.message.audio:
+            return await cb.answer(cb.t("aedit_noaudio"), True)
+        await cb.answer()
+        try:
+            await cb.q.message.edit_reply_markup(reply_markup=aedit_menu_kb(lang))
+        except TelegramError:
+            pass
+        return
+
+    if data == "aedit_x":
+        await cb.answer()
+        try:
+            await cb.q.message.edit_reply_markup(reply_markup=audio_kb(lang))
+        except TelegramError:
+            pass
+        return
+
+    if data in ("aedit_t", "aedit_p"):
+        m = cb.q.message
+        a = m.audio
+        if not a:
+            return await cb.answer(cb.t("aedit_noaudio"), True)
+        await cb.answer()
+        field = "title" if data == "aedit_t" else "performer"
+        cur = (a.title if field == "title" else a.performer) or ""
+        await session_save(f"aedit_{uid}", {"chat": m.chat_id, "mid": m.message_id, "field": field,
+                                            "file_id": a.file_id, "dur": a.duration or 0,
+                                            "title": a.title or "", "performer": a.performer or ""})
+        try:
+            await m.edit_reply_markup(reply_markup=audio_kb(lang))
+        except TelegramError:
+            pass
+        return await m.reply_text(cb.t("ask_aedit_title" if field == "title" else "ask_aedit_perf",
+                                       cur=esc(clip(cur, 80))), reply_markup=ForceReply(selective=True))
+
     if data == "ask_story":
         await cb.answer()
         return await cb.q.message.reply_text(cb.t("ask_story_prompt"), reply_markup=ForceReply(selective=True))
@@ -2010,7 +2092,7 @@ async def send_audio_from_session(cb: CB, key: str):
         res = None
     if not res:
         return await cb.ctx.bot.send_message(chat_id, cb.t("no_audio"))
-    await send_audio_file(cb.ctx, chat_id, s, res[0], res[1], Kb([[Btn(cb.t("b_delete"), callback_data="close")]]))
+    await send_audio_file(cb.ctx, chat_id, s, res[0], res[1], audio_kb(cb.lang))
 
 
 # ── shared admin helpers ─────────────────────────────────────────────────────
@@ -2473,8 +2555,7 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
             except TooBig:
                 res = None
             if res:
-                await send_audio_file(ctx, chat_id, media, res[0], res[1],
-                                      Kb([[Btn(tx(lang, "b_delete"), callback_data="close")]]))
+                await send_audio_file(ctx, chat_id, media, res[0], res[1], audio_kb(lang))
                 delivered = True
 
         if not delivered:
@@ -2683,6 +2764,99 @@ async def cmd_storydebug(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.effective_message.reply_document(InputFile(text.encode("utf-8"), filename="story_debug.txt"))
 
 
+def tag_mp3(data: bytes, title: str, performer: str) -> bytes:
+    """Write title + artist into the file's OWN ID3v2.3 tag, so players and saved copies show the
+    new names too (Telegram's own display comes from the send parameters). MP3 only; any other
+    format — or anything unexpected — is returned untouched."""
+    try:
+        if data[:3] == b"ID3" and len(data) > 10:
+            size = (data[6] << 21) | (data[7] << 14) | (data[8] << 7) | data[9]
+            audio = data[10 + size + (10 if data[5] & 0x10 else 0):]       # drop the old ID3v2 tag
+        else:
+            audio = data
+        if not (len(audio) > 2 and audio[0] == 0xFF and (audio[1] & 0xE0) == 0xE0):
+            return data                                                      # not MP3 frames
+        def frame(fid: bytes, text: str) -> bytes:
+            body = b"\x01" + text.encode("utf-16") + b"\x00\x00"             # UTF-16 (BOM) + terminator
+            return fid + len(body).to_bytes(4, "big") + b"\x00\x00" + body
+        frames = frame(b"TIT2", title) + frame(b"TPE1", performer)
+        n = len(frames)
+        sync = bytes([(n >> 21) & 0x7F, (n >> 14) & 0x7F, (n >> 7) & 0x7F, n & 0x7F])
+        return b"ID3\x03\x00\x00" + sync + frames + audio
+    except Exception:                                                        # noqa: BLE001
+        return data
+
+
+def _aedit_field(msg) -> str | None:
+    """'title' / 'performer' when the user is replying to one of the bot's 'type the new name' prompts."""
+    r = getattr(msg, "reply_to_message", None)
+    if not r or not r.from_user or not r.from_user.is_bot or not r.text:
+        return None
+    head = r.text.split("\n")[0].strip()
+    for key, field in (("ask_aedit_title", "title"), ("ask_aedit_perf", "performer")):
+        if head in {plain(tx(l, key, cur="")).split("\n")[0] for l in L}:
+            return field
+    return None
+
+
+async def handle_audio_edit(update: Update, ctx, field: str, text: str, lang: str) -> None:
+    """The user's reply to an 'edit name' prompt → the SAME audio message is re-published
+    in place with the new title / artist (falls back to send-new + delete-old)."""
+    msg, uid = update.effective_message, update.effective_user.id
+    if not await gate_message(update, ctx, uid, lang):
+        return
+    value = clip(" ".join((text or "").split()), 60)
+    if not value:
+        return await msg.reply_text(tx(lang, "aedit_empty"))
+    s = await session_get(f"aedit_{uid}")
+    if not s or s.get("field") != field or not s.get("file_id"):
+        return await msg.reply_text(tx(lang, "aedit_expired"))
+    if value == (s.get(field) or ""):
+        return await msg.reply_text(tx(lang, "aedit_same"))
+
+    chat_id, mid = int(s["chat"]), int(s["mid"])
+    title = value if field == "title" else (s.get("title") or "TikTok")
+    perf = value if field == "performer" else (s.get("performer") or "TikTok")
+    try:
+        f = await ctx.bot.get_file(s["file_id"])
+        data = bytes(await f.download_as_bytearray())
+    except Exception as e:                                                   # noqa: BLE001
+        log.info("audio edit: cannot fetch the file: %s", e)
+        return await msg.reply_text(tx(lang, "aedit_fail"))
+
+    data = tag_mp3(data, title, perf)
+    is_m4a = data[4:8] == b"ftyp"
+    fn = f"{safe_name(title, 'audio')}.{'m4a' if is_m4a else 'mp3'}"
+    caption = f"🎵 <a href=\"https://t.me/{BOT_USERNAME}\">@{esc(BOT_USERNAME)}</a>"
+    try:
+        await ctx.bot.edit_message_media(
+            chat_id=chat_id, message_id=mid,
+            media=InputMediaAudio(InputFile(data, filename=fn), caption=caption, parse_mode=ParseMode.HTML,
+                                  title=title, performer=perf, duration=_to_int(s.get("dur")) or None),
+            reply_markup=audio_kb(lang), **_UP)
+    except TelegramError as e:
+        log.info("audio edit: edit_message_media failed (%s) → re-sending", e)
+        try:
+            await send_audio_file(ctx, chat_id, {"a_title": title, "a_author": perf}, data,
+                                  "audio/mp4" if is_m4a else "audio/mpeg", audio_kb(lang))
+            try:
+                await ctx.bot.delete_message(chat_id, mid)
+            except TelegramError:
+                pass
+        except TelegramError as e2:
+            log.info("audio edit: re-send failed: %s", e2)
+            return await msg.reply_text(tx(lang, "aedit_fail"))
+
+    await ctx.bot.send_message(chat_id, tx(lang, "aedit_done", title=esc(title), perf=esc(perf)),
+                               reply_parameters=ReplyParameters(message_id=mid, allow_sending_without_reply=True))
+    for m_id in (msg.message_id, getattr(msg.reply_to_message, "message_id", None)):   # tidy the chat
+        if m_id:
+            try:
+                await ctx.bot.delete_message(chat_id, m_id)
+            except TelegramError:
+                pass
+
+
 def _is_story_reply(msg) -> bool:
     """True when the user is replying to the bot's 'send the username' story prompt."""
     r = getattr(msg, "reply_to_message", None)
@@ -2708,6 +2882,11 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         state = await pop_wait(uid)
         if state:
             return await handle_prompt(update, ctx, state, lang, started)
+
+    if private:
+        fld = _aedit_field(msg)                          # answer to an "edit audio name" prompt
+        if fld:
+            return await handle_audio_edit(update, ctx, fld, text, lang)
 
     if private and _is_story_reply(msg):                 # answer to the "secret story" prompt
         username = extract_username(text)
