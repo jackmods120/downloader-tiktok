@@ -248,6 +248,8 @@ L["ku"] = {
     "aedit_noaudio": "ئەم فایلە وەک گۆرانی نەنێردراوە، ناتوانرێت ناوەکەی بگۆڕدرێت.",
     "aedit_same": "ℹ️ ئەمە هەمان ناوی ئێستایە.",
     # ── discover (search + trending) ──────────────────────────────────────────
+    "b_disc_kurd": "🏔 ڤیدیۆی کوردی",
+    "disc_kurd_title": "🏔 <b>ڤیدیۆی کوردی</b>\n\nبابەتێک هەڵبژێرە و باشترین ڤیدیۆکانی کوردستانت بۆ دێنم:",
     "b_disc": "🔥 دۆزینەوە", "b_disc_search": "🔍 گەڕان بە وشە", "b_disc_more": "➡️ زیاتر", "b_disc_new": "🔍 گەڕانی نوێ",
     "disc_title": "🔥 <b>دۆزینەوە</b>\n\nلە تیکتۆک بگەڕێ یان ڤیدیۆی ترێندی وڵاتێک ببینە، ئینجا هەر ڤیدیۆیەک هەڵبژێرە بۆ دابەزاندن.\n\n🌍 <b>ترێندی وڵات:</b>",
     "ask_search_prompt": "🔍 <b>گەڕان لە تیکتۆک</b>\n\nوشەیەک یان ناوێک بنووسە:\nنموونە: <code>football</code>",
@@ -483,6 +485,8 @@ L["en"] = {
     "aedit_noaudio": "This file wasn't sent as audio, so its name can't be changed.",
     "aedit_same": "ℹ️ That is already the current name.",
     # ── discover (search + trending) ──────────────────────────────────────────
+    "b_disc_kurd": "🏔 Kurdish videos",
+    "disc_kurd_title": "🏔 <b>Kurdish videos</b>\n\nPick a topic and I will bring you the best videos from Kurdistan:",
     "b_disc": "🔥 Discover", "b_disc_search": "🔍 Search by keyword", "b_disc_more": "➡️ More", "b_disc_new": "🔍 New search",
     "disc_title": "🔥 <b>Discover</b>\n\nSearch TikTok or browse a country's trending videos, then pick any video to download.\n\n🌍 <b>Trending by country:</b>",
     "ask_search_prompt": "🔍 <b>Search TikTok</b>\n\nType a word or a name:\nExample: <code>football</code>",
@@ -716,6 +720,8 @@ L["ar"] = {
     "aedit_noaudio": "لم يُرسل هذا الملف كصوت لذا لا يمكن تغيير اسمه.",
     "aedit_same": "ℹ️ هذا هو الاسم الحالي بالفعل.",
     # ── discover (search + trending) ──────────────────────────────────────────
+    "b_disc_kurd": "🏔 فيديوهات كردية",
+    "disc_kurd_title": "🏔 <b>فيديوهات كردية</b>\n\nاختر موضوعاً وسأحضر لك أفضل الفيديوهات من كوردستان:",
     "b_disc": "🔥 اكتشف", "b_disc_search": "🔍 بحث بكلمة", "b_disc_more": "➡️ المزيد", "b_disc_new": "🔍 بحث جديد",
     "disc_title": "🔥 <b>اكتشف</b>\n\nابحث في تيك توك أو تصفّح الفيديوهات الرائجة في بلد ما، ثم اختر أي فيديو لتحميله.\n\n🌍 <b>الرائج حسب البلد:</b>",
     "ask_search_prompt": "🔍 <b>البحث في تيك توك</b>\n\nاكتب كلمة أو اسماً:\nمثال: <code>football</code>",
@@ -1439,23 +1445,53 @@ async def fetch_latest(username: str, n: int) -> list | None:
 # ── discover: keyword search + country trending ───────────────────────────────
 DISC_REGIONS = (("🇮🇶", "IQ"), ("🇸🇦", "SA"), ("🇦🇪", "AE"), ("🇹🇷", "TR"), ("🇺🇸", "US"), ("🇬🇧", "GB"))
 DISC_PAGE = 10
+# (label per language, search keywords)
+KURD_TOPICS = (
+    ({"ku": "🏔 کوردستان", "en": "🏔 Kurdistan", "ar": "🏔 كوردستان"}, "kurdistan"),
+    ({"ku": "🎤 گۆرانی کوردی", "en": "🎤 Kurdish songs", "ar": "🎤 أغاني كردية"}, "kurdish song"),
+    ({"ku": "😂 کۆمیدی کوردی", "en": "😂 Kurdish comedy", "ar": "😂 كوميديا كردية"}, "kurdish comedy"),
+    ({"ku": "💃 هەڵپەڕکێ", "en": "💃 Halparke", "ar": "💃 هلپركي"}, "halparke kurdish"),
+    ({"ku": "🏙 هەولێر", "en": "🏙 Erbil", "ar": "🏙 أربيل"}, "erbil"),
+    ({"ku": "🏙 سلێمانی", "en": "🏙 Sulaymaniyah", "ar": "🏙 السليمانية"}, "sulaymaniyah"),
+    ({"ku": "🏙 دهۆک", "en": "🏙 Duhok", "ar": "🏙 دهوك"}, "duhok"),
+    ({"ku": "🌄 سروشتی کوردستان", "en": "🌄 Kurdistan nature", "ar": "🌄 طبيعة كوردستان"}, "kurdistan nature"),
+)
 
 
 async def fetch_discover(kind: str, q: str = "", region: str = "US", cursor: int = 0):
     """→ (items | None, next_cursor). Items: {'url','title','creator','views','likes'}; None = provider failure."""
     t = min(int(CFG.get("api_timeout", 40)), 20)
-    try:
-        if kind == "search":
-            r = await http().post("https://www.tikwm.com/api/feed/search",
-                                  data={"keywords": q, "count": DISC_PAGE, "cursor": cursor, "web": 1, "hd": 1}, timeout=t)
-        else:
-            r = await http().get("https://www.tikwm.com/api/feed/list",
-                                 params={"region": region, "count": DISC_PAGE}, timeout=t)
-        j = r.json()
-    except Exception as e:
-        log.info("discover failed: %s", e)
-        return None, 0
-    if j.get("code") != 0:
+    if kind == "search":
+        base = "https://www.tikwm.com/api/feed/search"
+        p = {"keywords": q, "count": DISC_PAGE, "cursor": cursor, "web": 1, "hd": 1}
+        attempts = [("post", {"data": p}), ("get", {"params": p}), ("post", {"params": p})]
+    else:
+        base = "https://www.tikwm.com/api/feed/list"
+        attempts = [("get", {"params": {"region": region, "count": DISC_PAGE}})]
+    j = None
+    for n, (meth, kw) in enumerate(attempts):
+        for retry in (0, 1):
+            try:
+                r = await getattr(http(), meth)(base, timeout=t, **kw)
+                j = r.json()
+            except Exception as e:
+                log.info("discover %s failed: %s", meth, e)
+                j = None
+                break
+            msg_ = str(j.get("msg") or "").lower() if isinstance(j, dict) else ""
+            if isinstance(j, dict) and j.get("code") != 0 and "limit" in msg_ and not retry:
+                await asyncio.sleep(1.3)                # provider allows ~1 request / second
+                continue
+            break
+        ok = isinstance(j, dict) and j.get("code") == 0 and (
+            isinstance(j.get("data"), list) or (isinstance(j.get("data"), dict) and j["data"].get("videos")))
+        if ok:
+            break
+        log.info("discover %s %s → code=%s msg=%s", kind, meth, (j or {}).get("code") if isinstance(j, dict) else None,
+                 (j or {}).get("msg") if isinstance(j, dict) else None)
+        if n + 1 < len(attempts):
+            await asyncio.sleep(1.2)
+    if not isinstance(j, dict) or j.get("code") != 0:
         return None, 0
     data = j.get("data")
     vids = data if isinstance(data, list) else (data.get("videos") if isinstance(data, dict) else None)
@@ -1480,8 +1516,17 @@ def disc_menu_view(lang: str) -> tuple[str, Kb]:
     rows = [[Btn(tx(lang, "b_disc_search"), callback_data="disc_search")]]
     flags = [Btn(f"{f} {c}", callback_data=f"disc_t_{c}") for f, c in DISC_REGIONS]
     rows += [flags[i:i + 3] for i in range(0, len(flags), 3)]
+    rows.append([Btn(tx(lang, "b_disc_kurd"), callback_data="disc_kurd")])
     rows.append(back_row(lang))
     return tx(lang, "disc_title"), Kb(rows)
+
+
+def kurd_menu_view(lang: str) -> tuple[str, Kb]:
+    btns = [Btn(lbl.get(lang) or lbl["en"], callback_data=f"disc_k_{i}") for i, (lbl, _) in enumerate(KURD_TOPICS)]
+    rows = [btns[i:i + 2] for i in range(0, len(btns), 2)]
+    rows.append([Btn(tx(lang, "b_disc_search"), callback_data="disc_search")])
+    rows.append(back_row(lang, "ask_disc"))
+    return tx(lang, "disc_kurd_title"), Kb(rows)
 
 
 def disc_kb(lang: str, tok: str, n: int, more: bool) -> Kb:
@@ -2313,6 +2358,15 @@ async def route(cb: CB, data: str):
         await cb.answer()
         text, kb = disc_menu_view(lang)
         return await cb.edit(text, kb)
+
+    if data == "disc_kurd":
+        await cb.answer()
+        text, kb = kurd_menu_view(lang)
+        return await cb.edit(text, kb)
+
+    if data.startswith("disc_k_") and data[7:].isdigit() and int(data[7:]) < len(KURD_TOPICS):
+        await cb.answer()
+        return await process_discover(cb.update, cb.ctx, lang, "search", q=KURD_TOPICS[int(data[7:])][1])
 
     if data == "disc_search":
         await cb.answer()
