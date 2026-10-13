@@ -89,6 +89,8 @@ STORY_API_HEADERS = os.getenv("STORY_API_HEADERS", "").strip()
 STORY_MAX         = 40               # newest stories per request (VIP: STORY_MAX_VIP)
 STORY_MAX_VIP     = 80
 STORY_PAGES       = 8                # max provider pages fetched per username
+LATEST_FREE       = 3                # latest videos per request for everyone
+LATEST_VIP        = 12               # … for VIP
 
 START_TIME     = time.time()
 SESSION_TTL    = 3600                # seconds an audio/"again" session stays valid
@@ -151,7 +153,7 @@ L["ku"] = {
         "<blockquote>🎬 ڤیدیۆ — بێ لۆگۆ و بە کوالێتی بەرز\n"
         "🖼 وێنە — هەموو وێنەکانی پۆستەکە وەک ئەلبوم\n"
         "🎵 گۆرانی — دوگمەی <b>MP3</b> لە ژێر ڤیدیۆکە\n"
-        "👤 پرۆفایل — یوزەرنەیمێک بنێرە بۆ وەرگرتنی وێنەی پرۆفایل بە HD\n"
+        "👤 پرۆفایل — یوزەرنەیمێک بنێرە بۆ کارتی پرۆفایل + وێنەی HD + ستۆری + ڤیدیۆکان\n"
         "🕵️ ستۆری — دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیمێک بنێرە</blockquote>\n"
         "💎 <b>VIP</b> — بێ جۆینی ناچاری و وێنەی زیاتر.\n"
         "📩 پەیوەندی: {dev}"
@@ -244,11 +246,22 @@ L["ku"] = {
     "aedit_empty": "⚠️ ناوێکی ڕاست بنووسە (نووسین).",
     "aedit_noaudio": "ئەم فایلە وەک گۆرانی نەنێردراوە، ناتوانرێت ناوەکەی بگۆڕدرێت.",
     "aedit_same": "ℹ️ ئەمە هەمان ناوی ئێستایە.",
+    # ── profile hub ───────────────────────────────────────────────────────────
+    "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
+    "pf_followers": "👥 فۆڵۆوەر", "pf_following": "➕ فۆڵۆو", "pf_likes": "❤️ لایک", "pf_videos": "🎬 ڤیدیۆ",
+    "pf_b_vids": "🎬 دوایین ڤیدیۆکان", "pf_b_file": "📎 وێنە بە HD (فایل)", "pf_b_open": "🔗 پرۆفایل",
+    "st_latest": "🎬 <b>دوایین ڤیدیۆکان دەهێنرێن…</b>\n{bar}",
+    "latest_header": "🎬 <b>دوایین ڤیدیۆکانی @{user}</b>\n<blockquote>📥 {n} ڤیدیۆ دەنێردرێت</blockquote>",
+    "latest_none": "📭 <b>@{user}</b> ڤیدیۆی نییە (یان تەنیا پۆستی وێنەی هەیە).",
+    "latest_unavailable": "⚠️ ناتوانرێت ڤیدیۆکانی ئەم ئەکاونتە بهێنرێت. دواتر دووبارە هەوڵبدەرەوە.",
+    "latest_done": "✅ <b>{n} ڤیدیۆ</b> نێردرا",
+    "latest_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> ڤیدیۆ نێردرا، <b>{left}</b> ماوە. دوگمەی خوارەوە دابگرە بۆ بەردەوامبوون.",
+    "latest_vip_hint": "💎 بەکارهێنەری ئاسایی {free} ڤیدیۆ وەردەگرێت — بە <b>VIP</b> تا {vip} ڤیدیۆ.",
     "no_story": "📭 <b>@{user}</b> ئێستا ستۆری چالاکی نییە.\nستۆری تیکتۆک ٢٤ کاتژمێر دەمێنێتەوە.",
     "story_unavailable": "⚠️ ستۆری ئەم ئەکاونتە بەردەست نییە (ڕەنگە تایبەت بێت یان سەرچاوەکە پشتگیری نەکات).",
     "b_story": "🕵️ ستۆری نهێنی", "b_story_again": "🔄 ستۆری کەسێکی تر",
     # ── buttons ───────────────────────────────────────────────────────────────
-    "b_dl": "📥 دابەزاندنی نوێ", "b_profile": "👤 پرۆفایل", "b_vip": "💎 VIP", "b_avatar": "🖼 وێنەی پرۆفایل",
+    "b_dl": "📥 دابەزاندنی نوێ", "b_profile": "👤 پرۆفایل", "b_vip": "💎 VIP", "b_avatar": "🔎 پرۆفایلی تیکتۆک",
     "b_lang": "🌐 زمان", "b_help": "📖 ڕێنمایی", "b_channel": "📢 کەناڵی بۆت",
     "b_panel": "🛠 پانێڵی کۆنتڕۆڵ", "b_back": "🔙 گەڕانەوە", "b_delete": "🗑 سڕینەوە",
     "b_joined": "✅ جۆینم کرد", "b_audio": "🎵 گۆرانی MP3", "b_orig": "🔗 لینکی ڕەسەن",
@@ -366,7 +379,7 @@ L["en"] = {
         "<blockquote>🎬 Video — no watermark, high quality\n"
         "🖼 Photos — the whole post as an album\n"
         "🎵 Music — tap the <b>MP3</b> button under the video\n"
-        "👤 Profile — send a username for an HD profile picture\n"
+        "👤 Profile — send a username for a profile card + HD picture + stories + latest videos\n"
         "🕵️ Stories — tap <b>Secret story</b> and send a username</blockquote>\n"
         "💎 <b>VIP</b> — no forced join, more photos.\n"
         "📩 Contact: {dev}"
@@ -457,10 +470,21 @@ L["en"] = {
     "aedit_empty": "⚠️ Please send a valid name (text).",
     "aedit_noaudio": "This file wasn't sent as audio, so its name can't be changed.",
     "aedit_same": "ℹ️ That is already the current name.",
+    # ── profile hub ───────────────────────────────────────────────────────────
+    "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
+    "pf_followers": "👥 Followers", "pf_following": "➕ Following", "pf_likes": "❤️ Likes", "pf_videos": "🎬 Videos",
+    "pf_b_vids": "🎬 Latest videos", "pf_b_file": "📎 HD picture (file)", "pf_b_open": "🔗 Profile",
+    "st_latest": "🎬 <b>Fetching the latest videos…</b>\n{bar}",
+    "latest_header": "🎬 <b>Latest videos of @{user}</b>\n<blockquote>📥 {n} videos on the way</blockquote>",
+    "latest_none": "📭 <b>@{user}</b> has no videos (or only photo posts).",
+    "latest_unavailable": "⚠️ Couldn't fetch this account's videos. Try again later.",
+    "latest_done": "✅ <b>{n} videos</b> delivered",
+    "latest_partial": "⏱ Time limit reached — <b>{n}</b> videos sent, <b>{left}</b> left. Tap the button below to continue.",
+    "latest_vip_hint": "💎 Free users get {free} videos — <b>VIP</b> gets up to {vip}.",
     "no_story": "📭 <b>@{user}</b> has no active stories right now.\nTikTok stories last 24 hours.",
     "story_unavailable": "⚠️ This account's stories aren't available (it may be private, or the source doesn't support them).",
     "b_story": "🕵️ Secret story", "b_story_again": "🔄 Another story",
-    "b_dl": "📥 New download", "b_profile": "👤 Profile", "b_vip": "💎 VIP", "b_avatar": "🖼 Profile picture",
+    "b_dl": "📥 New download", "b_profile": "👤 Profile", "b_vip": "💎 VIP", "b_avatar": "🔎 TikTok profile",
     "b_lang": "🌐 Language", "b_help": "📖 Help", "b_channel": "📢 Bot channel",
     "b_panel": "🛠 Control panel", "b_back": "🔙 Back", "b_delete": "🗑 Delete",
     "b_joined": "✅ I joined", "b_audio": "🎵 MP3 audio", "b_orig": "🔗 Original link",
@@ -577,7 +601,7 @@ L["ar"] = {
         "<blockquote>🎬 الفيديو — بدون علامة مائية وبجودة عالية\n"
         "🖼 الصور — كل صور المنشور كألبوم\n"
         "🎵 الموسيقى — زر <b>MP3</b> أسفل الفيديو\n"
-        "👤 الملف الشخصي — أرسل اسم مستخدم للحصول على صورة الملف الشخصي بجودة HD\n"
+        "👤 الملف الشخصي — أرسل اسم مستخدم لبطاقة الحساب + صورة HD + القصص + آخر الفيديوهات\n"
         "🕵️ القصص — اضغط <b>قصة سرية</b> وأرسل اسم مستخدم</blockquote>\n"
         "💎 <b>VIP</b> — بدون اشتراك إجباري وصور أكثر.\n"
         "📩 للتواصل: {dev}"
@@ -668,10 +692,21 @@ L["ar"] = {
     "aedit_empty": "⚠️ أرسل اسماً صالحاً (نص).",
     "aedit_noaudio": "لم يُرسل هذا الملف كصوت لذا لا يمكن تغيير اسمه.",
     "aedit_same": "ℹ️ هذا هو الاسم الحالي بالفعل.",
+    # ── profile hub ───────────────────────────────────────────────────────────
+    "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
+    "pf_followers": "👥 المتابعون", "pf_following": "➕ يتابع", "pf_likes": "❤️ الإعجابات", "pf_videos": "🎬 الفيديوهات",
+    "pf_b_vids": "🎬 آخر الفيديوهات", "pf_b_file": "📎 صورة HD (ملف)", "pf_b_open": "🔗 الحساب",
+    "st_latest": "🎬 <b>جارٍ جلب آخر الفيديوهات…</b>\n{bar}",
+    "latest_header": "🎬 <b>آخر فيديوهات @{user}</b>\n<blockquote>📥 {n} فيديو قيد الإرسال</blockquote>",
+    "latest_none": "📭 <b>@{user}</b> ليس لديه فيديوهات (أو منشورات صور فقط).",
+    "latest_unavailable": "⚠️ تعذّر جلب فيديوهات هذا الحساب. حاول لاحقاً.",
+    "latest_done": "✅ تم إرسال <b>{n} فيديو</b>",
+    "latest_partial": "⏱ انتهى الوقت — أُرسل <b>{n}</b> فيديو وتبقّى <b>{left}</b>. اضغط الزر أدناه للمتابعة.",
+    "latest_vip_hint": "💎 المستخدم العادي يحصل على {free} فيديو — و<b>VIP</b> حتى {vip}.",
     "no_story": "📭 <b>@{user}</b> لا يملك قصصاً نشطة حالياً.\nقصص تيك توك تبقى 24 ساعة.",
     "story_unavailable": "⚠️ قصص هذا الحساب غير متاحة (ربما الحساب خاص أو المصدر لا يدعمها).",
     "b_story": "🕵️ قصة سرية", "b_story_again": "🔄 قصة أخرى",
-    "b_dl": "📥 تحميل جديد", "b_profile": "👤 الملف الشخصي", "b_vip": "💎 VIP", "b_avatar": "🖼 صورة الملف الشخصي",
+    "b_dl": "📥 تحميل جديد", "b_profile": "👤 الملف الشخصي", "b_vip": "💎 VIP", "b_avatar": "🔎 حساب تيك توك",
     "b_lang": "🌐 اللغة", "b_help": "📖 المساعدة", "b_channel": "📢 قناة البوت",
     "b_panel": "🛠 لوحة التحكم", "b_back": "🔙 رجوع", "b_delete": "🗑 حذف",
     "b_joined": "✅ اشتركت", "b_audio": "🎵 صوت MP3", "b_orig": "🔗 الرابط الأصلي",
@@ -1268,6 +1303,125 @@ async def fetch_avatar(username: str) -> dict | None:
     return None
 
 
+# ── profile hub (info card) + latest videos ───────────────────────────────────
+def _stat(st, *keys):
+    """First present numeric stat among `keys` (None when the provider doesn't give it)."""
+    if isinstance(st, dict):
+        for k in keys:
+            if st.get(k) not in (None, ""):
+                return _to_int(st[k])
+    return None
+
+
+async def _profile_via_tikwm(username: str) -> dict | None:
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    try:
+        r = await http().get("https://www.tikwm.com/api/user/info",
+                             params={"unique_id": f"@{username}"}, timeout=t)
+        j = r.json()
+    except Exception as e:
+        log.warning("tikwm profile failed: %s", e)
+        return None
+    data = j.get("data") if j.get("code") == 0 else None
+    u = data.get("user") if isinstance(data, dict) else None
+    if not isinstance(u, dict) or not u:
+        return None
+    handle = u.get("uniqueId") or username
+    if u.get("privateAccount"):
+        return {"private": True, "user": handle}
+    st = data.get("stats") or data.get("statsV2") or {}
+    return {
+        "private": False, "user": handle, "name": u.get("nickname") or "",
+        "bio": (u.get("signature") or "").strip(), "verified": bool(u.get("verified")),
+        "pic": abs_url(u.get("avatarLarger") or u.get("avatarMedium") or u.get("avatarThumb"),
+                       "https://www.tikwm.com"),
+        "followers": _stat(st, "followerCount"), "following": _stat(st, "followingCount"),
+        "likes": _stat(st, "heartCount", "heart"), "videos": _stat(st, "videoCount"),
+    }
+
+
+async def fetch_profile(username: str) -> dict | None:
+    """Card data → {'private': True, 'user'} | full dict | picture-only fallback | None."""
+    p = await _profile_via_tikwm(username)
+    if p:
+        return p
+    r = await _avatar_via_scrape(username)
+    if r:
+        return {"private": False, "user": username, "name": "", "bio": "", "verified": False,
+                "pic": r.get("pic", ""), "followers": None, "following": None, "likes": None, "videos": None}
+    return None
+
+
+def profile_card(lang: str, p: dict) -> str:
+    rows = [f"{tx(lang, label)}: <b>{fmt_num(p[key])}</b>"
+            for key, label in (("followers", "pf_followers"), ("following", "pf_following"),
+                               ("likes", "pf_likes"), ("videos", "pf_videos"))
+            if p.get(key) is not None]
+    stats = "\n<blockquote>" + "\n".join(rows) + "</blockquote>" if rows else ""
+    bio = f"\n\n📝 <i>{esc(clip(p['bio'], 220))}</i>" if p.get("bio") else ""
+    return tx(lang, "profile_card", name=esc(clip(p.get("name") or p["user"], 60)),
+              badge="✔️" if p.get("verified") else "", user=esc(p["user"]), stats=stats, bio=bio,
+              bot=esc(BOT_USERNAME))
+
+
+def profile_kb(lang: str, user: str) -> Kb:
+    rows = []
+    if user.isascii() and len(user) <= 24:            # callback_data is limited to 64 bytes
+        rows.append([Btn(tx(lang, "b_story"), callback_data=f"pf_s_{user}"),
+                     Btn(tx(lang, "pf_b_vids"), callback_data=f"pf_v_{user}")])
+        rows.append([Btn(tx(lang, "pf_b_file"), callback_data=f"pf_f_{user}"),
+                     Btn(tx(lang, "pf_b_open"), url=f"https://www.tiktok.com/@{user}")])
+    rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
+    return Kb(rows)
+
+
+async def fetch_latest(username: str, n: int) -> list | None:
+    """Newest `n` VIDEO posts as normalised media dicts · [] = none · None = provider failure."""
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    try:
+        r = await http().get("https://www.tikwm.com/api/user/posts",
+                             params={"unique_id": f"@{username}", "count": 30, "cursor": 0}, timeout=t)
+        j = r.json()
+    except Exception as e:
+        log.info("tikwm posts failed: %s", e)
+        return None
+    if j.get("code") != 0 or not isinstance(j.get("data"), dict):
+        return None
+    vids = [d for d in (j["data"].get("videos") or []) if isinstance(d, dict)]
+    vids.sort(key=lambda d: _to_int(d.get("create_time") or d.get("createTime")), reverse=True)  # pinned posts lead otherwise
+    out = []
+    for d in vids:
+        d = dict(d)
+        d.setdefault("id", d.get("video_id"))
+        if d.get("images"):
+            continue                                   # photo post: its `play` link is only the music
+        m = parse_tikwm(d, f"https://www.tiktok.com/@{username}/video/{d.get('id')}")
+        if m["videos"]:
+            out.append(m)
+        if len(out) >= n:
+            break
+    return out
+
+
+async def profile_debug(username: str) -> str:
+    """Admin tool: the SHAPE of tikwm's user/info and user/posts answers (strings shortened)."""
+    out = [f"profile debug @{username}"]
+    for name, url, params in (
+            ("user/info", "https://www.tikwm.com/api/user/info", {"unique_id": f"@{username}"}),
+            ("user/posts", "https://www.tikwm.com/api/user/posts", {"unique_id": f"@{username}", "count": 3, "cursor": 0})):
+        try:
+            r = await http().get(url, params=params, timeout=20)
+            j = r.json()
+        except Exception as e:
+            out.append(f"\n── {name}: ERROR {e}")
+            continue
+        data = j.get("data")
+        out.append(f"\n── {name}  code={j.get('code')} msg={j.get('msg')!r}")
+        out.append(json.dumps(_shorten(data), ensure_ascii=False)[:3500] if data is not None else "(no data)")
+        await asyncio.sleep(1.2)
+    return "\n".join(out)
+
+
 # ── secret stories ────────────────────────────────────────────────────────────
 def _first_url(v, base: str = "") -> str:
     """Find the first http(s) URL inside a str / dict / list (providers differ a lot)."""
@@ -1713,12 +1867,12 @@ async def send_audio_file(ctx, chat_id: int, s: dict, data: bytes, ctype: str, k
 
 
 async def send_avatar_photo(ctx, chat_id: int, lang: str, username: str, data: bytes, ctype: str,
-                            kb: Kb | None = None) -> None:
+                            kb: Kb | None = None, caption: str | None = None) -> None:
     """Deliver a profile picture. HD avatars are usually a few hundred KB → send as photo,
     but fall back to a document if Telegram's photo pipeline rejects it (rare, large PNGs)."""
     ext = _ext(ctype, "jpg")
     fn = f"{safe_name(username, 'profile')}.{ext}"
-    caption = tx(lang, "avatar_caption", user=esc(username), bot=esc(BOT_USERNAME))
+    caption = caption or tx(lang, "avatar_caption", user=esc(username), bot=esc(BOT_USERNAME))
     try:
         if len(data) <= TG_PHOTO_MAX:
             await ctx.bot.send_photo(chat_id, InputFile(data, filename=fn), caption=caption,
@@ -2015,6 +2169,34 @@ async def route(cb: CB, data: str):
             pass
         return await m.reply_text(cb.t("ask_aedit_title" if field == "title" else "ask_aedit_perf",
                                        cur=esc(clip(cur, 80))), reply_markup=ForceReply(selective=True))
+
+    if data.startswith("pf_"):                           # profile-hub buttons: pf_<s|v|f>_<username>
+        parts = data.split("_", 2)
+        if len(parts) == 3 and re.fullmatch(r"[\w.]{1,24}", parts[2]):
+            act, user = parts[1], parts[2]
+            if act == "f":
+                return await send_profile_file(cb, user)
+            await cb.answer()
+            if act == "s":
+                return await process_story(cb.update, cb.ctx, user, lang, time.monotonic())
+            if act == "v":
+                return await process_latest(cb.update, cb.ctx, user, lang, time.monotonic())
+        return
+
+    if data == "latest_more":
+        await cb.answer()
+        s = await session_get(f"latest_{uid}")
+        items = s.get("items") if s else None
+        if isinstance(items, dict):                      # Firebase may hand a list back as {"0":…, "1":…}
+            items = [items[k] for k in sorted(items, key=lambda x: int(x))]
+        if not items:
+            return await cb.q.message.reply_text(cb.t("story_expired"))
+        try:
+            await cb.q.message.edit_reply_markup(reply_markup=None)    # a used button can't be tapped twice
+        except TelegramError:
+            pass
+        s["items"] = items
+        return await process_latest(cb.update, cb.ctx, s.get("user", ""), lang, time.monotonic(), resume=s)
 
     if data == "ask_story":
         await cb.answer()
@@ -2577,7 +2759,8 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
 
 
 async def process_avatar(update: Update, ctx, username: str, lang: str, started: float) -> None:
-    """Fetch and deliver a public TikTok account's HD profile picture."""
+    """Profile hub: HD picture + info card (followers, likes, bio …) with buttons for the secret
+    stories, the latest videos and the picture as an uncompressed file."""
     msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
 
     if not await gate_message(update, ctx, uid, lang):
@@ -2588,24 +2771,26 @@ async def process_avatar(update: Update, ctx, username: str, lang: str, started:
     status = None
     try:
         status = await msg.reply_text(tx(lang, "st_search", bar=bar(1)))
-        info = await fetch_avatar(username)
+        info = await fetch_profile(username)
         if not info:
             return await safe_edit(status, tx(lang, "no_avatar"))
         if info.get("private"):
             return await safe_edit(status, tx(lang, "private_account"))
 
+        card, kb = profile_card(lang, info), profile_kb(lang, info["user"])
         await safe_edit(status, tx(lang, "st_avatar", bar=bar(3)))
-        try:
-            res = await download_bytes(info["pic"], max_bytes=20_000_000, timeout=25)
-        except TooBig:
-            res = None
-        if not res:
-            return await safe_edit(status, tx(lang, "no_avatar"))
-
-        await safe_edit(status, tx(lang, "st_upload", bar=bar(4)))
-        await chat_action(ctx, chat_id, ChatAction.UPLOAD_PHOTO)
-        await send_avatar_photo(ctx, chat_id, lang, info["user"], res[0], res[1],
-                                Kb([[Btn(tx(lang, "b_delete"), callback_data="close")]]))
+        res = None
+        if info.get("pic"):
+            try:
+                res = await download_bytes(info["pic"], max_bytes=20_000_000, timeout=25)
+            except TooBig:
+                res = None
+        if res:
+            await safe_edit(status, tx(lang, "st_upload", bar=bar(4)))
+            await chat_action(ctx, chat_id, ChatAction.UPLOAD_PHOTO)
+            await send_avatar_photo(ctx, chat_id, lang, info["user"], res[0], res[1], kb, caption=card)
+        else:                                            # no picture → the card alone is still useful
+            await ctx.bot.send_message(chat_id, card, reply_markup=kb)
 
         await db_incr("sys/cfg/total_dl")
         await db_incr(f"users/{uid}/dl")
@@ -2620,6 +2805,123 @@ async def process_avatar(update: Update, ctx, username: str, lang: str, started:
             await safe_edit(status, tx(lang, "dl_fail"))
     finally:
         await release_lock(uid)
+
+
+async def send_profile_file(cb: "CB", username: str) -> None:
+    """The profile picture as a FILE — Telegram doesn't recompress it."""
+    await cb.answer(plain(cb.t("st_avatar", bar="")).strip())
+    chat_id = cb.q.message.chat_id
+    info = await fetch_profile(username)
+    res = None
+    if info and not info.get("private") and info.get("pic"):
+        try:
+            res = await download_bytes(info["pic"], max_bytes=20_000_000, timeout=25)
+        except TooBig:
+            res = None
+    if not res:
+        return await cb.ctx.bot.send_message(chat_id, cb.t("no_avatar"))
+    await chat_action(cb.ctx, chat_id, ChatAction.UPLOAD_DOCUMENT)
+    kind = sniff_kind(res[0])
+    ext = kind if kind in ("jpg", "png", "webp") else _ext(res[1], "jpg")
+    await cb.ctx.bot.send_document(
+        chat_id, InputFile(res[0], filename=f"{safe_name(info['user'], 'profile')}_HD.{ext}"),
+        caption=tx(cb.lang, "avatar_caption", user=esc(info["user"]), bot=esc(BOT_USERNAME)),
+        reply_markup=Kb([[Btn(cb.t("b_delete"), callback_data="close")]]), **_UP)
+
+
+def latest_kb(lang: str, left: int = 0) -> Kb:
+    rows = []
+    if left > 0:
+        rows.append([Btn(tx(lang, "b_story_more", left=left), callback_data="latest_more")])
+    rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
+    return Kb(rows)
+
+
+async def _send_latest_item(ctx, chat_id: int, lang: str, m: dict) -> bool:
+    """Download + upload ONE video of the batch → True when something was delivered."""
+    await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
+    data, big = await fetch_video(m)
+    if data and sniff_kind(data) != "video":             # a 'video' link that serves audio / junk
+        data = None
+    try:
+        if data:
+            await send_video_file(ctx, chat_id, m, data, result_kb(lang, m, False))
+            return True
+        if big and _valid_button_url(big):                # > 50 MB → link button
+            await ctx.bot.send_message(chat_id, f"{build_caption(m)}\n\n{tx(lang, 'too_big')}",
+                                       reply_markup=result_kb(lang, m, False, direct=big))
+            return True
+    except TelegramError as e:
+        log.info("latest video not sent: %s", e)
+    return False
+
+
+async def process_latest(update: Update, ctx, username: str, lang: str, started: float,
+                         resume: dict | None = None) -> None:
+    """Latest videos of an account — LATEST_FREE for everyone, LATEST_VIP for VIP — sent in
+    time-boxed batches; `resume` continues where the last batch stopped."""
+    msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
+
+    if not await gate_message(update, ctx, uid, lang):
+        return
+    if not await acquire_lock(uid):
+        return await msg.reply_text(tx(lang, "busy_msg"))
+
+    status = None
+    try:
+        if resume is None:
+            status = await msg.reply_text(tx(lang, "st_latest", bar=bar(1)))
+            items = await fetch_latest(username, LATEST_VIP if is_vip(uid) else LATEST_FREE)
+            if items is None:
+                return await safe_edit(status, tx(lang, "latest_unavailable"))
+            if not items:
+                return await safe_edit(status, tx(lang, "latest_none", user=esc(username)))
+            await safe_edit(status, tx(lang, "latest_header", user=esc(username), n=len(items)))
+            idx = 0
+        else:
+            items, idx = resume["items"], int(resume.get("next") or 0)
+        total = len(items)
+
+        sent = 0
+        while idx < total and deadline_left(started) >= 14:      # videos are heavy → bigger safety margin
+            if await _send_latest_item(ctx, chat_id, lang, items[idx]):
+                sent += 1
+            idx += 1
+
+        left = total - idx
+        if left > 0:                                     # out of time → remember the rest for the button
+            await session_save(f"latest_{uid}", {"user": username, "items": items, "next": idx})
+        if not sent and left <= 0:
+            if status:
+                return await safe_edit(status, tx(lang, "dl_fail"))
+            return await msg.reply_text(tx(lang, "dl_fail"))
+
+        text = tx(lang, "latest_partial", n=sent, left=left) if left > 0 else tx(lang, "latest_done", n=sent)
+        if left <= 0 and not is_vip(uid) and total >= LATEST_FREE:
+            text += "\n\n" + tx(lang, "latest_vip_hint", free=LATEST_FREE, vip=LATEST_VIP)
+        await ctx.bot.send_message(chat_id, text, reply_markup=latest_kb(lang, left))
+        if resume is None and sent:
+            await db_incr("sys/cfg/total_dl")
+            await db_incr(f"users/{uid}/dl")
+
+    except Exception as e:                                              # noqa: BLE001
+        await report_error(ctx, e, "process_latest")
+        if status:
+            await safe_edit(status, tx(lang, "dl_fail"))
+    finally:
+        await release_lock(uid)
+
+
+async def cmd_profdebug(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Admins only: /profdebug @username → text file with the shape of tikwm's profile + posts answers."""
+    ud, lang = await ensure_user(update, ctx)
+    if not is_admin(update.effective_user.id):
+        return
+    username = extract_username(" ".join(ctx.args or []))
+    if not username:
+        return await update.effective_message.reply_text("/profdebug @username")
+    text = await profile_debug(username)
+    await update.effective_message.reply_document(InputFile(text.encode("utf-8"), filename="profile_debug.txt"))
 
 
 def story_kb(lang: str, left: int = 0) -> Kb:
@@ -2931,6 +3233,7 @@ def build_application() -> Application:
     ptb.add_handler(CommandHandler("ping", cmd_ping))
     ptb.add_handler(CommandHandler("story", cmd_story))
     ptb.add_handler(CommandHandler("storydebug", cmd_storydebug))
+    ptb.add_handler(CommandHandler("profdebug", cmd_profdebug))
     ptb.add_handler(CallbackQueryHandler(on_callback))
     ptb.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND & ~filters.StatusUpdate.ALL, on_message))
     ptb.add_error_handler(on_error)
