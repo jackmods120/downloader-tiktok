@@ -154,6 +154,7 @@ L["ku"] = {
         "🖼 وێنە — هەموو وێنەکانی پۆستەکە وەک ئەلبوم\n"
         "🎵 گۆرانی — دوگمەی <b>MP3</b> لە ژێر ڤیدیۆکە\n"
         "👤 پرۆفایل — یوزەرنەیمێک بنێرە بۆ کارتی پرۆفایل + وێنەی HD + ستۆری + ڤیدیۆکان\n"
+        "🔥 دۆزینەوە — گەڕان لە تیکتۆک و ترێندی وڵاتان\n"
         "🕵️ ستۆری — دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیمێک بنێرە</blockquote>\n"
         "💎 <b>VIP</b> — بێ جۆینی ناچاری و وێنەی زیاتر.\n"
         "📩 پەیوەندی: {dev}"
@@ -246,6 +247,16 @@ L["ku"] = {
     "aedit_empty": "⚠️ ناوێکی ڕاست بنووسە (نووسین).",
     "aedit_noaudio": "ئەم فایلە وەک گۆرانی نەنێردراوە، ناتوانرێت ناوەکەی بگۆڕدرێت.",
     "aedit_same": "ℹ️ ئەمە هەمان ناوی ئێستایە.",
+    # ── discover (search + trending) ──────────────────────────────────────────
+    "b_disc": "🔥 دۆزینەوە", "b_disc_search": "🔍 گەڕان بە وشە", "b_disc_more": "➡️ زیاتر", "b_disc_new": "🔍 گەڕانی نوێ",
+    "disc_title": "🔥 <b>دۆزینەوە</b>\n\nلە تیکتۆک بگەڕێ یان ڤیدیۆی ترێندی وڵاتێک ببینە، ئینجا هەر ڤیدیۆیەک هەڵبژێرە بۆ دابەزاندن.\n\n🌍 <b>ترێندی وڵات:</b>",
+    "ask_search_prompt": "🔍 <b>گەڕان لە تیکتۆک</b>\n\nوشەیەک یان ناوێک بنووسە:\nنموونە: <code>football</code>",
+    "st_disc": "🔎 <b>دەگەڕێم…</b>\n{bar}",
+    "disc_res_search": "🔍 <b>«{q}»</b>", "disc_res_trend": "🔥 <b>ترێند {region}</b>",
+    "disc_pick": "👇 ژمارەی ڤیدیۆکە هەڵبژێرە بۆ دابەزاندن",
+    "disc_none": "📭 هیچ ئەنجامێک نەدۆزرایەوە.",
+    "disc_fail": "⚠️ ناتوانرێت ئێستا ئەنجامەکان بهێنرێن. دواتر دووبارە هەوڵبدەرەوە.",
+    "disc_expired": "⌛ ئەم لیستە کۆنە — دووبارە بگەڕێ.",
     # ── profile hub ───────────────────────────────────────────────────────────
     "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "pf_followers": "👥 فۆڵۆوەر", "pf_following": "➕ فۆڵۆو", "pf_likes": "❤️ لایک", "pf_videos": "🎬 ڤیدیۆ",
@@ -380,6 +391,7 @@ L["en"] = {
         "🖼 Photos — the whole post as an album\n"
         "🎵 Music — tap the <b>MP3</b> button under the video\n"
         "👤 Profile — send a username for a profile card + HD picture + stories + latest videos\n"
+        "🔥 Discover — search TikTok or browse trending by country\n"
         "🕵️ Stories — tap <b>Secret story</b> and send a username</blockquote>\n"
         "💎 <b>VIP</b> — no forced join, more photos.\n"
         "📩 Contact: {dev}"
@@ -470,6 +482,16 @@ L["en"] = {
     "aedit_empty": "⚠️ Please send a valid name (text).",
     "aedit_noaudio": "This file wasn't sent as audio, so its name can't be changed.",
     "aedit_same": "ℹ️ That is already the current name.",
+    # ── discover (search + trending) ──────────────────────────────────────────
+    "b_disc": "🔥 Discover", "b_disc_search": "🔍 Search by keyword", "b_disc_more": "➡️ More", "b_disc_new": "🔍 New search",
+    "disc_title": "🔥 <b>Discover</b>\n\nSearch TikTok or browse a country's trending videos, then pick any video to download.\n\n🌍 <b>Trending by country:</b>",
+    "ask_search_prompt": "🔍 <b>Search TikTok</b>\n\nType a word or a name:\nExample: <code>football</code>",
+    "st_disc": "🔎 <b>Searching…</b>\n{bar}",
+    "disc_res_search": "🔍 <b>“{q}”</b>", "disc_res_trend": "🔥 <b>Trending {region}</b>",
+    "disc_pick": "👇 Tap a number to download that video",
+    "disc_none": "📭 Nothing found.",
+    "disc_fail": "⚠️ Couldn't load results right now. Try again later.",
+    "disc_expired": "⌛ This list is outdated — search again.",
     # ── profile hub ───────────────────────────────────────────────────────────
     "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "pf_followers": "👥 Followers", "pf_following": "➕ Following", "pf_likes": "❤️ Likes", "pf_videos": "🎬 Videos",
@@ -602,6 +624,7 @@ L["ar"] = {
         "🖼 الصور — كل صور المنشور كألبوم\n"
         "🎵 الموسيقى — زر <b>MP3</b> أسفل الفيديو\n"
         "👤 الملف الشخصي — أرسل اسم مستخدم لبطاقة الحساب + صورة HD + القصص + آخر الفيديوهات\n"
+        "🔥 اكتشف — ابحث في تيك توك أو تصفّح الرائج حسب البلد\n"
         "🕵️ القصص — اضغط <b>قصة سرية</b> وأرسل اسم مستخدم</blockquote>\n"
         "💎 <b>VIP</b> — بدون اشتراك إجباري وصور أكثر.\n"
         "📩 للتواصل: {dev}"
@@ -692,6 +715,16 @@ L["ar"] = {
     "aedit_empty": "⚠️ أرسل اسماً صالحاً (نص).",
     "aedit_noaudio": "لم يُرسل هذا الملف كصوت لذا لا يمكن تغيير اسمه.",
     "aedit_same": "ℹ️ هذا هو الاسم الحالي بالفعل.",
+    # ── discover (search + trending) ──────────────────────────────────────────
+    "b_disc": "🔥 اكتشف", "b_disc_search": "🔍 بحث بكلمة", "b_disc_more": "➡️ المزيد", "b_disc_new": "🔍 بحث جديد",
+    "disc_title": "🔥 <b>اكتشف</b>\n\nابحث في تيك توك أو تصفّح الفيديوهات الرائجة في بلد ما، ثم اختر أي فيديو لتحميله.\n\n🌍 <b>الرائج حسب البلد:</b>",
+    "ask_search_prompt": "🔍 <b>البحث في تيك توك</b>\n\nاكتب كلمة أو اسماً:\nمثال: <code>football</code>",
+    "st_disc": "🔎 <b>جارٍ البحث…</b>\n{bar}",
+    "disc_res_search": "🔍 <b>«{q}»</b>", "disc_res_trend": "🔥 <b>الرائج {region}</b>",
+    "disc_pick": "👇 اضغط على رقم الفيديو لتحميله",
+    "disc_none": "📭 لم يتم العثور على نتائج.",
+    "disc_fail": "⚠️ تعذّر تحميل النتائج الآن. حاول لاحقاً.",
+    "disc_expired": "⌛ هذه القائمة قديمة — ابحث من جديد.",
     # ── profile hub ───────────────────────────────────────────────────────────
     "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "pf_followers": "👥 المتابعون", "pf_following": "➕ يتابع", "pf_likes": "❤️ الإعجابات", "pf_videos": "🎬 الفيديوهات",
@@ -1403,23 +1436,100 @@ async def fetch_latest(username: str, n: int) -> list | None:
     return out
 
 
-async def profile_debug(username: str) -> str:
-    """Admin tool: the SHAPE of tikwm's user/info and user/posts answers (strings shortened)."""
-    out = [f"profile debug @{username}"]
-    for name, url, params in (
-            ("user/info", "https://www.tikwm.com/api/user/info", {"unique_id": f"@{username}"}),
-            ("user/posts", "https://www.tikwm.com/api/user/posts", {"unique_id": f"@{username}", "count": 3, "cursor": 0})):
-        try:
-            r = await http().get(url, params=params, timeout=20)
-            j = r.json()
-        except Exception as e:
-            out.append(f"\n── {name}: ERROR {e}")
+# ── discover: keyword search + country trending ───────────────────────────────
+DISC_REGIONS = (("🇮🇶", "IQ"), ("🇸🇦", "SA"), ("🇦🇪", "AE"), ("🇹🇷", "TR"), ("🇺🇸", "US"), ("🇬🇧", "GB"))
+DISC_PAGE = 10
+
+
+async def fetch_discover(kind: str, q: str = "", region: str = "US", cursor: int = 0):
+    """→ (items | None, next_cursor). Items: {'url','title','creator','views','likes'}; None = provider failure."""
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    try:
+        if kind == "search":
+            r = await http().post("https://www.tikwm.com/api/feed/search",
+                                  data={"keywords": q, "count": DISC_PAGE, "cursor": cursor, "web": 1, "hd": 1}, timeout=t)
+        else:
+            r = await http().get("https://www.tikwm.com/api/feed/list",
+                                 params={"region": region, "count": DISC_PAGE}, timeout=t)
+        j = r.json()
+    except Exception as e:
+        log.info("discover failed: %s", e)
+        return None, 0
+    if j.get("code") != 0:
+        return None, 0
+    data = j.get("data")
+    vids = data if isinstance(data, list) else (data.get("videos") if isinstance(data, dict) else None)
+    if not isinstance(vids, list):
+        return None, 0
+    items = []
+    for d in vids:
+        if not isinstance(d, dict):
             continue
-        data = j.get("data")
-        out.append(f"\n── {name}  code={j.get('code')} msg={j.get('msg')!r}")
-        out.append(json.dumps(_shorten(data), ensure_ascii=False)[:3500] if data is not None else "(no data)")
-        await asyncio.sleep(1.2)
-    return "\n".join(out)
+        au = d.get("author") if isinstance(d.get("author"), dict) else {}
+        user, vid = au.get("unique_id") or au.get("uniqueId"), d.get("video_id") or d.get("id")
+        if not user or not vid:
+            continue
+        items.append({"url": f"https://www.tiktok.com/@{user}/video/{vid}", "title": d.get("title") or "",
+                      "creator": au.get("nickname") or user, "views": _to_int(d.get("play_count")),
+                      "likes": _to_int(d.get("digg_count"))})
+    nxt = _to_int(data.get("cursor")) if isinstance(data, dict) else 0
+    return items, nxt
+
+
+def disc_menu_view(lang: str) -> tuple[str, Kb]:
+    rows = [[Btn(tx(lang, "b_disc_search"), callback_data="disc_search")]]
+    flags = [Btn(f"{f} {c}", callback_data=f"disc_t_{c}") for f, c in DISC_REGIONS]
+    rows += [flags[i:i + 3] for i in range(0, len(flags), 3)]
+    rows.append(back_row(lang))
+    return tx(lang, "disc_title"), Kb(rows)
+
+
+def disc_kb(lang: str, tok: str, n: int, more: bool) -> Kb:
+    nums = [Btn(str(i + 1), callback_data=f"dv_{tok}_{i}") for i in range(n)]
+    rows = [nums[i:i + 5] for i in range(0, len(nums), 5)]
+    tail = []
+    if more:
+        tail.append(Btn(tx(lang, "b_disc_more"), callback_data="disc_p"))
+    tail.append(Btn(tx(lang, "b_disc_new"), callback_data="disc_search"))
+    rows.append(tail)
+    rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
+    return Kb(rows)
+
+
+async def process_discover(update: Update, ctx, lang: str, kind: str, q: str = "", region: str = "US",
+                           cursor: int = 0) -> None:
+    msg, uid = update.effective_message, update.effective_user.id
+    if not await gate_message(update, ctx, uid, lang):
+        return
+    status = await msg.reply_text(tx(lang, "st_disc", bar=bar(2)))
+    try:
+        items, nxt = await fetch_discover(kind, q, region, cursor)
+        if items is None:
+            return await safe_edit(status, tx(lang, "disc_fail"))
+        if not items:
+            return await safe_edit(status, tx(lang, "disc_none"))
+        tok = os.urandom(2).hex()
+        await session_save(f"disc_{uid}", {"tok": tok, "kind": kind, "q": q, "region": region,
+                                           "cursor": nxt, "items": items})
+        head = tx(lang, "disc_res_search", q=esc(clip(q, 40))) if kind == "search" \
+            else tx(lang, "disc_res_trend", region=esc(region))
+        lines = [f"<b>{i + 1}.</b> {esc(clip(it['title'] or it['creator'], 55))}\n"
+                 f"      👤 {esc(clip(it['creator'], 24))} · ▶️ {fmt_num(it['views'])} · ❤️ {fmt_num(it['likes'])}"
+                 for i, it in enumerate(items)]
+        text = head + "\n\n" + "\n".join(lines) + "\n\n" + tx(lang, "disc_pick")
+        await safe_edit(status, text, disc_kb(lang, tok, len(items), kind == "trend" or (kind == "search" and nxt > 0)))
+    except Exception as e:                                              # noqa: BLE001
+        await report_error(ctx, e, "process_discover")
+        await safe_edit(status, tx(lang, "disc_fail"))
+
+
+def _is_search_reply(msg) -> bool:
+    """True when the user is replying to the bot's 'type a keyword' search prompt."""
+    r = getattr(msg, "reply_to_message", None)
+    if not r or not r.from_user or not r.from_user.is_bot or not r.text:
+        return False
+    heads = {plain(tx(l, "ask_search_prompt")).split("\n")[0] for l in L}
+    return r.text.split("\n")[0].strip() in heads
 
 
 # ── secret stories ────────────────────────────────────────────────────────────
@@ -1912,7 +2022,8 @@ def menu_view(uid: int, lang: str, name: str) -> tuple[str, Kb]:
     rows = [
         [Btn(tx(lang, "b_dl"), callback_data="ask_link"),
          Btn(tx(lang, "b_avatar"), callback_data="ask_avatar")],
-        [Btn(tx(lang, "b_story"), callback_data="ask_story")],
+        [Btn(tx(lang, "b_story"), callback_data="ask_story"),
+         Btn(tx(lang, "b_disc"), callback_data="ask_disc")],
         [Btn(tx(lang, "b_profile"), callback_data="show_profile"),
          Btn(tx(lang, "b_vip"), callback_data="show_vip")],
         [Btn(tx(lang, "b_lang"), callback_data="show_settings"),
@@ -2197,6 +2308,44 @@ async def route(cb: CB, data: str):
             pass
         s["items"] = items
         return await process_latest(cb.update, cb.ctx, s.get("user", ""), lang, time.monotonic(), resume=s)
+
+    if data == "ask_disc":
+        await cb.answer()
+        text, kb = disc_menu_view(lang)
+        return await cb.edit(text, kb)
+
+    if data == "disc_search":
+        await cb.answer()
+        return await cb.q.message.reply_text(cb.t("ask_search_prompt"), reply_markup=ForceReply(selective=True))
+
+    if data.startswith("disc_t_") and re.fullmatch(r"[A-Z]{2}", data[7:]):
+        await cb.answer()
+        return await process_discover(cb.update, cb.ctx, lang, "trend", region=data[7:])
+
+    if data in ("disc_p", ) or data.startswith("dv_"):
+        s = await session_get(f"disc_{uid}")
+        items = s.get("items") if s else None
+        if isinstance(items, dict):
+            items = [items[k] for k in sorted(items, key=lambda x: int(x))]
+        if data == "disc_p":
+            await cb.answer()
+            if not s:
+                return await cb.q.message.reply_text(cb.t("disc_expired"))
+            try:
+                await cb.q.message.edit_reply_markup(reply_markup=None)
+            except TelegramError:
+                pass
+            return await process_discover(cb.update, cb.ctx, lang, s.get("kind", "search"), s.get("q", ""),
+                                          s.get("region", "US"), int(s.get("cursor") or 0))
+        parts = data.split("_")
+        try:
+            tok, i = parts[1], int(parts[2])
+        except (IndexError, ValueError):
+            return await cb.answer()
+        if not s or not items or s.get("tok") != tok or not (0 <= i < len(items)):
+            return await cb.answer(cb.t("disc_expired"), True)
+        await cb.answer()
+        return await process_link(cb.update, cb.ctx, items[i]["url"], lang, time.monotonic())
 
     if data == "ask_story":
         await cb.answer()
@@ -2912,18 +3061,6 @@ async def process_latest(update: Update, ctx, username: str, lang: str, started:
         await release_lock(uid)
 
 
-async def cmd_profdebug(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Admins only: /profdebug @username → text file with the shape of tikwm's profile + posts answers."""
-    ud, lang = await ensure_user(update, ctx)
-    if not is_admin(update.effective_user.id):
-        return
-    username = extract_username(" ".join(ctx.args or []))
-    if not username:
-        return await update.effective_message.reply_text("/profdebug @username")
-    text = await profile_debug(username)
-    await update.effective_message.reply_document(InputFile(text.encode("utf-8"), filename="profile_debug.txt"))
-
-
 def story_kb(lang: str, left: int = 0) -> Kb:
     rows = []
     if left > 0:
@@ -3042,28 +3179,6 @@ async def process_story(update: Update, ctx, username: str, lang: str, started: 
             await safe_edit(status, tx(lang, "dl_fail"))
     finally:
         await release_lock(uid)
-
-
-async def cmd_story(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    started = time.monotonic()
-    ud, lang = await ensure_user(update, ctx)
-    username = extract_username(" ".join(ctx.args or []))
-    if not username:
-        return await update.effective_message.reply_text(tx(lang, "ask_story_prompt"),
-                                                         reply_markup=ForceReply(selective=True))
-    await process_story(update, ctx, username, lang, started)
-
-
-async def cmd_storydebug(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Admins only: /storydebug @username → text file with the shape of the provider's answer."""
-    ud, lang = await ensure_user(update, ctx)
-    if not is_admin(update.effective_user.id):
-        return
-    username = extract_username(" ".join(ctx.args or []))
-    if not username:
-        return await update.effective_message.reply_text("/storydebug @username")
-    text = await story_debug(username)
-    await update.effective_message.reply_document(InputFile(text.encode("utf-8"), filename="story_debug.txt"))
 
 
 def tag_mp3(data: bytes, title: str, performer: str) -> bytes:
@@ -3190,6 +3305,12 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if fld:
             return await handle_audio_edit(update, ctx, fld, text, lang)
 
+    if private and _is_search_reply(msg):                # answer to the "search TikTok" prompt
+        q = text.strip()
+        if q and not q.startswith("/"):
+            return await process_discover(update, ctx, lang, "search", q=q[:60])
+        return await msg.reply_text(tx(lang, "ask_search_prompt"), reply_markup=ForceReply(selective=True))
+
     if private and _is_story_reply(msg):                 # answer to the "secret story" prompt
         username = extract_username(text)
         if username:
@@ -3228,12 +3349,7 @@ def build_application() -> Application:
         .connect_timeout(15).read_timeout(30).write_timeout(30).pool_timeout(15)
         .build()
     )
-    ptb.add_handler(CommandHandler(["start", "menu"], cmd_start))
-    ptb.add_handler(CommandHandler("help", cmd_help))
-    ptb.add_handler(CommandHandler("ping", cmd_ping))
-    ptb.add_handler(CommandHandler("story", cmd_story))
-    ptb.add_handler(CommandHandler("storydebug", cmd_storydebug))
-    ptb.add_handler(CommandHandler("profdebug", cmd_profdebug))
+    ptb.add_handler(CommandHandler("start", cmd_start))
     ptb.add_handler(CallbackQueryHandler(on_callback))
     ptb.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND & ~filters.StatusUpdate.ALL, on_message))
     ptb.add_error_handler(on_error)
