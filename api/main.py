@@ -1462,8 +1462,12 @@ KURD_TOPICS = (
 
 async def fetch_discover(kind: str, q: str = "", region: str = "US", cursor: int = 0):
     """→ (items | None, next_cursor). Items: {'url','title','creator','views','likes'}; None = provider failure."""
-    t = min(int(CFG.get("api_timeout", 40)), 20)
+    t = 10
+    ckey = "dq_" + hashlib.md5(f"{q.lower()}|{cursor}".encode()).hexdigest()[:14]
     if kind == "search":
+        hit = await session_get(ckey)
+        if hit and time.time() - hit.get("_ts", 0) < 600 and hit.get("items"):
+            return _as_list(hit["items"]), _to_int(hit.get("next"))
         base = "https://www.tikwm.com/api/feed/search"
         p = {"keywords": q, "count": DISC_PAGE, "cursor": cursor, "web": 1, "hd": 1}
         attempts = [("post", {"data": p}), ("get", {"params": p}), ("post", {"params": p})]
@@ -1516,6 +1520,8 @@ async def fetch_discover(kind: str, q: str = "", region: str = "US", cursor: int
                       "creator": au.get("nickname") or user, "views": _to_int(d.get("play_count")),
                       "likes": _to_int(d.get("digg_count"))})
     nxt = _to_int(data.get("cursor")) if isinstance(data, dict) else 0
+    if kind == "search" and items:
+        await session_save(ckey, {"items": items, "next": nxt})
     return items, nxt
 
 
@@ -1551,34 +1557,52 @@ async def _fetch_challenge(q: str, t: int) -> list:
         return []
 
 
-async def fetch_kurdish(topic: int) -> list | None:
-    """Kurdish videos — built from the IQ trending feed (the endpoint that is known to answer), keeping
-    videos with Kurdish letters / words; videos matching the chosen topic come first."""
-    t = min(int(CFG.get("api_timeout", 40)), 20)
-    pool, seen, ok = [], set(), False
-    for n in range(6):
-        try:
-            r = await http().get("https://www.tikwm.com/api/feed/list", params={"region": "IQ", "count": 20}, timeout=t)
-            j = r.json()
-        except Exception as e:
-            log.info("kurdish feed failed: %s", e)
-            j = None
-        if isinstance(j, dict) and j.get("code") == 0:
-            ok = True
-            d = j.get("data")
-            vids = d if isinstance(d, list) else (d or {}).get("videos")
-            for it in _disc_items(vids):
-                if it["url"] not in seen and _KURD_ANY.search(f"{it['title']} {it['creator']}"):
-                    seen.add(it["url"]); pool.append(it)
-        if len(pool) >= 3 * DISC_PAGE:
-            break
-        await asyncio.sleep(1.15)                          # provider allows ~1 request / second
+KURD_POOL_FRESH = 600      # seconds a cached pool is served without touching the provider
+KURD_POOL_MAX = 150
+
+
+def _as_list(x) -> list:
+    if isinstance(x, dict):                           # Firebase may hand a list back as {"0":…, "1":…}
+        x = [x[k] for k in sorted(x, key=lambda k: int(k) if str(k).isdigit() else 0)]
+    return [i for i in (x or []) if isinstance(i, dict)]
+
+
+async def fetch_kurdish(topic: int, budget: float = 22.0) -> list | None:
+    """Kurdish videos from the IQ trending feed (keeps Kurdish letters / words). The pool is cached and
+    SHARED by all users, so most taps answer instantly; a refresh is time-boxed to `budget` seconds."""
+    t0 = time.monotonic()
+    cached = await session_get("kurd_pool") or {}
+    pool = _as_list(cached.get("items"))
+    fresh = time.time() - cached.get("_ts", 0) < KURD_POOL_FRESH and len(pool) >= DISC_PAGE
+    ok = bool(pool)
+    if not fresh:
+        seen = {it.get("url") for it in pool}
+        new, calls = 0, 0
+        while time.monotonic() - t0 < budget and calls < 6 and new < 40:
+            if calls:
+                await asyncio.sleep(1.05)             # provider allows ~1 request / second
+            calls += 1
+            try:
+                r = await http().get("https://www.tikwm.com/api/feed/list", params={"region": "IQ", "count": 20}, timeout=8)
+                j = r.json()
+            except Exception as e:
+                log.info("kurdish feed failed: %s", e)
+                continue
+            if isinstance(j, dict) and j.get("code") == 0:
+                ok = True
+                d = j.get("data")
+                for it in _disc_items(d if isinstance(d, list) else (d or {}).get("videos")):
+                    if it["url"] not in seen and _KURD_ANY.search(f"{it['title']} {it['creator']}"):
+                        seen.add(it["url"]); pool.insert(0, it); new += 1
+        if new or not cached:
+            pool = pool[:KURD_POOL_MAX]
+            await session_save("kurd_pool", {"items": pool})
     if not ok:
         return None
     pat = KURD_TOPICS[topic][1] if 0 <= topic < len(KURD_TOPICS) else ""
     if pat:
         rx = re.compile(pat, re.I)
-        pool.sort(key=lambda it: 0 if rx.search(f"{it['title']} {it['creator']}") else 1)
+        pool = sorted(pool, key=lambda it: 0 if rx.search(f"{it['title']} {it['creator']}") else 1)
     return pool[:DISC_PAGE]
 
 
@@ -1618,11 +1642,15 @@ async def process_discover(update: Update, ctx, lang: str, kind: str, q: str = "
         return
     status = await msg.reply_text(tx(lang, "st_disc", bar=bar(2)))
     try:
-        if kind == "kurd":
-            ti = int(q) if q.isdigit() and int(q) < len(KURD_TOPICS) else 0
-            items, nxt = await fetch_kurdish(ti), 0
-        else:
-            items, nxt = await fetch_discover(kind, q, region, cursor)
+        try:
+            if kind == "kurd":
+                ti = int(q) if q.isdigit() and int(q) < len(KURD_TOPICS) else 0
+                items, nxt = await asyncio.wait_for(fetch_kurdish(ti), 40), 0
+            else:
+                items, nxt = await asyncio.wait_for(fetch_discover(kind, q, region, cursor), 40)
+        except asyncio.TimeoutError:                        # never leave the "searching…" bar hanging
+            items, nxt = None, 0
+            _DISC_ERR["msg"] = f"{kind}: timeout"
         if items is None:
             note = f"\n\n<code>{esc(_DISC_ERR['msg'][:160])}</code>" if is_admin(uid) and _DISC_ERR["msg"] else ""
             return await safe_edit(status, tx(lang, "disc_fail") + note)
