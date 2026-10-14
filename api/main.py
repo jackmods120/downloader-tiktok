@@ -1445,16 +1445,18 @@ async def fetch_latest(username: str, n: int) -> list | None:
 # ── discover: keyword search + country trending ───────────────────────────────
 DISC_REGIONS = (("🇮🇶", "IQ"), ("🇸🇦", "SA"), ("🇦🇪", "AE"), ("🇹🇷", "TR"), ("🇺🇸", "US"), ("🇬🇧", "GB"))
 DISC_PAGE = 10
+_DISC_ERR = {"msg": ""}
 # (label per language, search keywords)
+_KURD_ANY = re.compile(r"[ڕڵۆێۊ]|کورد|kurd|erbil|hewler|hawler|duhok|dohuk|slemani|sulaym|هەولێر|سلێمانی|دهۆک|کەرکووک|kirkuk|zakho|زاخۆ", re.I)
 KURD_TOPICS = (
-    ({"ku": "🏔 کوردستان", "en": "🏔 Kurdistan", "ar": "🏔 كوردستان"}, "kurdistan"),
-    ({"ku": "🎤 گۆرانی کوردی", "en": "🎤 Kurdish songs", "ar": "🎤 أغاني كردية"}, "kurdish song"),
-    ({"ku": "😂 کۆمیدی کوردی", "en": "😂 Kurdish comedy", "ar": "😂 كوميديا كردية"}, "kurdish comedy"),
-    ({"ku": "💃 هەڵپەڕکێ", "en": "💃 Halparke", "ar": "💃 هلپركي"}, "halparke kurdish"),
-    ({"ku": "🏙 هەولێر", "en": "🏙 Erbil", "ar": "🏙 أربيل"}, "erbil"),
-    ({"ku": "🏙 سلێمانی", "en": "🏙 Sulaymaniyah", "ar": "🏙 السليمانية"}, "sulaymaniyah"),
-    ({"ku": "🏙 دهۆک", "en": "🏙 Duhok", "ar": "🏙 دهوك"}, "duhok"),
-    ({"ku": "🌄 سروشتی کوردستان", "en": "🌄 Kurdistan nature", "ar": "🌄 طبيعة كوردستان"}, "kurdistan nature"),
+    ({"ku": "🏔 هەموو ڤیدیۆی کوردی", "en": "🏔 All Kurdish videos", "ar": "🏔 كل الفيديوهات الكردية"}, r""),
+    ({"ku": "🎤 گۆرانی", "en": "🎤 Songs", "ar": "🎤 أغاني"}, r"گۆرانی|گورانی|ستران|song|music|singer|ئاواز|دەنگ"),
+    ({"ku": "😂 کۆمیدی", "en": "😂 Comedy", "ar": "😂 كوميديا"}, r"کۆمیدی|پێکەنین|comedy|funny|😂|🤣|گاڵتە"),
+    ({"ku": "💃 هەڵپەڕکێ", "en": "💃 Dance", "ar": "💃 رقص"}, r"هەڵپەڕکێ|هەلپەرکێ|halparke|govend|dance|dabke|💃"),
+    ({"ku": "🏙 هەولێر", "en": "🏙 Erbil", "ar": "🏙 أربيل"}, r"هەولێر|erbil|hewler|hawler"),
+    ({"ku": "🏙 سلێمانی", "en": "🏙 Sulaymaniyah", "ar": "🏙 السليمانية"}, r"سلێمانی|slemani|sulaym"),
+    ({"ku": "🏙 دهۆک", "en": "🏙 Duhok", "ar": "🏙 دهوك"}, r"دهۆک|duhok|dohuk|zakho|زاخۆ"),
+    ({"ku": "🌄 سروشت", "en": "🌄 Nature", "ar": "🌄 طبيعة"}, r"سروشت|nature|چیا|کێو|mountain|🌄|🏔|⛰"),
 )
 
 
@@ -1492,6 +1494,11 @@ async def fetch_discover(kind: str, q: str = "", region: str = "US", cursor: int
         if n + 1 < len(attempts):
             await asyncio.sleep(1.2)
     if not isinstance(j, dict) or j.get("code") != 0:
+        _DISC_ERR["msg"] = f"{kind}: code={j.get('code') if isinstance(j, dict) else None} msg={j.get('msg') if isinstance(j, dict) else 'no/invalid response'}"
+        if kind == "search":                               # last resort: hashtag (challenge) videos
+            items = await _fetch_challenge(q, t)
+            if items:
+                return items, 0
         return None, 0
     data = j.get("data")
     vids = data if isinstance(data, list) else (data.get("videos") if isinstance(data, dict) else None)
@@ -1510,6 +1517,69 @@ async def fetch_discover(kind: str, q: str = "", region: str = "US", cursor: int
                       "likes": _to_int(d.get("digg_count"))})
     nxt = _to_int(data.get("cursor")) if isinstance(data, dict) else 0
     return items, nxt
+
+
+def _disc_items(vids) -> list:
+    items = []
+    for d in vids or []:
+        if not isinstance(d, dict):
+            continue
+        au = d.get("author") if isinstance(d.get("author"), dict) else {}
+        user, vid = au.get("unique_id") or au.get("uniqueId"), d.get("video_id") or d.get("id")
+        if user and vid:
+            items.append({"url": f"https://www.tiktok.com/@{user}/video/{vid}", "title": d.get("title") or "",
+                          "creator": au.get("nickname") or user, "views": _to_int(d.get("play_count")),
+                          "likes": _to_int(d.get("digg_count"))})
+    return items
+
+
+async def _fetch_challenge(q: str, t: int) -> list:
+    """Hashtag fallback: find the #tag matching the keyword, return its videos."""
+    try:
+        r = await http().post("https://www.tikwm.com/api/challenge/search", data={"keywords": q, "count": 1, "cursor": 0}, timeout=t)
+        d = (r.json() or {}).get("data") or {}
+        lst = d.get("challenge_list") or d.get("challenges") or (d if isinstance(d, list) else [])
+        cid = (lst[0].get("id") or lst[0].get("cid")) if lst and isinstance(lst[0], dict) else None
+        if not cid:
+            return []
+        await asyncio.sleep(1.2)
+        r = await http().get("https://www.tikwm.com/api/challenge/posts", params={"challenge_id": cid, "count": DISC_PAGE, "cursor": 0}, timeout=t)
+        d = (r.json() or {}).get("data")
+        return _disc_items(d if isinstance(d, list) else (d or {}).get("videos"))[:DISC_PAGE]
+    except Exception as e:
+        log.info("challenge fallback failed: %s", e)
+        return []
+
+
+async def fetch_kurdish(topic: int) -> list | None:
+    """Kurdish videos — built from the IQ trending feed (the endpoint that is known to answer), keeping
+    videos with Kurdish letters / words; videos matching the chosen topic come first."""
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    pool, seen, ok = [], set(), False
+    for n in range(6):
+        try:
+            r = await http().get("https://www.tikwm.com/api/feed/list", params={"region": "IQ", "count": 20}, timeout=t)
+            j = r.json()
+        except Exception as e:
+            log.info("kurdish feed failed: %s", e)
+            j = None
+        if isinstance(j, dict) and j.get("code") == 0:
+            ok = True
+            d = j.get("data")
+            vids = d if isinstance(d, list) else (d or {}).get("videos")
+            for it in _disc_items(vids):
+                if it["url"] not in seen and _KURD_ANY.search(f"{it['title']} {it['creator']}"):
+                    seen.add(it["url"]); pool.append(it)
+        if len(pool) >= 3 * DISC_PAGE:
+            break
+        await asyncio.sleep(1.15)                          # provider allows ~1 request / second
+    if not ok:
+        return None
+    pat = KURD_TOPICS[topic][1] if 0 <= topic < len(KURD_TOPICS) else ""
+    if pat:
+        rx = re.compile(pat, re.I)
+        pool.sort(key=lambda it: 0 if rx.search(f"{it['title']} {it['creator']}") else 1)
+    return pool[:DISC_PAGE]
 
 
 def disc_menu_view(lang: str) -> tuple[str, Kb]:
@@ -1548,21 +1618,31 @@ async def process_discover(update: Update, ctx, lang: str, kind: str, q: str = "
         return
     status = await msg.reply_text(tx(lang, "st_disc", bar=bar(2)))
     try:
-        items, nxt = await fetch_discover(kind, q, region, cursor)
+        if kind == "kurd":
+            ti = int(q) if q.isdigit() and int(q) < len(KURD_TOPICS) else 0
+            items, nxt = await fetch_kurdish(ti), 0
+        else:
+            items, nxt = await fetch_discover(kind, q, region, cursor)
         if items is None:
-            return await safe_edit(status, tx(lang, "disc_fail"))
+            note = f"\n\n<code>{esc(_DISC_ERR['msg'][:160])}</code>" if is_admin(uid) and _DISC_ERR["msg"] else ""
+            return await safe_edit(status, tx(lang, "disc_fail") + note)
         if not items:
             return await safe_edit(status, tx(lang, "disc_none"))
         tok = os.urandom(2).hex()
         await session_save(f"disc_{uid}", {"tok": tok, "kind": kind, "q": q, "region": region,
                                            "cursor": nxt, "items": items})
-        head = tx(lang, "disc_res_search", q=esc(clip(q, 40))) if kind == "search" \
-            else tx(lang, "disc_res_trend", region=esc(region))
+        if kind == "kurd":
+            lbl = KURD_TOPICS[ti][0]
+            head = f"<b>{lbl.get(lang) or lbl['en']}</b>"
+        elif kind == "search":
+            head = tx(lang, "disc_res_search", q=esc(clip(q, 40)))
+        else:
+            head = tx(lang, "disc_res_trend", region=esc(region))
         lines = [f"<b>{i + 1}.</b> {esc(clip(it['title'] or it['creator'], 55))}\n"
                  f"      👤 {esc(clip(it['creator'], 24))} · ▶️ {fmt_num(it['views'])} · ❤️ {fmt_num(it['likes'])}"
                  for i, it in enumerate(items)]
         text = head + "\n\n" + "\n".join(lines) + "\n\n" + tx(lang, "disc_pick")
-        await safe_edit(status, text, disc_kb(lang, tok, len(items), kind == "trend" or (kind == "search" and nxt > 0)))
+        await safe_edit(status, text, disc_kb(lang, tok, len(items), kind in ("trend", "kurd") or (kind == "search" and nxt > 0)))
     except Exception as e:                                              # noqa: BLE001
         await report_error(ctx, e, "process_discover")
         await safe_edit(status, tx(lang, "disc_fail"))
@@ -2366,7 +2446,7 @@ async def route(cb: CB, data: str):
 
     if data.startswith("disc_k_") and data[7:].isdigit() and int(data[7:]) < len(KURD_TOPICS):
         await cb.answer()
-        return await process_discover(cb.update, cb.ctx, lang, "search", q=KURD_TOPICS[int(data[7:])][1])
+        return await process_discover(cb.update, cb.ctx, lang, "kurd", q=data[7:])
 
     if data == "disc_search":
         await cb.answer()
