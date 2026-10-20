@@ -86,18 +86,11 @@ BOT_USERNAME   = os.getenv("BOT_USERNAME", "TikTok_Downloader_Jack_Robot").lstri
 #   STORY_API_HEADERS = {"x-api-key": "..."}        (JSON, optional)
 STORY_API_URL     = os.getenv("STORY_API_URL", "").strip()
 STORY_API_HEADERS = os.getenv("STORY_API_HEADERS", "").strip()
-# Posts viewer — optional paid/own provider used BEFORE the free tikwm endpoint (which Cloudflare may block
-# for datacenter IPs). Must answer in tikwm's shape: {"code":0,"data":{"videos":[…]}}. Placeholders: {username}, {count}
-#   POSTS_API_URL     = https://your-provider.example/api/user/posts?unique_id=@{username}&count={count}
-#   POSTS_API_HEADERS = {"x-api-key": "..."}        (JSON, optional)
-POSTS_API_URL     = os.getenv("POSTS_API_URL", "").strip()
-POSTS_API_HEADERS = os.getenv("POSTS_API_HEADERS", "").strip()
 STORY_MAX         = 40               # newest stories per request (VIP: STORY_MAX_VIP)
 STORY_MAX_VIP     = 80
 STORY_PAGES       = 8                # max provider pages fetched per username
-LATEST_PAGE       = 3                # videos sent per tap (the "more" button sends the next page)
-LATEST_FREE       = 15               # newest posts reachable for everyone
-LATEST_VIP        = 30               # … for VIP
+LATEST_FREE       = 3                # latest videos per request for everyone
+LATEST_VIP        = 12               # … for VIP
 
 START_TIME     = time.time()
 SESSION_TTL    = 3600                # seconds an audio/"again" session stays valid
@@ -269,15 +262,14 @@ L["ku"] = {
     # ── profile hub ───────────────────────────────────────────────────────────
     "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "pf_followers": "👥 فۆڵۆوەر", "pf_following": "➕ فۆڵۆو", "pf_likes": "❤️ لایک", "pf_videos": "🎬 ڤیدیۆ",
-    "pf_b_vids": "📚 بینینی پۆستەکانی", "pf_b_file": "📎 وێنە بە HD (فایل)", "pf_b_open": "🔗 پرۆفایل",
-    "st_latest": "📚 <b>پۆستەکان دەهێنرێن…</b>\n{bar}",
-    "latest_header": "📚 <b>پۆستەکانی @{user}</b>\n<blockquote>📥 {n} پۆست دۆزرایەوە — هەر جارەی {page} دانە دەنێردرێت</blockquote>",
-    "latest_none": "📭 <b>@{user}</b> هیچ پۆستێکی نییە.",
-    "latest_unavailable": "⚠️ ناتوانرێت پۆستەکانی ئەم ئەکاونتە بهێنرێت. دواتر دووبارە هەوڵبدەرەوە.",
-    "latest_done": "✅ <b>{n} پۆست</b> نێردرا — ئەمە دوایین پۆست بوو",
-    "latest_partial": "✅ <b>{n}</b> پۆست نێردرا — <b>{left}</b> ماوە. بۆ بینینی پۆستی زیاتر دوگمەی خوارەوە دابگرە.",
-    "b_latest_more": "➕ بینینی پۆستی زیاتر ({left} ماوە)",
-    "latest_vip_hint": "💎 بەکارهێنەری ئاسایی {free} پۆست وەردەگرێت — بە <b>VIP</b> تا {vip} پۆست.",
+    "pf_b_vids": "🎬 دوایین ڤیدیۆکان", "pf_b_file": "📎 وێنە بە HD (فایل)", "pf_b_open": "🔗 پرۆفایل",
+    "st_latest": "🎬 <b>دوایین ڤیدیۆکان دەهێنرێن…</b>\n{bar}",
+    "latest_header": "🎬 <b>دوایین ڤیدیۆکانی @{user}</b>\n<blockquote>📥 {n} ڤیدیۆ دەنێردرێت</blockquote>",
+    "latest_none": "📭 <b>@{user}</b> ڤیدیۆی نییە (یان تەنیا پۆستی وێنەی هەیە).",
+    "latest_unavailable": "⚠️ ناتوانرێت ڤیدیۆکانی ئەم ئەکاونتە بهێنرێت. دواتر دووبارە هەوڵبدەرەوە.",
+    "latest_done": "✅ <b>{n} ڤیدیۆ</b> نێردرا",
+    "latest_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> ڤیدیۆ نێردرا، <b>{left}</b> ماوە. دوگمەی خوارەوە دابگرە بۆ بەردەوامبوون.",
+    "latest_vip_hint": "💎 بەکارهێنەری ئاسایی {free} ڤیدیۆ وەردەگرێت — بە <b>VIP</b> تا {vip} ڤیدیۆ.",
     "no_story": "📭 <b>@{user}</b> ئێستا ستۆری چالاکی نییە.\nستۆری تیکتۆک ٢٤ کاتژمێر دەمێنێتەوە.",
     "story_unavailable": "⚠️ ستۆری ئەم ئەکاونتە بەردەست نییە (ڕەنگە تایبەت بێت یان سەرچاوەکە پشتگیری نەکات).",
     "b_story": "🕵️ ستۆری نهێنی", "b_story_again": "🔄 ستۆری کەسێکی تر",
@@ -507,15 +499,14 @@ L["en"] = {
     # ── profile hub ───────────────────────────────────────────────────────────
     "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "pf_followers": "👥 Followers", "pf_following": "➕ Following", "pf_likes": "❤️ Likes", "pf_videos": "🎬 Videos",
-    "pf_b_vids": "📚 View posts", "pf_b_file": "📎 HD picture (file)", "pf_b_open": "🔗 Profile",
-    "st_latest": "📚 <b>Fetching the posts…</b>\n{bar}",
-    "latest_header": "📚 <b>Posts of @{user}</b>\n<blockquote>📥 {n} posts found — sent {page} at a time</blockquote>",
-    "latest_none": "📭 <b>@{user}</b> has no posts.",
-    "latest_unavailable": "⚠️ Couldn't fetch this account's posts. Try again later.",
-    "latest_done": "✅ <b>{n} posts</b> sent — that was the last one",
-    "latest_partial": "✅ <b>{n}</b> posts sent — <b>{left}</b> left. Tap the button below to see more posts.",
-    "b_latest_more": "➕ See more posts ({left} left)",
-    "latest_vip_hint": "💎 Free users get {free} posts — <b>VIP</b> gets up to {vip}.",
+    "pf_b_vids": "🎬 Latest videos", "pf_b_file": "📎 HD picture (file)", "pf_b_open": "🔗 Profile",
+    "st_latest": "🎬 <b>Fetching the latest videos…</b>\n{bar}",
+    "latest_header": "🎬 <b>Latest videos of @{user}</b>\n<blockquote>📥 {n} videos on the way</blockquote>",
+    "latest_none": "📭 <b>@{user}</b> has no videos (or only photo posts).",
+    "latest_unavailable": "⚠️ Couldn't fetch this account's videos. Try again later.",
+    "latest_done": "✅ <b>{n} videos</b> delivered",
+    "latest_partial": "⏱ Time limit reached — <b>{n}</b> videos sent, <b>{left}</b> left. Tap the button below to continue.",
+    "latest_vip_hint": "💎 Free users get {free} videos — <b>VIP</b> gets up to {vip}.",
     "no_story": "📭 <b>@{user}</b> has no active stories right now.\nTikTok stories last 24 hours.",
     "story_unavailable": "⚠️ This account's stories aren't available (it may be private, or the source doesn't support them).",
     "b_story": "🕵️ Secret story", "b_story_again": "🔄 Another story",
@@ -743,15 +734,14 @@ L["ar"] = {
     # ── profile hub ───────────────────────────────────────────────────────────
     "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "pf_followers": "👥 المتابعون", "pf_following": "➕ يتابع", "pf_likes": "❤️ الإعجابات", "pf_videos": "🎬 الفيديوهات",
-    "pf_b_vids": "📚 عرض المنشورات", "pf_b_file": "📎 صورة HD (ملف)", "pf_b_open": "🔗 الحساب",
-    "st_latest": "📚 <b>جارٍ جلب المنشورات…</b>\n{bar}",
-    "latest_header": "📚 <b>منشورات @{user}</b>\n<blockquote>📥 تم العثور على {n} منشور — يُرسل {page} في كل مرة</blockquote>",
-    "latest_none": "📭 <b>@{user}</b> ليس لديه منشورات.",
-    "latest_unavailable": "⚠️ تعذّر جلب منشورات هذا الحساب. حاول لاحقاً.",
-    "latest_done": "✅ تم إرسال <b>{n} منشور</b> — كان هذا آخر منشور",
-    "latest_partial": "✅ أُرسل <b>{n}</b> منشور — تبقّى <b>{left}</b>. اضغط الزر أدناه لعرض المزيد.",
-    "b_latest_more": "➕ عرض المزيد ({left} متبقٍ)",
-    "latest_vip_hint": "💎 المستخدم العادي يحصل على {free} منشور — و<b>VIP</b> حتى {vip}.",
+    "pf_b_vids": "🎬 آخر الفيديوهات", "pf_b_file": "📎 صورة HD (ملف)", "pf_b_open": "🔗 الحساب",
+    "st_latest": "🎬 <b>جارٍ جلب آخر الفيديوهات…</b>\n{bar}",
+    "latest_header": "🎬 <b>آخر فيديوهات @{user}</b>\n<blockquote>📥 {n} فيديو قيد الإرسال</blockquote>",
+    "latest_none": "📭 <b>@{user}</b> ليس لديه فيديوهات (أو منشورات صور فقط).",
+    "latest_unavailable": "⚠️ تعذّر جلب فيديوهات هذا الحساب. حاول لاحقاً.",
+    "latest_done": "✅ تم إرسال <b>{n} فيديو</b>",
+    "latest_partial": "⏱ انتهى الوقت — أُرسل <b>{n}</b> فيديو وتبقّى <b>{left}</b>. اضغط الزر أدناه للمتابعة.",
+    "latest_vip_hint": "💎 المستخدم العادي يحصل على {free} فيديو — و<b>VIP</b> حتى {vip}.",
     "no_story": "📭 <b>@{user}</b> لا يملك قصصاً نشطة حالياً.\nقصص تيك توك تبقى 24 ساعة.",
     "story_unavailable": "⚠️ قصص هذا الحساب غير متاحة (ربما الحساب خاص أو المصدر لا يدعمها).",
     "b_story": "🕵️ قصة سرية", "b_story_again": "🔄 قصة أخرى",
@@ -1426,59 +1416,15 @@ def profile_kb(lang: str, user: str) -> Kb:
 
 async def fetch_latest(username: str, n: int) -> list | None:
     """Newest `n` VIDEO posts as normalised media dicts · [] = none · None = provider failure."""
-    t = 10
-    pw = {"unique_id": f"@{username}", "count": 20, "cursor": 0, "web": 1, "hd": 1}
-    variants = [("post", {"data": pw}),                                  # the tikwm web app itself uses POST
-                ("get", {"params": {"unique_id": f"@{username}", "count": 20, "cursor": 0}}),
-                ("post", {"data": {"unique_id": username, "count": 12, "cursor": 0}}),
-                ("get", {"params": {"unique_id": username, "count": 12, "cursor": 0}})]
-    j, tries, blocked = None, 0, False
-    if POSTS_API_URL:                                   # own / paid provider first
-        try:
-            hdr = json.loads(POSTS_API_HEADERS) if POSTS_API_HEADERS else {}
-            r = await http().get(POSTS_API_URL.replace("{username}", username).replace("{count}", "20"),
-                                 headers=hdr, timeout=t)
-            jj = r.json()
-            if isinstance(jj, dict) and jj.get("code") == 0 and isinstance(jj.get("data"), dict) and jj["data"].get("videos"):
-                j = jj
-                variants = []
-        except Exception as e:
-            log.info("custom posts provider failed: %s", e)
-    for meth, kw in variants:
-        for retry in range(3):                          # the free API answers "limit 1 request/second" when busy
-            tries += 1
-            try:
-                r = await getattr(http(), meth)("https://www.tikwm.com/api/user/posts", timeout=t, **kw)
-                j = r.json()
-            except Exception as e:
-                log.info("tikwm posts %s failed: %s", meth, e)
-                st = getattr(locals().get("r"), "status_code", "?")
-                if st == 403 and "just a moment" in (getattr(locals().get("r"), "text", "") or "").lower():
-                    blocked = True                      # Cloudflare challenge: every variant gets the same wall
-                body = (getattr(locals().get("r"), "text", "") or "")[:50].replace("\n", " ")
-                _DISC_ERR["msg"] = f"posts {meth}: {type(e).__name__} http={st} body={body!r}"
-                j = None
-                break
-            if isinstance(j, dict) and j.get("code") != 0 and "limit" in str(j.get("msg") or "").lower():
-                await asyncio.sleep(1.4)
-                continue
-            break
-        ok = isinstance(j, dict) and j.get("code") == 0 and isinstance(j.get("data"), dict) \
-            and bool(j["data"].get("videos"))
-        if ok:
-            break
-        if isinstance(j, dict):
-            _DISC_ERR["msg"] = f"posts: code={j.get('code')} msg={str(j.get('msg'))[:100]}"
-            log.info("tikwm posts @%s → %s", username, _DISC_ERR["msg"])
-            if j.get("code") == 0 and isinstance(j.get("data"), dict):
-                return []                              # reachable, account simply has no posts
-        if blocked:
-            _DISC_ERR["msg"] = "posts: 403 Cloudflare challenge — tikwm blocks this server IP. Set POSTS_API_URL (own/paid provider)."
-            break
-        if tries >= 8:
-            break
-        await asyncio.sleep(1.2)
-    if not isinstance(j, dict) or j.get("code") != 0 or not isinstance(j.get("data"), dict):
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    try:
+        r = await http().get("https://www.tikwm.com/api/user/posts",
+                             params={"unique_id": f"@{username}", "count": 30, "cursor": 0}, timeout=t)
+        j = r.json()
+    except Exception as e:
+        log.info("tikwm posts failed: %s", e)
+        return None
+    if j.get("code") != 0 or not isinstance(j.get("data"), dict):
         return None
     vids = [d for d in (j["data"].get("videos") or []) if isinstance(d, dict)]
     vids.sort(key=lambda d: _to_int(d.get("create_time") or d.get("createTime")), reverse=True)  # pinned posts lead otherwise
@@ -1486,9 +1432,10 @@ async def fetch_latest(username: str, n: int) -> list | None:
     for d in vids:
         d = dict(d)
         d.setdefault("id", d.get("video_id"))
-        is_photo = bool(d.get("images"))
-        m = parse_tikwm(d, f"https://www.tiktok.com/@{username}/{'photo' if is_photo else 'video'}/{d.get('id')}")
-        if m["images"] or m["videos"]:
+        if d.get("images"):
+            continue                                   # photo post: its `play` link is only the music
+        m = parse_tikwm(d, f"https://www.tiktok.com/@{username}/video/{d.get('id')}")
+        if m["videos"]:
             out.append(m)
         if len(out) >= n:
             break
@@ -3196,35 +3143,24 @@ async def send_profile_file(cb: "CB", username: str) -> None:
 def latest_kb(lang: str, left: int = 0) -> Kb:
     rows = []
     if left > 0:
-        rows.append([Btn(tx(lang, "b_latest_more", left=left), callback_data="latest_more")])
+        rows.append([Btn(tx(lang, "b_story_more", left=left), callback_data="latest_more")])
     rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
     return Kb(rows)
 
 
 async def _send_latest_item(ctx, chat_id: int, lang: str, m: dict) -> bool:
     """Download + upload ONE video of the batch → True when something was delivered."""
-    if m.get("audio"):                                    # lets the ".MP3" button work on this post
-        await session_save(m["key"], {k: m[k] for k in ("audio", "a_title", "a_author", "title", "creator", "src")})
+    await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
+    data, big = await fetch_video(m)
+    if data and sniff_kind(data) != "video":             # a 'video' link that serves audio / junk
+        data = None
     try:
-        if m["images"]:                                   # ── photo post → album
-            await chat_action(ctx, chat_id, ChatAction.UPLOAD_PHOTO)
-            files = await fetch_images(m["images"], 10)
-            if not files:
-                return False
-            n = await send_photo_album(ctx, chat_id, m, files)
-            if n:
-                await ctx.bot.send_message(chat_id, tx(lang, "photos_done", n=n), reply_markup=result_kb(lang, m, True))
-            return bool(n)
-        await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
-        data, big = await fetch_video(m)
-        if data and sniff_kind(data) != "video":         # a 'video' link that serves audio / junk
-            data = None
         if data:
-            await send_video_file(ctx, chat_id, m, data, result_kb(lang, m, True))
+            await send_video_file(ctx, chat_id, m, data, result_kb(lang, m, False))
             return True
         if big and _valid_button_url(big):                # > 50 MB → link button
             await ctx.bot.send_message(chat_id, f"{build_caption(m)}\n\n{tx(lang, 'too_big')}",
-                                       reply_markup=result_kb(lang, m, True, direct=big))
+                                       reply_markup=result_kb(lang, m, False, direct=big))
             return True
     except TelegramError as e:
         log.info("latest video not sent: %s", e)
@@ -3248,25 +3184,23 @@ async def process_latest(update: Update, ctx, username: str, lang: str, started:
             status = await msg.reply_text(tx(lang, "st_latest", bar=bar(1)))
             items = await fetch_latest(username, LATEST_VIP if is_vip(uid) else LATEST_FREE)
             if items is None:
-                note = f"\n\n<code>{esc(_DISC_ERR['msg'][:160])}</code>" if is_admin(uid) and _DISC_ERR["msg"] else ""
-                return await safe_edit(status, tx(lang, "latest_unavailable") + note)
+                return await safe_edit(status, tx(lang, "latest_unavailable"))
             if not items:
                 return await safe_edit(status, tx(lang, "latest_none", user=esc(username)))
-            await safe_edit(status, tx(lang, "latest_header", user=esc(username), n=len(items), page=LATEST_PAGE))
+            await safe_edit(status, tx(lang, "latest_header", user=esc(username), n=len(items)))
             idx = 0
         else:
             items, idx = resume["items"], int(resume.get("next") or 0)
         total = len(items)
 
-        sent = tried = 0
-        while idx < total and tried < LATEST_PAGE and deadline_left(started) >= 14:   # one page per tap
+        sent = 0
+        while idx < total and deadline_left(started) >= 14:      # videos are heavy → bigger safety margin
             if await _send_latest_item(ctx, chat_id, lang, items[idx]):
                 sent += 1
             idx += 1
-            tried += 1
 
         left = total - idx
-        if left > 0:                                     # page done → remember the rest for the button
+        if left > 0:                                     # out of time → remember the rest for the button
             await session_save(f"latest_{uid}", {"user": username, "items": items, "next": idx})
         if not sent and left <= 0:
             if status:
