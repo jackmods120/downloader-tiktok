@@ -86,6 +86,14 @@ BOT_USERNAME   = os.getenv("BOT_USERNAME", "TikTok_Downloader_Jack_Robot").lstri
 #   STORY_API_HEADERS = {"x-api-key": "..."}        (JSON, optional)
 STORY_API_URL     = os.getenv("STORY_API_URL", "").strip()
 STORY_API_HEADERS = os.getenv("STORY_API_HEADERS", "").strip()
+# Posts / latest-videos provider (optional).  TikWM's own site sits behind a Cloudflare challenge that
+# blocks serverless IPs (Vercel).  Point this at an API that returns the SAME JSON shape as
+# tikwm's /api/user/posts ({"code":0,"data":{"videos":[…],"cursor":…,"hasMore":…}}), e.g. the RapidAPI
+# "tiktok-scraper7" listing.  Placeholders: {username} {cursor} {count}
+#   POSTS_API_URL     = https://tiktok-scraper7.p.rapidapi.com/user/posts?unique_id={username}&count={count}&cursor={cursor}
+#   POSTS_API_HEADERS = {"x-rapidapi-key": "...", "x-rapidapi-host": "tiktok-scraper7.p.rapidapi.com"}
+POSTS_API_URL     = os.getenv("POSTS_API_URL", "").strip()
+POSTS_API_HEADERS = os.getenv("POSTS_API_HEADERS", "").strip()
 STORY_MAX         = 40               # newest stories per request (VIP: STORY_MAX_VIP)
 STORY_MAX_VIP     = 80
 STORY_PAGES       = 8                # max provider pages fetched per username
@@ -1455,6 +1463,25 @@ async def _tikwm_user_posts(username: str, cursor: int = 0) -> dict | None:
     t = min(int(CFG.get("api_timeout", 40)), 20)
     url = "https://www.tikwm.com/api/user/posts"
     _POSTS_ERR["msg"] = ""
+    if POSTS_API_URL:                                   # your own provider first
+        try:
+            hdr = json.loads(POSTS_API_HEADERS) if POSTS_API_HEADERS else {}
+            u = (POSTS_API_URL.replace("{username}", username.lstrip("@"))
+                 .replace("{cursor}", str(cursor)).replace("{count}", "30"))
+            r = await http().get(u, headers=hdr if isinstance(hdr, dict) else {}, timeout=t)
+            body = (r.text or "").strip()
+            try:
+                j = json.loads(body)
+            except ValueError:
+                j = None
+            if isinstance(j, dict) and j.get("code") == 0 and isinstance(j.get("data"), dict):
+                return j
+            _POSTS_ERR["msg"] = f"POSTS_API http={r.status_code} " + (
+                f"code={j.get('code')} msg={str(j.get('msg', ''))[:100]}" if isinstance(j, dict) else f"not JSON: {body[:80]!r}")
+        except Exception as e:                                          # noqa: BLE001
+            _POSTS_ERR["msg"] = f"POSTS_API {type(e).__name__}: {e}"[:200]
+        log.info("posts provider failed: %s", _POSTS_ERR["msg"])
+        return None
     tries = (("post", f"@{username}", 30), ("post", username, 30),
              ("get", f"@{username}", 30), ("get", username, 12))
     for method, uid_form, count in tries:
@@ -1473,6 +1500,9 @@ async def _tikwm_user_posts(username: str, cursor: int = 0) -> dict | None:
                 j = json.loads(body)
             except ValueError:
                 _POSTS_ERR["msg"] = f"{method.upper()} http={r.status_code} not JSON: {body[:80]!r}"
+                if r.status_code == 403 and "just a moment" in body.lower():
+                    _POSTS_ERR["msg"] = "Cloudflare blocks this server's IP on tikwm.com (set POSTS_API_URL)"
+                    break                                   # same IP → every variant would be blocked too
                 await asyncio.sleep(1.3)
                 continue
         except Exception as e:                                          # noqa: BLE001
