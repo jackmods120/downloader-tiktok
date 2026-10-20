@@ -86,20 +86,12 @@ BOT_USERNAME   = os.getenv("BOT_USERNAME", "TikTok_Downloader_Jack_Robot").lstri
 #   STORY_API_HEADERS = {"x-api-key": "..."}        (JSON, optional)
 STORY_API_URL     = os.getenv("STORY_API_URL", "").strip()
 STORY_API_HEADERS = os.getenv("STORY_API_HEADERS", "").strip()
-# Posts / latest-videos provider (optional).  TikWM's own site sits behind a Cloudflare challenge that
-# blocks serverless IPs (Vercel).  Point this at an API that returns the SAME JSON shape as
-# tikwm's /api/user/posts ({"code":0,"data":{"videos":[…],"cursor":…,"hasMore":…}}), e.g. the RapidAPI
-# "tiktok-scraper7" listing.  Placeholders: {username} {cursor} {count}
-#   POSTS_API_URL     = https://tiktok-scraper7.p.rapidapi.com/user/posts?unique_id={username}&count={count}&cursor={cursor}
-#   POSTS_API_HEADERS = {"x-rapidapi-key": "...", "x-rapidapi-host": "tiktok-scraper7.p.rapidapi.com"}
-POSTS_API_URL     = os.getenv("POSTS_API_URL", "").strip()
-POSTS_API_HEADERS = os.getenv("POSTS_API_HEADERS", "").strip()
 STORY_MAX         = 40               # newest stories per request (VIP: STORY_MAX_VIP)
 STORY_MAX_VIP     = 80
 STORY_PAGES       = 8                # max provider pages fetched per username
-LATEST_FREE       = 3                # latest videos per request for everyone
-LATEST_VIP        = 12               # … for VIP
-POSTS_PER_PAGE    = 3                # posts (videos + photo posts) sent per tap of "more posts"
+LATEST_PAGE       = 3                # videos sent per tap (the "more" button sends the next page)
+LATEST_FREE       = 9                # newest videos reachable for everyone
+LATEST_VIP        = 30               # … for VIP
 
 START_TIME     = time.time()
 SESSION_TTL    = 3600                # seconds an audio/"again" session stays valid
@@ -273,21 +265,13 @@ L["ku"] = {
     "pf_followers": "👥 فۆڵۆوەر", "pf_following": "➕ فۆڵۆو", "pf_likes": "❤️ لایک", "pf_videos": "🎬 ڤیدیۆ",
     "pf_b_vids": "🎬 دوایین ڤیدیۆکان", "pf_b_file": "📎 وێنە بە HD (فایل)", "pf_b_open": "🔗 پرۆفایل",
     "st_latest": "🎬 <b>دوایین ڤیدیۆکان دەهێنرێن…</b>\n{bar}",
-    "latest_header": "🎬 <b>دوایین ڤیدیۆکانی @{user}</b>\n<blockquote>📥 {n} ڤیدیۆ دەنێردرێت</blockquote>",
+    "latest_header": "🎬 <b>دوایین ڤیدیۆکانی @{user}</b>\n<blockquote>📥 {n} ڤیدیۆ دۆزرایەوە — هەر جارەی {page} دانە دەنێردرێت</blockquote>",
     "latest_none": "📭 <b>@{user}</b> ڤیدیۆی نییە (یان تەنیا پۆستی وێنەی هەیە).",
     "latest_unavailable": "⚠️ ناتوانرێت ڤیدیۆکانی ئەم ئەکاونتە بهێنرێت. دواتر دووبارە هەوڵبدەرەوە.",
     "latest_done": "✅ <b>{n} ڤیدیۆ</b> نێردرا",
-    "latest_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> ڤیدیۆ نێردرا، <b>{left}</b> ماوە. دوگمەی خوارەوە دابگرە بۆ بەردەوامبوون.",
+    "latest_partial": "✅ <b>{n}</b> ڤیدیۆ نێردرا — <b>{left}</b> ماوە. بۆ بینینی پۆستی زیاتر دوگمەی خوارەوە دابگرە.",
+    "b_latest_more": "➕ بینینی پۆستی زیاتر ({left} ماوە)",
     "latest_vip_hint": "💎 بەکارهێنەری ئاسایی {free} ڤیدیۆ وەردەگرێت — بە <b>VIP</b> تا {vip} ڤیدیۆ.",
-    "pf_b_posts": "📂 پۆستەکان",
-    "st_posts": "📂 <b>پۆستەکان دەهێنرێن…</b>\n{bar}",
-    "posts_header": "📂 <b>پۆستەکانی @{user}</b>\n<blockquote>📥 {n} پۆست دەنێردرێت</blockquote>",
-    "posts_none": "📭 <b>@{user}</b> هیچ پۆستێکی نییە.",
-    "posts_unavailable": "⚠️ ناتوانرێت پۆستەکانی ئەم ئەکاونتە بهێنرێت. دواتر دووبارە هەوڵبدەرەوە.",
-    "posts_done": "✅ <b>{n} پۆست</b> نێردرا",
-    "posts_end": "✅ <b>{n} پۆست</b> نێردرا — ئیتر پۆستی تر نەماوە.",
-    "posts_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> پۆست نێردرا. دوگمەی خوارەوە دابگرە بۆ بەردەوامبوون.",
-    "b_posts_more": "📂 بینینی پۆستی زیاتر (+{n})",
     "no_story": "📭 <b>@{user}</b> ئێستا ستۆری چالاکی نییە.\nستۆری تیکتۆک ٢٤ کاتژمێر دەمێنێتەوە.",
     "story_unavailable": "⚠️ ستۆری ئەم ئەکاونتە بەردەست نییە (ڕەنگە تایبەت بێت یان سەرچاوەکە پشتگیری نەکات).",
     "b_story": "🕵️ ستۆری نهێنی", "b_story_again": "🔄 ستۆری کەسێکی تر",
@@ -519,21 +503,13 @@ L["en"] = {
     "pf_followers": "👥 Followers", "pf_following": "➕ Following", "pf_likes": "❤️ Likes", "pf_videos": "🎬 Videos",
     "pf_b_vids": "🎬 Latest videos", "pf_b_file": "📎 HD picture (file)", "pf_b_open": "🔗 Profile",
     "st_latest": "🎬 <b>Fetching the latest videos…</b>\n{bar}",
-    "latest_header": "🎬 <b>Latest videos of @{user}</b>\n<blockquote>📥 {n} videos on the way</blockquote>",
+    "latest_header": "🎬 <b>Latest videos of @{user}</b>\n<blockquote>📥 {n} videos found — sent {page} at a time</blockquote>",
     "latest_none": "📭 <b>@{user}</b> has no videos (or only photo posts).",
     "latest_unavailable": "⚠️ Couldn't fetch this account's videos. Try again later.",
     "latest_done": "✅ <b>{n} videos</b> delivered",
-    "latest_partial": "⏱ Time limit reached — <b>{n}</b> videos sent, <b>{left}</b> left. Tap the button below to continue.",
+    "latest_partial": "✅ <b>{n}</b> videos sent — <b>{left}</b> left. Tap the button below to see more posts.",
+    "b_latest_more": "➕ See more posts ({left} left)",
     "latest_vip_hint": "💎 Free users get {free} videos — <b>VIP</b> gets up to {vip}.",
-    "pf_b_posts": "📂 Posts",
-    "st_posts": "📂 <b>Fetching posts…</b>\n{bar}",
-    "posts_header": "📂 <b>Posts of @{user}</b>\n<blockquote>📥 {n} posts on the way</blockquote>",
-    "posts_none": "📭 <b>@{user}</b> has no posts.",
-    "posts_unavailable": "⚠️ Couldn't fetch this account's posts. Try again later.",
-    "posts_done": "✅ <b>{n} posts</b> delivered",
-    "posts_end": "✅ <b>{n} posts</b> delivered — no more posts.",
-    "posts_partial": "⏱ Time limit reached — <b>{n}</b> posts sent. Tap the button below to continue.",
-    "b_posts_more": "📂 View more posts (+{n})",
     "no_story": "📭 <b>@{user}</b> has no active stories right now.\nTikTok stories last 24 hours.",
     "story_unavailable": "⚠️ This account's stories aren't available (it may be private, or the source doesn't support them).",
     "b_story": "🕵️ Secret story", "b_story_again": "🔄 Another story",
@@ -763,21 +739,13 @@ L["ar"] = {
     "pf_followers": "👥 المتابعون", "pf_following": "➕ يتابع", "pf_likes": "❤️ الإعجابات", "pf_videos": "🎬 الفيديوهات",
     "pf_b_vids": "🎬 آخر الفيديوهات", "pf_b_file": "📎 صورة HD (ملف)", "pf_b_open": "🔗 الحساب",
     "st_latest": "🎬 <b>جارٍ جلب آخر الفيديوهات…</b>\n{bar}",
-    "latest_header": "🎬 <b>آخر فيديوهات @{user}</b>\n<blockquote>📥 {n} فيديو قيد الإرسال</blockquote>",
+    "latest_header": "🎬 <b>آخر فيديوهات @{user}</b>\n<blockquote>📥 تم العثور على {n} فيديو — يُرسل {page} في كل مرة</blockquote>",
     "latest_none": "📭 <b>@{user}</b> ليس لديه فيديوهات (أو منشورات صور فقط).",
     "latest_unavailable": "⚠️ تعذّر جلب فيديوهات هذا الحساب. حاول لاحقاً.",
     "latest_done": "✅ تم إرسال <b>{n} فيديو</b>",
-    "latest_partial": "⏱ انتهى الوقت — أُرسل <b>{n}</b> فيديو وتبقّى <b>{left}</b>. اضغط الزر أدناه للمتابعة.",
+    "latest_partial": "✅ أُرسل <b>{n}</b> فيديو — تبقّى <b>{left}</b>. اضغط الزر أدناه لعرض المزيد من المنشورات.",
+    "b_latest_more": "➕ عرض المزيد ({left} متبقٍ)",
     "latest_vip_hint": "💎 المستخدم العادي يحصل على {free} فيديو — و<b>VIP</b> حتى {vip}.",
-    "pf_b_posts": "📂 المنشورات",
-    "st_posts": "📂 <b>جارٍ جلب المنشورات…</b>\n{bar}",
-    "posts_header": "📂 <b>منشورات @{user}</b>\n<blockquote>📥 {n} منشورات قيد الإرسال</blockquote>",
-    "posts_none": "📭 <b>@{user}</b> ليس لديه منشورات.",
-    "posts_unavailable": "⚠️ تعذّر جلب منشورات هذا الحساب. حاول لاحقاً.",
-    "posts_done": "✅ تم إرسال <b>{n} منشور</b>",
-    "posts_end": "✅ تم إرسال <b>{n} منشور</b> — لا توجد منشورات أخرى.",
-    "posts_partial": "⏱ انتهى الوقت — أُرسل <b>{n}</b> منشور. اضغط الزر أدناه للمتابعة.",
-    "b_posts_more": "📂 عرض المزيد من المنشورات (+{n})",
     "no_story": "📭 <b>@{user}</b> لا يملك قصصاً نشطة حالياً.\nقصص تيك توك تبقى 24 ساعة.",
     "story_unavailable": "⚠️ قصص هذا الحساب غير متاحة (ربما الحساب خاص أو المصدر لا يدعمها).",
     "b_story": "🕵️ قصة سرية", "b_story_again": "🔄 قصة أخرى",
@@ -1444,84 +1412,23 @@ def profile_kb(lang: str, user: str) -> Kb:
     if user.isascii() and len(user) <= 24:            # callback_data is limited to 64 bytes
         rows.append([Btn(tx(lang, "b_story"), callback_data=f"pf_s_{user}"),
                      Btn(tx(lang, "pf_b_vids"), callback_data=f"pf_v_{user}")])
-        rows.append([Btn(tx(lang, "pf_b_posts"), callback_data=f"pf_p_{user}")])
         rows.append([Btn(tx(lang, "pf_b_file"), callback_data=f"pf_f_{user}"),
                      Btn(tx(lang, "pf_b_open"), url=f"https://www.tiktok.com/@{user}")])
     rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
     return Kb(rows)
 
 
-_POSTS_ERR = {"msg": ""}
-_TW_HEAD = {"Accept": "application/json, text/plain, */*", "Referer": "https://www.tikwm.com/",
-            "Origin": "https://www.tikwm.com"}
-
-
-async def _tikwm_user_posts(username: str, cursor: int = 0) -> dict | None:
-    """TikWM user/posts → parsed JSON dict with code 0, else None (reason in _POSTS_ERR).
-    Official form is POST; GET is kept as a fallback.  An EMPTY body (provider blocking the
-    request) is retried with another method / id form instead of crashing on json()."""
-    t = min(int(CFG.get("api_timeout", 40)), 20)
-    url = "https://www.tikwm.com/api/user/posts"
-    _POSTS_ERR["msg"] = ""
-    if POSTS_API_URL:                                   # your own provider first
-        try:
-            hdr = json.loads(POSTS_API_HEADERS) if POSTS_API_HEADERS else {}
-            u = (POSTS_API_URL.replace("{username}", username.lstrip("@"))
-                 .replace("{cursor}", str(cursor)).replace("{count}", "30"))
-            r = await http().get(u, headers=hdr if isinstance(hdr, dict) else {}, timeout=t)
-            body = (r.text or "").strip()
-            try:
-                j = json.loads(body)
-            except ValueError:
-                j = None
-            if isinstance(j, dict) and j.get("code") == 0 and isinstance(j.get("data"), dict):
-                return j
-            _POSTS_ERR["msg"] = f"POSTS_API http={r.status_code} " + (
-                f"code={j.get('code')} msg={str(j.get('msg', ''))[:100]}" if isinstance(j, dict) else f"not JSON: {body[:80]!r}")
-        except Exception as e:                                          # noqa: BLE001
-            _POSTS_ERR["msg"] = f"POSTS_API {type(e).__name__}: {e}"[:200]
-        log.info("posts provider failed: %s", _POSTS_ERR["msg"])
-        return None
-    tries = (("post", f"@{username}", 30), ("post", username, 30),
-             ("get", f"@{username}", 30), ("get", username, 12))
-    for method, uid_form, count in tries:
-        p = {"unique_id": uid_form, "count": count, "cursor": cursor}
-        try:
-            if method == "post":
-                r = await http().post(url, data=p, headers=_TW_HEAD, timeout=t)
-            else:
-                r = await http().get(url, params=p, headers=_TW_HEAD, timeout=t)
-            body = (r.text or "").strip()
-            if not body:
-                _POSTS_ERR["msg"] = f"{method.upper()} http={r.status_code} empty body"
-                await asyncio.sleep(1.3)
-                continue
-            try:
-                j = json.loads(body)
-            except ValueError:
-                _POSTS_ERR["msg"] = f"{method.upper()} http={r.status_code} not JSON: {body[:80]!r}"
-                if r.status_code == 403 and "just a moment" in body.lower():
-                    _POSTS_ERR["msg"] = "Cloudflare blocks this server's IP on tikwm.com (set POSTS_API_URL)"
-                    break                                   # same IP → every variant would be blocked too
-                await asyncio.sleep(1.3)
-                continue
-        except Exception as e:                                          # noqa: BLE001
-            _POSTS_ERR["msg"] = f"{method.upper()} {type(e).__name__}: {e}"[:200]
-            await asyncio.sleep(1.2)
-            continue
-        if isinstance(j, dict) and j.get("code") == 0 and isinstance(j.get("data"), dict):
-            return j
-        _POSTS_ERR["msg"] = f"{method.upper()} code={j.get('code') if isinstance(j, dict) else '?'} " \
-                            f"msg={str(j.get('msg', ''))[:120] if isinstance(j, dict) else ''}"
-        await asyncio.sleep(1.4)                                        # free tier: 1 request / second
-    log.info("tikwm user/posts failed: %s", _POSTS_ERR["msg"])
-    return None
-
-
 async def fetch_latest(username: str, n: int) -> list | None:
     """Newest `n` VIDEO posts as normalised media dicts · [] = none · None = provider failure."""
-    j = await _tikwm_user_posts(username, 0)
-    if j is None:
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    try:
+        r = await http().get("https://www.tikwm.com/api/user/posts",
+                             params={"unique_id": f"@{username}", "count": 30, "cursor": 0}, timeout=t)
+        j = r.json()
+    except Exception as e:
+        log.info("tikwm posts failed: %s", e)
+        return None
+    if j.get("code") != 0 or not isinstance(j.get("data"), dict):
         return None
     vids = [d for d in (j["data"].get("videos") or []) if isinstance(d, dict)]
     vids.sort(key=lambda d: _to_int(d.get("create_time") or d.get("createTime")), reverse=True)  # pinned posts lead otherwise
@@ -1537,41 +1444,6 @@ async def fetch_latest(username: str, n: int) -> list | None:
         if len(out) >= n:
             break
     return out
-
-
-def _compact_post(m: dict) -> dict:
-    """Keep only what sending needs (the batch is stored in Firebase between taps)."""
-    keys = ("key", "src", "creator", "title", "cover", "duration", "videos", "audio",
-            "a_title", "a_author", "images", "views", "likes", "comments", "shares")
-    return {k: m.get(k) for k in keys}
-
-
-async def fetch_posts_page(username: str, cursor: int = 0) -> tuple | None:
-    """One provider page of ALL posts (videos AND photo posts) → (items, next_cursor, has_more)
-    · None = provider failure (reason kept in _POSTS_ERR).  Pages are chained with `cursor`."""
-    j = await _tikwm_user_posts(username, cursor)
-    if j is None:
-        return None
-    data = j["data"]
-    raw = [d for d in (data.get("videos") or []) if isinstance(d, dict)]
-    raw.sort(key=lambda d: _to_int(d.get("create_time") or d.get("createTime")), reverse=True)
-    items = []
-    for d in raw:
-        d = dict(d)
-        d.setdefault("id", d.get("video_id"))
-        m = parse_tikwm(d, f"https://www.tiktok.com/@{username}/{'photo' if d.get('images') else 'video'}/{d.get('id')}")
-        if m["images"] or m["videos"]:
-            items.append(_compact_post(m))
-    nxt, more = _page_meta(data)
-    try:
-        nxt = int(nxt) if nxt is not None else None
-    except (TypeError, ValueError):
-        nxt = None
-    if more is None:
-        more = bool(items) and nxt is not None
-    if nxt is None or nxt == cursor:                           # no usable cursor → can't continue safely
-        more = False
-    return items, (nxt or 0), more
 
 
 # ── discover: keyword search + country trending ───────────────────────────────
@@ -2577,24 +2449,7 @@ async def route(cb: CB, data: str):
                 return await process_story(cb.update, cb.ctx, user, lang, time.monotonic())
             if act == "v":
                 return await process_latest(cb.update, cb.ctx, user, lang, time.monotonic())
-            if act == "p":
-                return await process_posts(cb.update, cb.ctx, user, lang, time.monotonic())
         return
-
-    if data == "posts_more":
-        await cb.answer()
-        s = await session_get(f"posts_{uid}")
-        items = s.get("items") if s else None
-        if isinstance(items, dict):                      # Firebase may hand a list back as {"0":…, "1":…}
-            items = [items[k] for k in sorted(items, key=lambda x: int(x))]
-        if s is None or (not items and not s.get("has_more")):
-            return await cb.q.message.reply_text(cb.t("story_expired"))
-        try:
-            await cb.q.message.edit_reply_markup(reply_markup=None)    # a used button can't be tapped twice
-        except TelegramError:
-            pass
-        s["items"] = items or []
-        return await process_posts(cb.update, cb.ctx, s.get("user", ""), lang, time.monotonic(), resume=s)
 
     if data == "latest_more":
         await cb.answer()
@@ -3292,7 +3147,7 @@ async def send_profile_file(cb: "CB", username: str) -> None:
 def latest_kb(lang: str, left: int = 0) -> Kb:
     rows = []
     if left > 0:
-        rows.append([Btn(tx(lang, "b_story_more", left=left), callback_data="latest_more")])
+        rows.append([Btn(tx(lang, "b_latest_more", left=left), callback_data="latest_more")])
     rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
     return Kb(rows)
 
@@ -3336,20 +3191,21 @@ async def process_latest(update: Update, ctx, username: str, lang: str, started:
                 return await safe_edit(status, tx(lang, "latest_unavailable"))
             if not items:
                 return await safe_edit(status, tx(lang, "latest_none", user=esc(username)))
-            await safe_edit(status, tx(lang, "latest_header", user=esc(username), n=len(items)))
+            await safe_edit(status, tx(lang, "latest_header", user=esc(username), n=len(items), page=LATEST_PAGE))
             idx = 0
         else:
             items, idx = resume["items"], int(resume.get("next") or 0)
         total = len(items)
 
-        sent = 0
-        while idx < total and deadline_left(started) >= 14:      # videos are heavy → bigger safety margin
+        sent = tried = 0
+        while idx < total and tried < LATEST_PAGE and deadline_left(started) >= 14:   # one page per tap
             if await _send_latest_item(ctx, chat_id, lang, items[idx]):
                 sent += 1
             idx += 1
+            tried += 1
 
         left = total - idx
-        if left > 0:                                     # out of time → remember the rest for the button
+        if left > 0:                                     # page done → remember the rest for the button
             await session_save(f"latest_{uid}", {"user": username, "items": items, "next": idx})
         if not sent and left <= 0:
             if status:
@@ -3366,107 +3222,6 @@ async def process_latest(update: Update, ctx, username: str, lang: str, started:
 
     except Exception as e:                                              # noqa: BLE001
         await report_error(ctx, e, "process_latest")
-        if status:
-            await safe_edit(status, tx(lang, "dl_fail"))
-    finally:
-        await release_lock(uid)
-
-
-def posts_kb(lang: str, more_n: int = 0) -> Kb:
-    rows = []
-    if more_n > 0:
-        rows.append([Btn(tx(lang, "b_posts_more", n=min(more_n, POSTS_PER_PAGE)), callback_data="posts_more")])
-    rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
-    return Kb(rows)
-
-
-async def _send_post_item(ctx, chat_id: int, lang: str, uid: int, m: dict) -> bool:
-    """ONE post: photo post → album · video post → video.  True when something was delivered."""
-    if m.get("images"):
-        limit = int(CFG.get("vip_photos" if is_vip(uid) else "max_photos", 15))
-        files = await fetch_images(m["images"], limit)
-        if not files:
-            return False
-        await chat_action(ctx, chat_id, ChatAction.UPLOAD_PHOTO)
-        try:
-            return bool(await send_photo_album(ctx, chat_id, m, files))
-        except TelegramError as e:
-            log.info("post album not sent: %s", e)
-            return False
-    return await _send_latest_item(ctx, chat_id, lang, m)
-
-
-async def process_posts(update: Update, ctx, username: str, lang: str, started: float,
-                        resume: dict | None = None) -> None:
-    """Posts of an account, POSTS_PER_PAGE per tap.  The rest of the fetched page + the provider
-    cursor are kept in a session, so the 'more posts' button continues exactly where we stopped."""
-    msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
-
-    if not await gate_message(update, ctx, uid, lang):
-        return
-    if not await acquire_lock(uid):
-        return await msg.reply_text(tx(lang, "busy_msg"))
-
-    status = None
-    try:
-        if resume is None:
-            status = await msg.reply_text(tx(lang, "st_posts", bar=bar(1)))
-            page = await fetch_posts_page(username, 0)
-            if page is None:                                  # last resort: the videos list that already works
-                vids = await fetch_latest(username, 30)
-                if vids:
-                    page = ([_compact_post(v) for v in vids], 0, False)
-            if page is None:
-                txt = tx(lang, "posts_unavailable")
-                if is_admin(uid) and _POSTS_ERR["msg"]:
-                    txt += f"\n\n<code>{esc(_POSTS_ERR['msg'])}</code>"
-                return await safe_edit(status, txt)
-            buf, cursor, has_more = page
-            if not buf:
-                return await safe_edit(status, tx(lang, "posts_none", user=esc(username)))
-            await safe_edit(status, tx(lang, "posts_header", user=esc(username), n=min(len(buf), POSTS_PER_PAGE)))
-        else:
-            buf, cursor, has_more = resume["items"], int(resume.get("cursor") or 0), bool(resume.get("has_more"))
-        seen = {p.get("key") for p in buf}
-
-        sent = tried = 0
-        while tried < POSTS_PER_PAGE and deadline_left(started) >= 14:
-            if not buf:                                   # buffer empty → pull the next provider page
-                if not has_more:
-                    break
-                page = await fetch_posts_page(username, cursor)
-                if page is None:
-                    break
-                new, cursor, has_more = page
-                buf = [p for p in new if p.get("key") not in seen]
-                seen.update(p.get("key") for p in buf)
-                if not buf:
-                    continue
-            post = buf.pop(0)
-            tried += 1
-            if await _send_post_item(ctx, chat_id, lang, uid, post):
-                sent += 1
-
-        more_left = bool(buf) or has_more
-        if more_left:
-            await session_save(f"posts_{uid}", {"user": username, "items": buf, "cursor": cursor, "has_more": has_more})
-
-        if not sent and not more_left:
-            return await (safe_edit(status, tx(lang, "dl_fail")) if status else msg.reply_text(tx(lang, "dl_fail")))
-
-        if tried < POSTS_PER_PAGE and more_left:           # stopped early (time) → say so
-            text = tx(lang, "posts_partial", n=sent)
-        elif more_left:
-            text = tx(lang, "posts_done", n=sent)
-        else:
-            text = tx(lang, "posts_end", n=sent)
-        await ctx.bot.send_message(chat_id, text, reply_markup=posts_kb(lang, POSTS_PER_PAGE if more_left else 0))
-        if resume is None and sent:
-            await db_incr("sys/cfg/total_dl")
-            await db_incr(f"users/{uid}/dl")
-
-    except Exception as e:                                              # noqa: BLE001
-        await report_error(ctx, e, "process_posts")
         if status:
             await safe_edit(status, tx(lang, "dl_fail"))
     finally:
