@@ -1443,17 +1443,55 @@ def profile_kb(lang: str, user: str) -> Kb:
     return Kb(rows)
 
 
+_POSTS_ERR = {"msg": ""}
+_TW_HEAD = {"Accept": "application/json, text/plain, */*", "Referer": "https://www.tikwm.com/",
+            "Origin": "https://www.tikwm.com"}
+
+
+async def _tikwm_user_posts(username: str, cursor: int = 0) -> dict | None:
+    """TikWM user/posts → parsed JSON dict with code 0, else None (reason in _POSTS_ERR).
+    Official form is POST; GET is kept as a fallback.  An EMPTY body (provider blocking the
+    request) is retried with another method / id form instead of crashing on json()."""
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    url = "https://www.tikwm.com/api/user/posts"
+    _POSTS_ERR["msg"] = ""
+    tries = (("post", f"@{username}", 30), ("post", username, 30),
+             ("get", f"@{username}", 30), ("get", username, 12))
+    for method, uid_form, count in tries:
+        p = {"unique_id": uid_form, "count": count, "cursor": cursor}
+        try:
+            if method == "post":
+                r = await http().post(url, data=p, headers=_TW_HEAD, timeout=t)
+            else:
+                r = await http().get(url, params=p, headers=_TW_HEAD, timeout=t)
+            body = (r.text or "").strip()
+            if not body:
+                _POSTS_ERR["msg"] = f"{method.upper()} http={r.status_code} empty body"
+                await asyncio.sleep(1.3)
+                continue
+            try:
+                j = json.loads(body)
+            except ValueError:
+                _POSTS_ERR["msg"] = f"{method.upper()} http={r.status_code} not JSON: {body[:80]!r}"
+                await asyncio.sleep(1.3)
+                continue
+        except Exception as e:                                          # noqa: BLE001
+            _POSTS_ERR["msg"] = f"{method.upper()} {type(e).__name__}: {e}"[:200]
+            await asyncio.sleep(1.2)
+            continue
+        if isinstance(j, dict) and j.get("code") == 0 and isinstance(j.get("data"), dict):
+            return j
+        _POSTS_ERR["msg"] = f"{method.upper()} code={j.get('code') if isinstance(j, dict) else '?'} " \
+                            f"msg={str(j.get('msg', ''))[:120] if isinstance(j, dict) else ''}"
+        await asyncio.sleep(1.4)                                        # free tier: 1 request / second
+    log.info("tikwm user/posts failed: %s", _POSTS_ERR["msg"])
+    return None
+
+
 async def fetch_latest(username: str, n: int) -> list | None:
     """Newest `n` VIDEO posts as normalised media dicts · [] = none · None = provider failure."""
-    t = min(int(CFG.get("api_timeout", 40)), 20)
-    try:
-        r = await http().get("https://www.tikwm.com/api/user/posts",
-                             params={"unique_id": f"@{username}", "count": 30, "cursor": 0}, timeout=t)
-        j = r.json()
-    except Exception as e:
-        log.info("tikwm posts failed: %s", e)
-        return None
-    if j.get("code") != 0 or not isinstance(j.get("data"), dict):
+    j = await _tikwm_user_posts(username, 0)
+    if j is None:
         return None
     vids = [d for d in (j["data"].get("videos") or []) if isinstance(d, dict)]
     vids.sort(key=lambda d: _to_int(d.get("create_time") or d.get("createTime")), reverse=True)  # pinned posts lead otherwise
@@ -1478,36 +1516,11 @@ def _compact_post(m: dict) -> dict:
     return {k: m.get(k) for k in keys}
 
 
-_POSTS_ERR = {"msg": ""}
-
-
 async def fetch_posts_page(username: str, cursor: int = 0) -> tuple | None:
     """One provider page of ALL posts (videos AND photo posts) → (items, next_cursor, has_more)
     · None = provider failure (reason kept in _POSTS_ERR).  Pages are chained with `cursor`."""
-    t = min(int(CFG.get("api_timeout", 40)), 20)
-    j = None
-    _POSTS_ERR["msg"] = ""
-    # first try the exact request shape fetch_latest uses, then smaller pages / other id forms
-    shapes = ({"unique_id": f"@{username}", "count": 30}, {"unique_id": username, "count": 30},
-              {"unique_id": f"@{username}", "count": 12}, {"unique_id": username, "count": 12})
-    for attempt, shape in enumerate(shapes):
-        try:
-            r = await http().get("https://www.tikwm.com/api/user/posts",
-                                 params={**shape, "cursor": cursor}, timeout=t)
-            j = r.json()
-        except Exception as e:
-            _POSTS_ERR["msg"] = f"{type(e).__name__}: {e}"[:200]
-            log.info("tikwm posts page failed: %s", _POSTS_ERR["msg"])
-            await asyncio.sleep(1.2)
-            j = None
-            continue
-        if isinstance(j, dict) and j.get("code") == 0 and isinstance(j.get("data"), dict):
-            break
-        _POSTS_ERR["msg"] = f"code={j.get('code') if isinstance(j, dict) else '?'} msg={str(j.get('msg', ''))[:150] if isinstance(j, dict) else ''}"
-        log.info("tikwm posts rejected: %s", _POSTS_ERR["msg"])
-        j = None
-        await asyncio.sleep(1.4)                              # free tier: 1 request / second
-    if not j:
+    j = await _tikwm_user_posts(username, cursor)
+    if j is None:
         return None
     data = j["data"]
     raw = [d for d in (data.get("videos") or []) if isinstance(d, dict)]
