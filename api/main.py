@@ -1421,19 +1421,23 @@ def profile_kb(lang: str, user: str) -> Kb:
 async def fetch_latest(username: str, n: int) -> list | None:
     """Newest `n` VIDEO posts as normalised media dicts · [] = none · None = provider failure."""
     t = 10
-    variants = [{"unique_id": f"@{username}", "count": 20, "cursor": 0},
-                {"unique_id": username, "count": 12, "cursor": 0},
-                {"unique_id": f"@{username}", "count": 10, "cursor": 0, "web": 1}]
+    pw = {"unique_id": f"@{username}", "count": 20, "cursor": 0, "web": 1, "hd": 1}
+    variants = [("post", {"data": pw}),                                  # the tikwm web app itself uses POST
+                ("get", {"params": {"unique_id": f"@{username}", "count": 20, "cursor": 0}}),
+                ("post", {"data": {"unique_id": username, "count": 12, "cursor": 0}}),
+                ("get", {"params": {"unique_id": username, "count": 12, "cursor": 0}})]
     j, tries = None, 0
-    for params in variants:
+    for meth, kw in variants:
         for retry in range(3):                          # the free API answers "limit 1 request/second" when busy
             tries += 1
             try:
-                r = await http().get("https://www.tikwm.com/api/user/posts", params=params, timeout=t)
+                r = await getattr(http(), meth)("https://www.tikwm.com/api/user/posts", timeout=t, **kw)
                 j = r.json()
             except Exception as e:
-                log.info("tikwm posts failed: %s", e)
-                _DISC_ERR["msg"] = f"posts: {type(e).__name__} {str(e)[:80]}"
+                log.info("tikwm posts %s failed: %s", meth, e)
+                st = getattr(locals().get("r"), "status_code", "?")
+                body = (getattr(locals().get("r"), "text", "") or "")[:50].replace("\n", " ")
+                _DISC_ERR["msg"] = f"posts {meth}: {type(e).__name__} http={st} body={body!r}"
                 j = None
                 break
             if isinstance(j, dict) and j.get("code") != 0 and "limit" in str(j.get("msg") or "").lower():
@@ -1449,7 +1453,7 @@ async def fetch_latest(username: str, n: int) -> list | None:
             log.info("tikwm posts @%s → %s", username, _DISC_ERR["msg"])
             if j.get("code") == 0 and isinstance(j.get("data"), dict):
                 return []                              # reachable, account simply has no posts
-        if tries >= 5:
+        if tries >= 8:
             break
         await asyncio.sleep(1.2)
     if not isinstance(j, dict) or j.get("code") != 0 or not isinstance(j.get("data"), dict):
