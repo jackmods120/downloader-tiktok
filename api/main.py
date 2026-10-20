@@ -91,6 +91,7 @@ STORY_MAX_VIP     = 80
 STORY_PAGES       = 8                # max provider pages fetched per username
 LATEST_FREE       = 3                # latest videos per request for everyone
 LATEST_VIP        = 12               # … for VIP
+POSTS_PER_PAGE    = 3                # posts (videos + photo posts) sent per tap of "more posts"
 
 START_TIME     = time.time()
 SESSION_TTL    = 3600                # seconds an audio/"again" session stays valid
@@ -270,6 +271,15 @@ L["ku"] = {
     "latest_done": "✅ <b>{n} ڤیدیۆ</b> نێردرا",
     "latest_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> ڤیدیۆ نێردرا، <b>{left}</b> ماوە. دوگمەی خوارەوە دابگرە بۆ بەردەوامبوون.",
     "latest_vip_hint": "💎 بەکارهێنەری ئاسایی {free} ڤیدیۆ وەردەگرێت — بە <b>VIP</b> تا {vip} ڤیدیۆ.",
+    "pf_b_posts": "📂 پۆستەکان",
+    "st_posts": "📂 <b>پۆستەکان دەهێنرێن…</b>\n{bar}",
+    "posts_header": "📂 <b>پۆستەکانی @{user}</b>\n<blockquote>📥 {n} پۆست دەنێردرێت</blockquote>",
+    "posts_none": "📭 <b>@{user}</b> هیچ پۆستێکی نییە.",
+    "posts_unavailable": "⚠️ ناتوانرێت پۆستەکانی ئەم ئەکاونتە بهێنرێت. دواتر دووبارە هەوڵبدەرەوە.",
+    "posts_done": "✅ <b>{n} پۆست</b> نێردرا",
+    "posts_end": "✅ <b>{n} پۆست</b> نێردرا — ئیتر پۆستی تر نەماوە.",
+    "posts_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> پۆست نێردرا. دوگمەی خوارەوە دابگرە بۆ بەردەوامبوون.",
+    "b_posts_more": "📂 بینینی پۆستی زیاتر (+{n})",
     "no_story": "📭 <b>@{user}</b> ئێستا ستۆری چالاکی نییە.\nستۆری تیکتۆک ٢٤ کاتژمێر دەمێنێتەوە.",
     "story_unavailable": "⚠️ ستۆری ئەم ئەکاونتە بەردەست نییە (ڕەنگە تایبەت بێت یان سەرچاوەکە پشتگیری نەکات).",
     "b_story": "🕵️ ستۆری نهێنی", "b_story_again": "🔄 ستۆری کەسێکی تر",
@@ -507,6 +517,15 @@ L["en"] = {
     "latest_done": "✅ <b>{n} videos</b> delivered",
     "latest_partial": "⏱ Time limit reached — <b>{n}</b> videos sent, <b>{left}</b> left. Tap the button below to continue.",
     "latest_vip_hint": "💎 Free users get {free} videos — <b>VIP</b> gets up to {vip}.",
+    "pf_b_posts": "📂 Posts",
+    "st_posts": "📂 <b>Fetching posts…</b>\n{bar}",
+    "posts_header": "📂 <b>Posts of @{user}</b>\n<blockquote>📥 {n} posts on the way</blockquote>",
+    "posts_none": "📭 <b>@{user}</b> has no posts.",
+    "posts_unavailable": "⚠️ Couldn't fetch this account's posts. Try again later.",
+    "posts_done": "✅ <b>{n} posts</b> delivered",
+    "posts_end": "✅ <b>{n} posts</b> delivered — no more posts.",
+    "posts_partial": "⏱ Time limit reached — <b>{n}</b> posts sent. Tap the button below to continue.",
+    "b_posts_more": "📂 View more posts (+{n})",
     "no_story": "📭 <b>@{user}</b> has no active stories right now.\nTikTok stories last 24 hours.",
     "story_unavailable": "⚠️ This account's stories aren't available (it may be private, or the source doesn't support them).",
     "b_story": "🕵️ Secret story", "b_story_again": "🔄 Another story",
@@ -742,6 +761,15 @@ L["ar"] = {
     "latest_done": "✅ تم إرسال <b>{n} فيديو</b>",
     "latest_partial": "⏱ انتهى الوقت — أُرسل <b>{n}</b> فيديو وتبقّى <b>{left}</b>. اضغط الزر أدناه للمتابعة.",
     "latest_vip_hint": "💎 المستخدم العادي يحصل على {free} فيديو — و<b>VIP</b> حتى {vip}.",
+    "pf_b_posts": "📂 المنشورات",
+    "st_posts": "📂 <b>جارٍ جلب المنشورات…</b>\n{bar}",
+    "posts_header": "📂 <b>منشورات @{user}</b>\n<blockquote>📥 {n} منشورات قيد الإرسال</blockquote>",
+    "posts_none": "📭 <b>@{user}</b> ليس لديه منشورات.",
+    "posts_unavailable": "⚠️ تعذّر جلب منشورات هذا الحساب. حاول لاحقاً.",
+    "posts_done": "✅ تم إرسال <b>{n} منشور</b>",
+    "posts_end": "✅ تم إرسال <b>{n} منشور</b> — لا توجد منشورات أخرى.",
+    "posts_partial": "⏱ انتهى الوقت — أُرسل <b>{n}</b> منشور. اضغط الزر أدناه للمتابعة.",
+    "b_posts_more": "📂 عرض المزيد من المنشورات (+{n})",
     "no_story": "📭 <b>@{user}</b> لا يملك قصصاً نشطة حالياً.\nقصص تيك توك تبقى 24 ساعة.",
     "story_unavailable": "⚠️ قصص هذا الحساب غير متاحة (ربما الحساب خاص أو المصدر لا يدعمها).",
     "b_story": "🕵️ قصة سرية", "b_story_again": "🔄 قصة أخرى",
@@ -1408,6 +1436,7 @@ def profile_kb(lang: str, user: str) -> Kb:
     if user.isascii() and len(user) <= 24:            # callback_data is limited to 64 bytes
         rows.append([Btn(tx(lang, "b_story"), callback_data=f"pf_s_{user}"),
                      Btn(tx(lang, "pf_b_vids"), callback_data=f"pf_v_{user}")])
+        rows.append([Btn(tx(lang, "pf_b_posts"), callback_data=f"pf_p_{user}")])
         rows.append([Btn(tx(lang, "pf_b_file"), callback_data=f"pf_f_{user}"),
                      Btn(tx(lang, "pf_b_open"), url=f"https://www.tiktok.com/@{user}")])
     rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
@@ -1440,6 +1469,59 @@ async def fetch_latest(username: str, n: int) -> list | None:
         if len(out) >= n:
             break
     return out
+
+
+def _compact_post(m: dict) -> dict:
+    """Keep only what sending needs (the batch is stored in Firebase between taps)."""
+    keys = ("key", "src", "creator", "title", "cover", "duration", "videos", "audio",
+            "a_title", "a_author", "images", "views", "likes", "comments", "shares")
+    return {k: m.get(k) for k in keys}
+
+
+async def fetch_posts_page(username: str, cursor: int = 0) -> tuple | None:
+    """One provider page of ALL posts (videos AND photo posts) → (items, next_cursor, has_more)
+    · None = provider failure.  Pages are chained with `cursor`."""
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    j = None
+    for attempt in range(3):
+        try:
+            r = await http().get("https://www.tikwm.com/api/user/posts",
+                                 params={"unique_id": f"@{username}", "count": 30, "cursor": cursor}, timeout=t)
+            j = r.json()
+        except Exception as e:
+            log.info("tikwm posts page failed: %s", e)
+            await asyncio.sleep(0.8)
+            continue
+        if j.get("code") == 0 and isinstance(j.get("data"), dict):
+            break
+        msg = str(j.get("msg", "")).lower()
+        if "limit" in msg or "second" in msg:                  # free tier: 1 request / second
+            await asyncio.sleep(1.3)
+            j = None
+            continue
+        return None
+    if not j or j.get("code") != 0 or not isinstance(j.get("data"), dict):
+        return None
+    data = j["data"]
+    raw = [d for d in (data.get("videos") or []) if isinstance(d, dict)]
+    raw.sort(key=lambda d: _to_int(d.get("create_time") or d.get("createTime")), reverse=True)
+    items = []
+    for d in raw:
+        d = dict(d)
+        d.setdefault("id", d.get("video_id"))
+        m = parse_tikwm(d, f"https://www.tiktok.com/@{username}/{'photo' if d.get('images') else 'video'}/{d.get('id')}")
+        if m["images"] or m["videos"]:
+            items.append(_compact_post(m))
+    nxt, more = _page_meta(data)
+    try:
+        nxt = int(nxt) if nxt is not None else None
+    except (TypeError, ValueError):
+        nxt = None
+    if more is None:
+        more = bool(items) and nxt is not None
+    if nxt is None or nxt == cursor:                           # no usable cursor → can't continue safely
+        more = False
+    return items, (nxt or 0), more
 
 
 # ── discover: keyword search + country trending ───────────────────────────────
@@ -2445,7 +2527,24 @@ async def route(cb: CB, data: str):
                 return await process_story(cb.update, cb.ctx, user, lang, time.monotonic())
             if act == "v":
                 return await process_latest(cb.update, cb.ctx, user, lang, time.monotonic())
+            if act == "p":
+                return await process_posts(cb.update, cb.ctx, user, lang, time.monotonic())
         return
+
+    if data == "posts_more":
+        await cb.answer()
+        s = await session_get(f"posts_{uid}")
+        items = s.get("items") if s else None
+        if isinstance(items, dict):                      # Firebase may hand a list back as {"0":…, "1":…}
+            items = [items[k] for k in sorted(items, key=lambda x: int(x))]
+        if s is None or (not items and not s.get("has_more")):
+            return await cb.q.message.reply_text(cb.t("story_expired"))
+        try:
+            await cb.q.message.edit_reply_markup(reply_markup=None)    # a used button can't be tapped twice
+        except TelegramError:
+            pass
+        s["items"] = items or []
+        return await process_posts(cb.update, cb.ctx, s.get("user", ""), lang, time.monotonic(), resume=s)
 
     if data == "latest_more":
         await cb.answer()
@@ -3217,6 +3316,100 @@ async def process_latest(update: Update, ctx, username: str, lang: str, started:
 
     except Exception as e:                                              # noqa: BLE001
         await report_error(ctx, e, "process_latest")
+        if status:
+            await safe_edit(status, tx(lang, "dl_fail"))
+    finally:
+        await release_lock(uid)
+
+
+def posts_kb(lang: str, more_n: int = 0) -> Kb:
+    rows = []
+    if more_n > 0:
+        rows.append([Btn(tx(lang, "b_posts_more", n=min(more_n, POSTS_PER_PAGE)), callback_data="posts_more")])
+    rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
+    return Kb(rows)
+
+
+async def _send_post_item(ctx, chat_id: int, lang: str, uid: int, m: dict) -> bool:
+    """ONE post: photo post → album · video post → video.  True when something was delivered."""
+    if m.get("images"):
+        limit = int(CFG.get("vip_photos" if is_vip(uid) else "max_photos", 15))
+        files = await fetch_images(m["images"], limit)
+        if not files:
+            return False
+        await chat_action(ctx, chat_id, ChatAction.UPLOAD_PHOTO)
+        try:
+            return bool(await send_photo_album(ctx, chat_id, m, files))
+        except TelegramError as e:
+            log.info("post album not sent: %s", e)
+            return False
+    return await _send_latest_item(ctx, chat_id, lang, m)
+
+
+async def process_posts(update: Update, ctx, username: str, lang: str, started: float,
+                        resume: dict | None = None) -> None:
+    """Posts of an account, POSTS_PER_PAGE per tap.  The rest of the fetched page + the provider
+    cursor are kept in a session, so the 'more posts' button continues exactly where we stopped."""
+    msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
+
+    if not await gate_message(update, ctx, uid, lang):
+        return
+    if not await acquire_lock(uid):
+        return await msg.reply_text(tx(lang, "busy_msg"))
+
+    status = None
+    try:
+        if resume is None:
+            status = await msg.reply_text(tx(lang, "st_posts", bar=bar(1)))
+            page = await fetch_posts_page(username, 0)
+            if page is None:
+                return await safe_edit(status, tx(lang, "posts_unavailable"))
+            buf, cursor, has_more = page
+            if not buf:
+                return await safe_edit(status, tx(lang, "posts_none", user=esc(username)))
+            await safe_edit(status, tx(lang, "posts_header", user=esc(username), n=min(len(buf), POSTS_PER_PAGE)))
+        else:
+            buf, cursor, has_more = resume["items"], int(resume.get("cursor") or 0), bool(resume.get("has_more"))
+        seen = {p.get("key") for p in buf}
+
+        sent = tried = 0
+        while tried < POSTS_PER_PAGE and deadline_left(started) >= 14:
+            if not buf:                                   # buffer empty → pull the next provider page
+                if not has_more:
+                    break
+                page = await fetch_posts_page(username, cursor)
+                if page is None:
+                    break
+                new, cursor, has_more = page
+                buf = [p for p in new if p.get("key") not in seen]
+                seen.update(p.get("key") for p in buf)
+                if not buf:
+                    continue
+            post = buf.pop(0)
+            tried += 1
+            if await _send_post_item(ctx, chat_id, lang, uid, post):
+                sent += 1
+
+        more_left = bool(buf) or has_more
+        if more_left:
+            await session_save(f"posts_{uid}", {"user": username, "items": buf, "cursor": cursor, "has_more": has_more})
+
+        if not sent and not more_left:
+            return await (safe_edit(status, tx(lang, "dl_fail")) if status else msg.reply_text(tx(lang, "dl_fail")))
+
+        if tried < POSTS_PER_PAGE and more_left:           # stopped early (time) → say so
+            text = tx(lang, "posts_partial", n=sent)
+        elif more_left:
+            text = tx(lang, "posts_done", n=sent)
+        else:
+            text = tx(lang, "posts_end", n=sent)
+        await ctx.bot.send_message(chat_id, text, reply_markup=posts_kb(lang, POSTS_PER_PAGE if more_left else 0))
+        if resume is None and sent:
+            await db_incr("sys/cfg/total_dl")
+            await db_incr(f"users/{uid}/dl")
+
+    except Exception as e:                                              # noqa: BLE001
+        await report_error(ctx, e, "process_posts")
         if status:
             await safe_edit(status, tx(lang, "dl_fail"))
     finally:
