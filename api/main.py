@@ -1420,15 +1420,39 @@ def profile_kb(lang: str, user: str) -> Kb:
 
 async def fetch_latest(username: str, n: int) -> list | None:
     """Newest `n` VIDEO posts as normalised media dicts · [] = none · None = provider failure."""
-    t = min(int(CFG.get("api_timeout", 40)), 20)
-    try:
-        r = await http().get("https://www.tikwm.com/api/user/posts",
-                             params={"unique_id": f"@{username}", "count": 30, "cursor": 0}, timeout=t)
-        j = r.json()
-    except Exception as e:
-        log.info("tikwm posts failed: %s", e)
-        return None
-    if j.get("code") != 0 or not isinstance(j.get("data"), dict):
+    t = 10
+    variants = [{"unique_id": f"@{username}", "count": 20, "cursor": 0},
+                {"unique_id": username, "count": 12, "cursor": 0},
+                {"unique_id": f"@{username}", "count": 10, "cursor": 0, "web": 1}]
+    j, tries = None, 0
+    for params in variants:
+        for retry in range(3):                          # the free API answers "limit 1 request/second" when busy
+            tries += 1
+            try:
+                r = await http().get("https://www.tikwm.com/api/user/posts", params=params, timeout=t)
+                j = r.json()
+            except Exception as e:
+                log.info("tikwm posts failed: %s", e)
+                _DISC_ERR["msg"] = f"posts: {type(e).__name__} {str(e)[:80]}"
+                j = None
+                break
+            if isinstance(j, dict) and j.get("code") != 0 and "limit" in str(j.get("msg") or "").lower():
+                await asyncio.sleep(1.4)
+                continue
+            break
+        ok = isinstance(j, dict) and j.get("code") == 0 and isinstance(j.get("data"), dict) \
+            and bool(j["data"].get("videos"))
+        if ok:
+            break
+        if isinstance(j, dict):
+            _DISC_ERR["msg"] = f"posts: code={j.get('code')} msg={str(j.get('msg'))[:100]}"
+            log.info("tikwm posts @%s → %s", username, _DISC_ERR["msg"])
+            if j.get("code") == 0 and isinstance(j.get("data"), dict):
+                return []                              # reachable, account simply has no posts
+        if tries >= 5:
+            break
+        await asyncio.sleep(1.2)
+    if not isinstance(j, dict) or j.get("code") != 0 or not isinstance(j.get("data"), dict):
         return None
     vids = [d for d in (j["data"].get("videos") or []) if isinstance(d, dict)]
     vids.sort(key=lambda d: _to_int(d.get("create_time") or d.get("createTime")), reverse=True)  # pinned posts lead otherwise
@@ -3198,7 +3222,8 @@ async def process_latest(update: Update, ctx, username: str, lang: str, started:
             status = await msg.reply_text(tx(lang, "st_latest", bar=bar(1)))
             items = await fetch_latest(username, LATEST_VIP if is_vip(uid) else LATEST_FREE)
             if items is None:
-                return await safe_edit(status, tx(lang, "latest_unavailable"))
+                note = f"\n\n<code>{esc(_DISC_ERR['msg'][:160])}</code>" if is_admin(uid) and _DISC_ERR["msg"] else ""
+                return await safe_edit(status, tx(lang, "latest_unavailable") + note)
             if not items:
                 return await safe_edit(status, tx(lang, "latest_none", user=esc(username)))
             await safe_edit(status, tx(lang, "latest_header", user=esc(username), n=len(items), page=LATEST_PAGE))
