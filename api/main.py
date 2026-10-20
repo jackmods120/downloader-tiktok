@@ -86,6 +86,12 @@ BOT_USERNAME   = os.getenv("BOT_USERNAME", "TikTok_Downloader_Jack_Robot").lstri
 #   STORY_API_HEADERS = {"x-api-key": "..."}        (JSON, optional)
 STORY_API_URL     = os.getenv("STORY_API_URL", "").strip()
 STORY_API_HEADERS = os.getenv("STORY_API_HEADERS", "").strip()
+# Posts viewer — optional paid/own provider used BEFORE the free tikwm endpoint (which Cloudflare may block
+# for datacenter IPs). Must answer in tikwm's shape: {"code":0,"data":{"videos":[…]}}. Placeholders: {username}, {count}
+#   POSTS_API_URL     = https://your-provider.example/api/user/posts?unique_id=@{username}&count={count}
+#   POSTS_API_HEADERS = {"x-api-key": "..."}        (JSON, optional)
+POSTS_API_URL     = os.getenv("POSTS_API_URL", "").strip()
+POSTS_API_HEADERS = os.getenv("POSTS_API_HEADERS", "").strip()
 STORY_MAX         = 40               # newest stories per request (VIP: STORY_MAX_VIP)
 STORY_MAX_VIP     = 80
 STORY_PAGES       = 8                # max provider pages fetched per username
@@ -1426,7 +1432,18 @@ async def fetch_latest(username: str, n: int) -> list | None:
                 ("get", {"params": {"unique_id": f"@{username}", "count": 20, "cursor": 0}}),
                 ("post", {"data": {"unique_id": username, "count": 12, "cursor": 0}}),
                 ("get", {"params": {"unique_id": username, "count": 12, "cursor": 0}})]
-    j, tries = None, 0
+    j, tries, blocked = None, 0, False
+    if POSTS_API_URL:                                   # own / paid provider first
+        try:
+            hdr = json.loads(POSTS_API_HEADERS) if POSTS_API_HEADERS else {}
+            r = await http().get(POSTS_API_URL.replace("{username}", username).replace("{count}", "20"),
+                                 headers=hdr, timeout=t)
+            jj = r.json()
+            if isinstance(jj, dict) and jj.get("code") == 0 and isinstance(jj.get("data"), dict) and jj["data"].get("videos"):
+                j = jj
+                variants = []
+        except Exception as e:
+            log.info("custom posts provider failed: %s", e)
     for meth, kw in variants:
         for retry in range(3):                          # the free API answers "limit 1 request/second" when busy
             tries += 1
@@ -1436,6 +1453,8 @@ async def fetch_latest(username: str, n: int) -> list | None:
             except Exception as e:
                 log.info("tikwm posts %s failed: %s", meth, e)
                 st = getattr(locals().get("r"), "status_code", "?")
+                if st == 403 and "just a moment" in (getattr(locals().get("r"), "text", "") or "").lower():
+                    blocked = True                      # Cloudflare challenge: every variant gets the same wall
                 body = (getattr(locals().get("r"), "text", "") or "")[:50].replace("\n", " ")
                 _DISC_ERR["msg"] = f"posts {meth}: {type(e).__name__} http={st} body={body!r}"
                 j = None
@@ -1453,6 +1472,9 @@ async def fetch_latest(username: str, n: int) -> list | None:
             log.info("tikwm posts @%s → %s", username, _DISC_ERR["msg"])
             if j.get("code") == 0 and isinstance(j.get("data"), dict):
                 return []                              # reachable, account simply has no posts
+        if blocked:
+            _DISC_ERR["msg"] = "posts: 403 Cloudflare challenge — tikwm blocks this server IP. Set POSTS_API_URL (own/paid provider)."
+            break
         if tries >= 8:
             break
         await asyncio.sleep(1.2)
