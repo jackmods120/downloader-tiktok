@@ -31,6 +31,7 @@ import asyncio
 import hashlib
 import hmac
 import html
+import importlib.util
 import io
 import json
 import logging
@@ -2211,8 +2212,8 @@ def safe_name(s: str, default: str = "tiktok") -> str:
 
 def build_caption(m: dict) -> str:
     title = esc(clip(m["title"], 200)) or "TikTok"
-    stats = (f"👁 {fmt_num(m['views'])}   ❤️ {fmt_num(m['likes'])}   "
-             f"💬 {fmt_num(m['comments'])}   🔁 {fmt_num(m['shares'])}")
+    stats = (f"👁 {fmt_num(m['views'])}\n❤️ {fmt_num(m['likes'])}\n"
+             f"💬 {fmt_num(m['comments'])}\n🔁 {fmt_num(m['shares'])}")
     return (f"🎬 <b>{title}</b>\n👤 {esc(clip(m['creator'], 60))}\n\n"
             f"<blockquote>{stats}</blockquote>\n"
             f"⚡ <a href=\"https://t.me/{BOT_USERNAME}\">@{esc(BOT_USERNAME)}</a>")
@@ -2996,7 +2997,7 @@ async def _extra_sticker(ctx, chat_id: int, lang: str, key: str, src: str) -> No
                 break
     webp = await asyncio.to_thread(_static_sticker, cover[0]) if cover else None
     if not webp:
-        raise RuntimeError("sticker: nothing to build")
+        raise RuntimeError("sticker needs `imageio-ffmpeg` (animated) or `Pillow` (static) in requirements.txt")
     await ctx.bot.send_sticker(chat_id, InputFile(webp, filename="sticker.webp"),
                                reply_markup=_close_kb(lang), **_UP)
     await ctx.bot.send_message(chat_id, tx(lang, "stk_static"))
@@ -4153,6 +4154,11 @@ async def status_page(req: Request, full_path: str = ""):
         _row("DB_SECRET", "ok" if DB_SECRET else "warn", "✓ Set" if DB_SECRET else "Not set", "" if DB_SECRET else "Needed unless your database rules are public"),
         _row("WEBHOOK_SECRET", "ok" if WEBHOOK_SECRET else "warn", "✓ Enabled" if WEBHOOK_SECRET else "Recommended",
              "" if WEBHOOK_SECRET else "Without it anyone who knows the URL can forge updates"),
+        _row("ffmpeg", "ok" if ffmpeg_path() else "warn", "✓ Found" if ffmpeg_path() else "Missing",
+             "" if ffmpeg_path() else "Add imageio-ffmpeg to requirements.txt (short GIF + animated sticker)"),
+        _row("Pillow", "ok" if importlib.util.find_spec("PIL") else "warn",
+             "✓ Found" if importlib.util.find_spec("PIL") else "Missing",
+             "" if importlib.util.find_spec("PIL") else "Add Pillow to requirements.txt (static sticker fallback)"),
         _row("OWNER_ID", "ok" if OWNER_ID != 5977475208 else "warn", "✓ Custom" if OWNER_ID != 5977475208 else "Default",
              "" if OWNER_ID != 5977475208 else "Set your own Telegram ID — the default belongs to the original developer"),
     ]
