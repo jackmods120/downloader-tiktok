@@ -1478,29 +1478,36 @@ def _compact_post(m: dict) -> dict:
     return {k: m.get(k) for k in keys}
 
 
+_POSTS_ERR = {"msg": ""}
+
+
 async def fetch_posts_page(username: str, cursor: int = 0) -> tuple | None:
     """One provider page of ALL posts (videos AND photo posts) → (items, next_cursor, has_more)
-    · None = provider failure.  Pages are chained with `cursor`."""
+    · None = provider failure (reason kept in _POSTS_ERR).  Pages are chained with `cursor`."""
     t = min(int(CFG.get("api_timeout", 40)), 20)
     j = None
-    for attempt in range(3):
+    _POSTS_ERR["msg"] = ""
+    # first try the exact request shape fetch_latest uses, then smaller pages / other id forms
+    shapes = ({"unique_id": f"@{username}", "count": 30}, {"unique_id": username, "count": 30},
+              {"unique_id": f"@{username}", "count": 12}, {"unique_id": username, "count": 12})
+    for attempt, shape in enumerate(shapes):
         try:
             r = await http().get("https://www.tikwm.com/api/user/posts",
-                                 params={"unique_id": f"@{username}", "count": 30, "cursor": cursor}, timeout=t)
+                                 params={**shape, "cursor": cursor}, timeout=t)
             j = r.json()
         except Exception as e:
-            log.info("tikwm posts page failed: %s", e)
-            await asyncio.sleep(0.8)
-            continue
-        if j.get("code") == 0 and isinstance(j.get("data"), dict):
-            break
-        msg = str(j.get("msg", "")).lower()
-        if "limit" in msg or "second" in msg:                  # free tier: 1 request / second
-            await asyncio.sleep(1.3)
+            _POSTS_ERR["msg"] = f"{type(e).__name__}: {e}"[:200]
+            log.info("tikwm posts page failed: %s", _POSTS_ERR["msg"])
+            await asyncio.sleep(1.2)
             j = None
             continue
-        return None
-    if not j or j.get("code") != 0 or not isinstance(j.get("data"), dict):
+        if isinstance(j, dict) and j.get("code") == 0 and isinstance(j.get("data"), dict):
+            break
+        _POSTS_ERR["msg"] = f"code={j.get('code') if isinstance(j, dict) else '?'} msg={str(j.get('msg', ''))[:150] if isinstance(j, dict) else ''}"
+        log.info("tikwm posts rejected: %s", _POSTS_ERR["msg"])
+        j = None
+        await asyncio.sleep(1.4)                              # free tier: 1 request / second
+    if not j:
         return None
     data = j["data"]
     raw = [d for d in (data.get("videos") or []) if isinstance(d, dict)]
@@ -3362,8 +3369,15 @@ async def process_posts(update: Update, ctx, username: str, lang: str, started: 
         if resume is None:
             status = await msg.reply_text(tx(lang, "st_posts", bar=bar(1)))
             page = await fetch_posts_page(username, 0)
+            if page is None:                                  # last resort: the videos list that already works
+                vids = await fetch_latest(username, 30)
+                if vids:
+                    page = ([_compact_post(v) for v in vids], 0, False)
             if page is None:
-                return await safe_edit(status, tx(lang, "posts_unavailable"))
+                txt = tx(lang, "posts_unavailable")
+                if is_admin(uid) and _POSTS_ERR["msg"]:
+                    txt += f"\n\n<code>{esc(_POSTS_ERR['msg'])}</code>"
+                return await safe_edit(status, txt)
             buf, cursor, has_more = page
             if not buf:
                 return await safe_edit(status, tx(lang, "posts_none", user=esc(username)))
