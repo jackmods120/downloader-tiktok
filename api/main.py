@@ -1,10 +1,18 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║   JackTik  ·  TikTok Downloader Bot for Telegram                         ║
-# ║   Version : v15.0 (Pro)         Stack : FastAPI · PTB 21 · Firebase      ║
+# ║   Version : v16.0 (Pro)         Stack : FastAPI · PTB 21 · Firebase      ║
 # ║   Owner   : @j4ck_721s          Deploy: Vercel (Python serverless)       ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 """
-JackTik v15 — TikTok downloader bot (Telegram webhook, Vercel serverless).
+JackTik v16 — TikTok downloader bot (Telegram webhook, Vercel serverless).
+
+What changed in v16 (stage 1)
+  • Download quality per user (Settings): HD · Standard · Audio only.
+  • Instant repeats: Telegram file_ids are cached in Firebase (fc/ + uc/), so a link that
+    was already downloaded is re-sent in about a second — no API call, download or upload.
+  • New buttons under every video: 🎞 GIF · 🧩 Sticker · 💬 Comments (top 50 + .txt file).
+  • Optional packages:  imageio-ffmpeg  (trimmed silent GIF + animated sticker)  and  Pillow
+    (static sticker fallback).  Without them the bot still runs; only those two degrade.
 
 What changed in v15 (short version)
   • Media is DOWNLOADED by the bot and UPLOADED to Telegram (v14 handed the
@@ -28,6 +36,8 @@ import json
 import logging
 import os
 import re
+import shutil
+import tempfile
 import time
 import traceback
 from contextvars import ContextVar
@@ -100,6 +110,11 @@ CFG_TTL        = 20                  # seconds between config reloads per instan
 FUNC_BUDGET    = 52                  # seconds we allow ourselves (vercel maxDuration = 60)
 TG_MAX_BYTES   = 49_000_000          # Telegram bot upload limit is 50 MB
 TG_PHOTO_MAX   = 10_000_000          # photo limit for sendPhoto
+COMMENTS_MAX   = 50                  # comments fetched per video
+COMMENTS_SHOW  = 10                  # comments previewed in the chat message
+GIF_SECONDS    = 10                  # longest GIF we make
+STICKER_MAX    = 256_000             # Telegram video-sticker size limit
+QUALITIES      = ("hd", "sd", "audio")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 log = logging.getLogger("jacktik")
@@ -155,7 +170,9 @@ L["ku"] = {
         "🎵 گۆرانی — دوگمەی <b>MP3</b> لە ژێر ڤیدیۆکە\n"
         "👤 پرۆفایل — یوزەرنەیمێک بنێرە بۆ کارتی پرۆفایل + وێنەی HD + ستۆری + ڤیدیۆکان\n"
         "🔥 دۆزینەوە — گەڕان لە تیکتۆک و ترێندی وڵاتان\n"
-        "🕵️ ستۆری — دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیمێک بنێرە</blockquote>\n"
+        "🕵️ ستۆری — دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیمێک بنێرە\n"
+        "🎞 GIF · 🧩 ستیکەر · 💬 کۆمێنت — دوگمەکانی ژێر ڤیدیۆکە\n"
+        "⚙️ کوالێتی — لە ڕێکخستن HD / ئاسایی / تەنیا دەنگ هەڵبژێرە</blockquote>\n"
         "💎 <b>VIP</b> — بێ جۆینی ناچاری و وێنەی زیاتر.\n"
         "📩 پەیوەندی: {dev}"
     ),
@@ -181,6 +198,24 @@ L["ku"] = {
     "lang_title": "🌐 <b>زمانی خۆت هەڵبژێرە</b>",
     "lang_current": "🔵 ئێستا: {cur}",
     "lang_saved": "✅ زمانەکە گۆڕدرا",
+    "q_title": "🎞 <b>کوالێتی دابەزاندن</b>",
+    "q_current": "🔵 ئێستا: {cur}",
+    "q_hd": "🎬 HD — باشترین کوالێتی",
+    "q_sd": "📱 ئاسایی — داتای کەمتر",
+    "q_audio": "🎵 تەنیا دەنگ (MP3)",
+    "qb_hd": "🎬 HD", "qb_sd": "📱 ئاسایی", "qb_audio": "🎵 دەنگ",
+    "q_saved": "✅ کوالێتی گۆڕدرا",
+    "b_gif": "🎞 GIF", "b_sticker": "🧩 ستیکەر", "b_comments": "💬 کۆمێنت",
+    "st_gif": "🎞 <b>GIF ئامادە دەکرێت…</b>\n{bar}",
+    "st_stk": "🧩 <b>ستیکەر ئامادە دەکرێت…</b>\n{bar}",
+    "st_cmt": "💬 <b>کۆمێنتەکان دەهێنرێن…</b>\n{bar}",
+    "gif_fail": "❌ نەتوانرا GIF دروست بکرێت. دووبارە هەوڵبدەرەوە.",
+    "stk_fail": "❌ نەتوانرا ستیکەر دروست بکرێت.",
+    "stk_static": "ℹ️ ستیکەری جوڵاو لەم سێرڤەرەدا بەردەست نییە، بۆیە ستیکەری وێنە نێردرا.",
+    "cmt_title": "💬 <b>کۆمێنتەکان</b> · {n}",
+    "cmt_file": "📄 هەموو {n} کۆمێنتەکە",
+    "cmt_none": "💬 ئەم ڤیدیۆیە کۆمێنتی نییە یان نەتوانرا بهێنرێت.",
+    "cmt_fail": "❌ نەتوانرا کۆمێنتەکان بهێنرێت.",
     "force_join": (
         "🔒 <b>جۆینی ناچاری</b>\n\n"
         "بۆ بەردەوامبوون، سەرەتا ئەم چەناڵانە جۆین بکە، پاشان دوگمەی "
@@ -275,7 +310,7 @@ L["ku"] = {
     "b_story": "🕵️ ستۆری نهێنی", "b_story_again": "🔄 ستۆری کەسێکی تر",
     # ── buttons ───────────────────────────────────────────────────────────────
     "b_dl": "📥 دابەزاندنی نوێ", "b_profile": "👤 پرۆفایل", "b_vip": "💎 VIP", "b_avatar": "🔎 پرۆفایلی تیکتۆک",
-    "b_lang": "🌐 زمان", "b_help": "📖 ڕێنمایی", "b_channel": "📢 کەناڵی بۆت",
+    "b_lang": "⚙️ ڕێکخستن", "b_help": "📖 ڕێنمایی", "b_channel": "📢 کەناڵی بۆت",
     "b_panel": "🛠 پانێڵی کۆنتڕۆڵ", "b_back": "🔙 گەڕانەوە", "b_delete": "🗑 سڕینەوە",
     "b_joined": "✅ جۆینم کرد", "b_audio": "🎵 گۆرانی MP3", "b_orig": "🔗 لینکی ڕەسەن",
     "b_direct": "⬇️ دابەزاندنی ڕاستەوخۆ", "b_cancel": "✖️ هەڵوەشاندنەوە",
@@ -394,7 +429,9 @@ L["en"] = {
         "🎵 Music — tap the <b>MP3</b> button under the video\n"
         "👤 Profile — send a username for a profile card + HD picture + stories + latest videos\n"
         "🔥 Discover — search TikTok or browse trending by country\n"
-        "🕵️ Stories — tap <b>Secret story</b> and send a username</blockquote>\n"
+        "🕵️ Stories — tap <b>Secret story</b> and send a username\n"
+        "🎞 GIF · 🧩 Sticker · 💬 Comments — buttons under the video\n"
+        "⚙️ Quality — pick HD / Standard / Audio only in Settings</blockquote>\n"
         "💎 <b>VIP</b> — no forced join, more photos.\n"
         "📩 Contact: {dev}"
     ),
@@ -420,6 +457,24 @@ L["en"] = {
     "lang_title": "🌐 <b>Choose your language</b>",
     "lang_current": "🔵 Current: {cur}",
     "lang_saved": "✅ Language changed",
+    "q_title": "🎞 <b>Download quality</b>",
+    "q_current": "🔵 Current: {cur}",
+    "q_hd": "🎬 HD — best quality",
+    "q_sd": "📱 Standard — less data",
+    "q_audio": "🎵 Audio only (MP3)",
+    "qb_hd": "🎬 HD", "qb_sd": "📱 Standard", "qb_audio": "🎵 Audio",
+    "q_saved": "✅ Quality changed",
+    "b_gif": "🎞 GIF", "b_sticker": "🧩 Sticker", "b_comments": "💬 Comments",
+    "st_gif": "🎞 <b>Making the GIF…</b>\n{bar}",
+    "st_stk": "🧩 <b>Making the sticker…</b>\n{bar}",
+    "st_cmt": "💬 <b>Fetching comments…</b>\n{bar}",
+    "gif_fail": "❌ Could not make the GIF. Please try again.",
+    "stk_fail": "❌ Could not make the sticker.",
+    "stk_static": "ℹ️ Animated stickers are not available on this server, so a static sticker was sent.",
+    "cmt_title": "💬 <b>Comments</b> · {n}",
+    "cmt_file": "📄 All {n} comments",
+    "cmt_none": "💬 This video has no comments, or they could not be loaded.",
+    "cmt_fail": "❌ Could not fetch the comments.",
     "force_join": (
         "🔒 <b>Forced join</b>\n\n"
         "To continue, join the channels below first, then tap <b>“I joined”</b> 👇"
@@ -511,7 +566,7 @@ L["en"] = {
     "story_unavailable": "⚠️ This account's stories aren't available (it may be private, or the source doesn't support them).",
     "b_story": "🕵️ Secret story", "b_story_again": "🔄 Another story",
     "b_dl": "📥 New download", "b_profile": "👤 Profile", "b_vip": "💎 VIP", "b_avatar": "🔎 TikTok profile",
-    "b_lang": "🌐 Language", "b_help": "📖 Help", "b_channel": "📢 Bot channel",
+    "b_lang": "⚙️ Settings", "b_help": "📖 Help", "b_channel": "📢 Bot channel",
     "b_panel": "🛠 Control panel", "b_back": "🔙 Back", "b_delete": "🗑 Delete",
     "b_joined": "✅ I joined", "b_audio": "🎵 MP3 audio", "b_orig": "🔗 Original link",
     "b_direct": "⬇️ Direct download", "b_cancel": "✖️ Cancel",
@@ -629,7 +684,9 @@ L["ar"] = {
         "🎵 الموسيقى — زر <b>MP3</b> أسفل الفيديو\n"
         "👤 الملف الشخصي — أرسل اسم مستخدم لبطاقة الحساب + صورة HD + القصص + آخر الفيديوهات\n"
         "🔥 اكتشف — ابحث في تيك توك أو تصفّح الرائج حسب البلد\n"
-        "🕵️ القصص — اضغط <b>قصة سرية</b> وأرسل اسم مستخدم</blockquote>\n"
+        "🕵️ القصص — اضغط <b>قصة سرية</b> وأرسل اسم مستخدم\n"
+        "🎞 GIF · 🧩 ملصق · 💬 التعليقات — أزرار أسفل الفيديو\n"
+        "⚙️ الجودة — اختر HD / عادية / صوت فقط من الإعدادات</blockquote>\n"
         "💎 <b>VIP</b> — بدون اشتراك إجباري وصور أكثر.\n"
         "📩 للتواصل: {dev}"
     ),
@@ -655,6 +712,24 @@ L["ar"] = {
     "lang_title": "🌐 <b>اختر لغتك</b>",
     "lang_current": "🔵 الحالية: {cur}",
     "lang_saved": "✅ تم تغيير اللغة",
+    "q_title": "🎞 <b>جودة التحميل</b>",
+    "q_current": "🔵 الحالية: {cur}",
+    "q_hd": "🎬 HD — أفضل جودة",
+    "q_sd": "📱 عادية — بيانات أقل",
+    "q_audio": "🎵 الصوت فقط (MP3)",
+    "qb_hd": "🎬 HD", "qb_sd": "📱 عادية", "qb_audio": "🎵 صوت",
+    "q_saved": "✅ تم تغيير الجودة",
+    "b_gif": "🎞 GIF", "b_sticker": "🧩 ملصق", "b_comments": "💬 التعليقات",
+    "st_gif": "🎞 <b>جارٍ تجهيز GIF…</b>\n{bar}",
+    "st_stk": "🧩 <b>جارٍ تجهيز الملصق…</b>\n{bar}",
+    "st_cmt": "💬 <b>جارٍ جلب التعليقات…</b>\n{bar}",
+    "gif_fail": "❌ تعذّر إنشاء GIF. حاول مرة أخرى.",
+    "stk_fail": "❌ تعذّر إنشاء الملصق.",
+    "stk_static": "ℹ️ الملصق المتحرك غير متاح على هذا الخادم، لذلك أُرسل ملصق ثابت.",
+    "cmt_title": "💬 <b>التعليقات</b> · {n}",
+    "cmt_file": "📄 جميع التعليقات ({n})",
+    "cmt_none": "💬 لا توجد تعليقات لهذا الفيديو أو تعذّر جلبها.",
+    "cmt_fail": "❌ تعذّر جلب التعليقات.",
     "force_join": (
         "🔒 <b>الاشتراك الإجباري</b>\n\n"
         "للمتابعة اشترك في القنوات التالية أولاً ثم اضغط <b>«اشتركت»</b> 👇"
@@ -746,7 +821,7 @@ L["ar"] = {
     "story_unavailable": "⚠️ قصص هذا الحساب غير متاحة (ربما الحساب خاص أو المصدر لا يدعمها).",
     "b_story": "🕵️ قصة سرية", "b_story_again": "🔄 قصة أخرى",
     "b_dl": "📥 تحميل جديد", "b_profile": "👤 الملف الشخصي", "b_vip": "💎 VIP", "b_avatar": "🔎 حساب تيك توك",
-    "b_lang": "🌐 اللغة", "b_help": "📖 المساعدة", "b_channel": "📢 قناة البوت",
+    "b_lang": "⚙️ الإعدادات", "b_help": "📖 المساعدة", "b_channel": "📢 قناة البوت",
     "b_panel": "🛠 لوحة التحكم", "b_back": "🔙 رجوع", "b_delete": "🗑 حذف",
     "b_joined": "✅ اشتركت", "b_audio": "🎵 صوت MP3", "b_orig": "🔗 الرابط الأصلي",
     "b_direct": "⬇️ تحميل مباشر", "b_cancel": "✖️ إلغاء",
@@ -1136,6 +1211,110 @@ async def release_lock(uid: int) -> None:
     await db_del(f"locks/{uid}")
 
 
+# ── media cache (Telegram file_ids) + per-user quality ───────────────────────
+_KEY_RE = re.compile(r"[A-Za-z0-9]{1,24}")
+
+
+def safe_key(k) -> bool:
+    """Media keys are digits (TikTok id) or a short hex hash — nothing else may reach a DB path."""
+    return isinstance(k, str) and _KEY_RE.fullmatch(k) is not None
+
+
+def _url_hash(url: str) -> str:
+    return hashlib.md5(url.strip().encode()).hexdigest()[:20]
+
+
+def bot_tag() -> str:
+    return f"⚡ <a href=\"https://t.me/{BOT_USERNAME}\">@{esc(BOT_USERNAME)}</a>"
+
+
+async def user_quality(uid: int) -> str:
+    q = await db_get(f"users/{uid}/q")
+    return q if q in QUALITIES else "hd"
+
+
+async def cache_get(key: str) -> dict | None:
+    if not safe_key(key):
+        return None
+    d = await db_get(f"fc/{key}")
+    return d if isinstance(d, dict) and d.get("src") else None
+
+
+async def remember_media(media: dict, url: str) -> None:
+    """Store the (small) metadata of a result + a link→key map, so a repeated link is instant."""
+    key = media.get("key")
+    if not safe_key(key):
+        return
+    await db_patch(f"fc/{key}", {
+        "key": key, "src": media.get("src") or url,
+        "creator": clip(media.get("creator") or "", 80), "title": clip(media.get("title") or "", 300),
+        "duration": _to_int(media.get("duration")),
+        "views": _to_int(media.get("views")), "likes": _to_int(media.get("likes")),
+        "comments": _to_int(media.get("comments")), "shares": _to_int(media.get("shares")),
+        "hv": 1 if media.get("videos") else 0, "ha": 1 if media.get("audio") else 0,
+        "ts": int(time.time()),
+    })
+    await db_put(f"uc/{_url_hash(url)}", key)
+
+
+async def save_fid(key: str, field: str, sent, attr: str) -> None:
+    """Remember the file_id Telegram gave us (video / audio / animation) → next time: no upload."""
+    try:
+        fid = getattr(getattr(sent, attr, None), "file_id", None)
+        if fid and safe_key(key):
+            await db_put(f"fc/{key}/{field}", fid)
+    except Exception as e:                                   # noqa: BLE001 — caching is best effort
+        log.info("save_fid failed: %s", e)
+
+
+def media_from_cache(hit: dict) -> dict:
+    return {
+        "key": hit.get("key") or "", "src": hit.get("src") or "",
+        "creator": hit.get("creator") or "TikTok", "title": hit.get("title") or "", "cover": "",
+        "duration": _to_int(hit.get("duration")),
+        "videos": [("cache", 0)] if hit.get("hv") else [],          # marker only: "this post has a video"
+        "audio": "cache" if hit.get("ha") else "", "a_title": "", "a_author": "", "images": [],
+        "views": _to_int(hit.get("views")), "likes": _to_int(hit.get("likes")),
+        "comments": _to_int(hit.get("comments")), "shares": _to_int(hit.get("shares")),
+    }
+
+
+async def send_from_cache(ctx, chat_id: int, lang: str, url: str, quality: str) -> bool:
+    """Repeated link → send by file_id (≈1 s, no API call, no download, no upload). False → do it the normal way."""
+    key = await db_get(f"uc/{_url_hash(url)}")
+    if not safe_key(key):
+        return False
+    hit = await cache_get(key)
+    if not hit:
+        return False
+    m = media_from_cache(hit)
+    auto = bool(CFG.get("auto_audio"))
+    try:
+        if quality == "audio" and hit.get("fid_a"):
+            await ctx.bot.send_audio(chat_id, hit["fid_a"], caption=f"🎵 {bot_tag()}",
+                                     reply_markup=audio_kb(lang), **_UP)
+            return True
+        if quality == "audio":
+            return False
+        fid = hit.get("fid_hd" if quality == "hd" else "fid_sd")          # exactly the quality the user chose
+        if not fid or (auto and m["audio"] and not hit.get("fid_a")):
+            return False
+        await ctx.bot.send_video(chat_id, fid, caption=build_caption(m),
+                                 reply_markup=result_kb(lang, m, with_audio=not auto), **_UP)
+        if auto and hit.get("fid_a"):
+            await ctx.bot.send_audio(chat_id, hit["fid_a"], caption=f"🎵 {bot_tag()}",
+                                     reply_markup=audio_kb(lang), **_UP)
+        return True
+    except TelegramError as e:
+        log.info("cache send failed (%s) → normal path", e)
+        return False
+
+
+async def count_download(uid: int) -> None:
+    await db_incr("sys/cfg/total_dl")
+    await db_incr(f"users/{uid}/dl")
+
+
 async def display_name(uid: int) -> str:
     ud = await db_get(f"users/{uid}")
     if isinstance(ud, dict):
@@ -1186,11 +1365,16 @@ def _media_key(vid: str, url: str) -> str:
 
 def parse_tikwm(d: dict, src: str) -> dict:
     base = "https://www.tikwm.com"
-    cands: list = []
-    for key, skey in (("hdplay", "hd_size"), ("play", "size"), ("wmplay", "wm_size")):
-        u = abs_url(d.get(key), base)
-        if u and u not in [c[0] for c in cands]:
-            cands.append((u, _to_int(d.get(skey))))
+    def _cands(order: tuple) -> list:
+        out: list = []
+        for key, skey in order:
+            u = abs_url(d.get(key), base)
+            if u and u not in [c[0] for c in out]:
+                out.append((u, _to_int(d.get(skey))))
+        return out
+
+    cands    = _cands((("hdplay", "hd_size"), ("play", "size"), ("wmplay", "wm_size")))    # HD first
+    cands_sd = _cands((("play", "size"), ("hdplay", "hd_size"), ("wmplay", "wm_size")))    # standard first
     mi = d.get("music_info") if isinstance(d.get("music_info"), dict) else {}
     au = d.get("author") if isinstance(d.get("author"), dict) else {}
     return {
@@ -1201,6 +1385,7 @@ def parse_tikwm(d: dict, src: str) -> dict:
         "cover":    abs_url(d.get("cover"), base),
         "duration": _to_int(d.get("duration")),
         "videos":   cands,
+        "videos_sd": cands_sd,
         "audio":    abs_url(d.get("music") or mi.get("play"), base),
         "a_title":  mi.get("title") or "",
         "a_author": mi.get("author") or au.get("nickname") or "TikTok",
@@ -1954,10 +2139,12 @@ async def download_bytes(url: str, max_bytes: int = TG_MAX_BYTES, timeout: float
         return None
 
 
-async def fetch_video(media: dict) -> tuple[bytes | None, str | None]:
-    """Try every candidate URL (HD first). → (bytes | None, direct_url_if_too_big | None)"""
+async def fetch_video(media: dict, quality: str = "hd") -> tuple[bytes | None, str | None]:
+    """Try every candidate URL (HD first, or standard first when quality == "sd").
+    → (bytes | None, direct_url_if_too_big | None)"""
     big = None
-    for url, size in media["videos"]:
+    cands = (media.get("videos_sd") or media["videos"]) if quality == "sd" else media["videos"]
+    for url, size in cands:
         if size and size > TG_MAX_BYTES:
             big = big or url
             continue
@@ -2046,6 +2233,15 @@ def result_kb(lang: str, m: dict, with_audio: bool, direct: str | None = None) -
         rows.append(top)
     if direct and _valid_button_url(direct):
         rows.append([Btn(tx(lang, "b_direct"), url=direct)])
+    extra = []
+    key = str(m.get("key") or "")
+    if safe_key(key) and _valid_button_url(m.get("src", "")):
+        if m.get("videos"):
+            extra += [Btn(tx(lang, "b_gif"), callback_data=f"dl_gif_{key}"),
+                      Btn(tx(lang, "b_sticker"), callback_data=f"dl_stk_{key}")]
+        extra.append(Btn(tx(lang, "b_comments"), callback_data=f"dl_cmt_{key}"))
+    if extra:
+        rows.append(extra)
     rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
     return Kb(rows)
 
@@ -2054,17 +2250,18 @@ def result_kb(lang: str, m: dict, with_audio: bool, direct: str | None = None) -
 _UP = dict(read_timeout=120, write_timeout=120, connect_timeout=20, pool_timeout=20)
 
 
-async def send_video_file(ctx, chat_id: int, m: dict, data: bytes, kb: Kb) -> None:
+async def send_video_file(ctx, chat_id: int, m: dict, data: bytes, kb: Kb):
+    """Upload a video; returns the sent Message (its file_id is cached by the caller)."""
     name = f"{safe_name(m['creator'])}_{m['key']}.mp4"
     try:
-        await ctx.bot.send_video(
+        return await ctx.bot.send_video(
             chat_id, InputFile(data, filename=name), caption=build_caption(m),
             duration=m.get("duration") or None, supports_streaming=True, reply_markup=kb, **_UP,
         )
     except BadRequest as e:                       # e.g. codec/format rejected → send as a file
         log.info("send_video rejected (%s) → document fallback", e)
-        await ctx.bot.send_document(chat_id, InputFile(data, filename=name),
-                                    caption=build_caption(m), reply_markup=kb, **_UP)
+        return await ctx.bot.send_document(chat_id, InputFile(data, filename=name),
+                                           caption=build_caption(m), reply_markup=kb, **_UP)
 
 
 async def send_photo_album(ctx, chat_id: int, m: dict, files: list) -> int:
@@ -2116,17 +2313,16 @@ def aedit_menu_kb(lang: str) -> Kb:
                [Btn(tx(lang, "b_aedit_back"), callback_data="aedit_x")]])
 
 
-async def send_audio_file(ctx, chat_id: int, s: dict, data: bytes, ctype: str, kb: Kb | None = None) -> None:
+async def send_audio_file(ctx, chat_id: int, s: dict, data: bytes, ctype: str, kb: Kb | None = None):
     ext = _ext(ctype, "mp3")
     title = clip(s.get("a_title") or s.get("title") or "TikTok", 60)
     fn = f"{safe_name(title, 'audio')}.{ext}"
     performer = clip(s.get("a_author") or s.get("creator") or "TikTok", 60)
     try:
-        await ctx.bot.send_audio(chat_id, InputFile(data, filename=fn), title=title, performer=performer,
-                                 caption=f"🎵 <a href=\"https://t.me/{BOT_USERNAME}\">@{esc(BOT_USERNAME)}</a>",
-                                 reply_markup=kb, **_UP)
+        return await ctx.bot.send_audio(chat_id, InputFile(data, filename=fn), title=title, performer=performer,
+                                        caption=f"🎵 {bot_tag()}", reply_markup=kb, **_UP)
     except BadRequest:
-        await ctx.bot.send_document(chat_id, InputFile(data, filename=fn), reply_markup=kb, **_UP)
+        return await ctx.bot.send_document(chat_id, InputFile(data, filename=fn), reply_markup=kb, **_UP)
 
 
 async def send_avatar_photo(ctx, chat_id: int, lang: str, username: str, data: bytes, ctype: str,
@@ -2186,6 +2382,15 @@ def menu_view(uid: int, lang: str, name: str) -> tuple[str, Kb]:
     if is_admin(uid):
         rows.append([Btn(tx(lang, "b_panel"), callback_data="panel_unified")])
     return text, Kb(rows)
+
+
+async def settings_view(uid: int, lang: str) -> tuple[str, Kb]:
+    """Language + download quality."""
+    q = await user_quality(uid)
+    text = (f"{tx(lang, 'lang_title')}\n\n{tx(lang, 'lang_current', cur=LANG_NAMES.get(lang, '?'))}\n\n"
+            f"{tx(lang, 'q_title')}\n{tx(lang, 'q_current', cur=tx(lang, 'q_' + q))}")
+    qrow = [Btn(("✅ " if q == c else "") + tx(lang, "qb_" + c), callback_data=f"set_q_{c}") for c in QUALITIES]
+    return text, Kb(lang_buttons("set_lang_") + [qrow, back_row(lang)])
 
 
 def lang_buttons(prefix: str) -> list:
@@ -2543,8 +2748,17 @@ async def route(cb: CB, data: str):
         return await cb.edit(cb.t("help", dev=esc(DEV)), Kb([back_row(lang)]))
 
     if data == "show_settings":
-        return await cb.edit(f"{cb.t('lang_title')}\n\n{cb.t('lang_current', cur=LANG_NAMES.get(lang, '?'))}",
-                             Kb(lang_buttons("set_lang_") + [back_row(lang)]))
+        text, kb = await settings_view(uid, lang)
+        return await cb.edit(text, kb)
+
+    if data.startswith("set_q_"):
+        q = data[len("set_q_"):]
+        if q in QUALITIES:
+            await db_put(f"users/{uid}/q", q)
+            await cb.answer(cb.t("q_saved"))
+            text, kb = await settings_view(uid, lang)
+            return await cb.edit(text, kb)
+        return
 
     if data.startswith("set_lang_"):
         chosen = data[len("set_lang_"):]
@@ -2559,6 +2773,9 @@ async def route(cb: CB, data: str):
     if data.startswith("dl_audio_"):
         return await send_audio_from_session(cb, data[len("dl_audio_"):])
 
+    if data.startswith(("dl_gif_", "dl_stk_", "dl_cmt_")):
+        return await send_extra(cb, data)
+
     # ── staff areas ──────────────────────────────────────────────────────────
     if is_admin(uid) and data != "noop":
         await set_wait_clear(uid)          # any navigation cancels a pending "type the ID" prompt
@@ -2570,14 +2787,282 @@ async def route(cb: CB, data: str):
         return await route_owner(cb, data) if is_owner(uid) else await cb.answer(cb.t("no_perm"), True)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# 9b · EXTRAS under a result:  GIF · sticker · comments   (+ ffmpeg helpers)
+# ══════════════════════════════════════════════════════════════════════════════
+_FF_UNSET = object()
+_ff_path = _FF_UNSET
+
+
+def ffmpeg_path() -> str | None:
+    """System ffmpeg, or the one bundled by the optional `imageio-ffmpeg` package."""
+    global _ff_path
+    if _ff_path is _FF_UNSET:
+        p = shutil.which("ffmpeg")
+        if not p:
+            try:
+                import imageio_ffmpeg                                   # type: ignore
+                p = imageio_ffmpeg.get_ffmpeg_exe()
+            except Exception:                                           # noqa: BLE001
+                p = None
+        _ff_path = p
+    return _ff_path
+
+
+async def run_ffmpeg(args: list, data: bytes, out_ext: str, timeout: float = 30.0) -> bytes | None:
+    exe = ffmpeg_path()
+    if not exe:
+        return None
+    with tempfile.TemporaryDirectory() as d:
+        src, dst = os.path.join(d, "in.mp4"), os.path.join(d, f"out.{out_ext}")
+        with open(src, "wb") as f:
+            f.write(data)
+        proc = await asyncio.create_subprocess_exec(
+            exe, "-y", "-v", "error", "-i", src, *args, dst,
+            stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
+        try:
+            _, err = await asyncio.wait_for(proc.communicate(), timeout)
+        except asyncio.TimeoutError:
+            proc.kill()
+            log.info("ffmpeg timed out")
+            return None
+        if proc.returncode != 0 or not os.path.exists(dst):
+            log.info("ffmpeg failed: %s", (err or b"")[-300:])
+            return None
+        with open(dst, "rb") as f:
+            return f.read()
+
+
+async def to_gif_mp4(data: bytes) -> bytes | None:
+    """Telegram 'GIF' = silent looping MP4. Trim + shrink it (needs ffmpeg)."""
+    out = await run_ffmpeg(
+        ["-t", str(GIF_SECONDS), "-an", "-vf", "scale='min(480,iw)':-2,fps=24",
+         "-c:v", "libx264", "-preset", "veryfast", "-crf", "28", "-pix_fmt", "yuv420p",
+         "-movflags", "+faststart"], data, "mp4", 35)
+    return out if out and len(out) <= TG_MAX_BYTES else None
+
+
+async def to_sticker_webm(data: bytes) -> bytes | None:
+    """Telegram video sticker: WEBM/VP9, ≤3 s, one side exactly 512 px, ≤256 KB, no audio (needs ffmpeg)."""
+    for crf, fps in ((34, 30), (42, 24), (50, 20), (58, 15)):
+        out = await run_ffmpeg(
+            ["-t", "2.9", "-an",
+             "-vf", f"scale=512:512:force_original_aspect_ratio=decrease,fps={fps}",
+             "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "0", "-crf", str(crf),
+             "-deadline", "realtime", "-cpu-used", "5", "-row-mt", "1", "-auto-alt-ref", "0"],
+            data, "webm", 25)
+        if out and len(out) <= STICKER_MAX:
+            return out
+    return None
+
+
+def _static_sticker(img: bytes) -> bytes | None:
+    """Fallback when ffmpeg is missing: the video cover as a static 512 px WEBP sticker (needs Pillow)."""
+    try:
+        from PIL import Image, ImageOps                                 # type: ignore
+        im = ImageOps.contain(Image.open(io.BytesIO(img)).convert("RGBA"), (512, 512))
+        buf = io.BytesIO()
+        im.save(buf, "WEBP", quality=88, method=4)
+        return buf.getvalue() if len(buf.getvalue()) <= 512_000 else None
+    except Exception as e:                                              # noqa: BLE001
+        log.info("static sticker failed: %s", e)
+        return None
+
+
+async def fetch_comments(src: str, limit: int = COMMENTS_MAX) -> list | None:
+    """Top comments of a video (TikWM). → list (maybe empty) · None on failure."""
+    t = min(int(CFG.get("api_timeout", 40)), 20)
+    for attempt in range(3):
+        try:
+            r = await http().post("https://www.tikwm.com/api/comment/list/",
+                                  data={"url": src, "count": limit, "cursor": 0}, timeout=t)
+            j = r.json()
+        except Exception as e:                                          # noqa: BLE001
+            log.warning("comments attempt %s failed: %s", attempt + 1, e)
+            await asyncio.sleep(0.8)
+            continue
+        if j.get("code") == 0 and isinstance(j.get("data"), dict):
+            out = []
+            for c in j["data"].get("comments") or []:
+                if not isinstance(c, dict):
+                    continue
+                text = (c.get("text") or "").strip()
+                if not text:
+                    continue
+                u = c.get("user") if isinstance(c.get("user"), dict) else {}
+                out.append({"user": u.get("nickname") or u.get("unique_id") or "—",
+                            "handle": u.get("unique_id") or "", "text": text,
+                            "likes": _to_int(c.get("digg_count")), "replies": _to_int(c.get("reply_total"))})
+            return out
+        msg = str(j.get("msg", "")).lower()
+        if "limit" in msg or "second" in msg:
+            await asyncio.sleep(1.3)
+            continue
+        log.info("comments rejected: %s", msg)
+        return None
+    return None
+
+
+def comments_preview(lang: str, items: list) -> str:
+    text = tx(lang, "cmt_title", n=len(items))
+    for i, c in enumerate(items[:COMMENTS_SHOW], 1):
+        likes = f" · ❤️ {fmt_num(c['likes'])}" if c["likes"] else ""
+        block = f"\n\n<b>{i}. {esc(clip(c['user'], 30))}</b>{likes}\n{esc(clip(c['text'], 260))}"
+        if len(text) + len(block) > 3700:
+            break
+        text += block
+    return text
+
+
+def comments_txt(items: list) -> str:
+    out = []
+    for i, c in enumerate(items, 1):
+        who = c["user"] + (f" (@{c['handle']})" if c["handle"] else "")
+        out.append(f"#{i}  {who}  ·  ❤ {c['likes']}  ·  ↩ {c['replies']}\n{c['text']}\n")
+    return "\n".join(out)
+
+
+_TT_HOST = re.compile(r"^https?://([\w-]+\.)*tiktok\.com/", re.I)
+
+
+def _src_from_markup(message) -> str | None:
+    """The 'original link' button of the result message IS the TikTok link → no storage needed."""
+    try:
+        for row in message.reply_markup.inline_keyboard:
+            for b in row:
+                if b.url and _TT_HOST.match(b.url):
+                    return b.url
+    except AttributeError:
+        pass
+    return None
+
+
+async def _src_for(cb: "CB", key: str) -> str | None:
+    src = _src_from_markup(cb.q.message)
+    if src:
+        return src
+    hit = await cache_get(key)
+    if hit:
+        return hit.get("src")
+    s = await session_get(key)
+    return s.get("src") if s else None
+
+
+def _close_kb(lang: str) -> Kb:
+    return Kb([[Btn(tx(lang, "b_delete"), callback_data="close")]])
+
+
+async def _extra_gif(ctx, chat_id: int, lang: str, key: str, src: str) -> None:
+    fid = await db_get(f"fc/{key}/fid_gif")
+    if isinstance(fid, str) and fid:                                    # sent before → instant
+        try:
+            await ctx.bot.send_animation(chat_id, fid, caption=bot_tag(), reply_markup=_close_kb(lang), **_UP)
+            return
+        except TelegramError as e:
+            log.info("cached gif failed (%s) → rebuild", e)
+    await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
+    m = await fetch_tiktok(src)
+    if not m or not m["videos"]:
+        raise RuntimeError("no video for gif")
+    data, _ = await fetch_video(m, "sd")                                # smaller file is plenty for a GIF
+    if not data:
+        raise RuntimeError("gif download failed")
+    data = await to_gif_mp4(data) or data                               # silent + trimmed when ffmpeg exists
+    sent = await ctx.bot.send_animation(chat_id, InputFile(data, filename=f"{key}.mp4"),
+                                        caption=bot_tag(), reply_markup=_close_kb(lang), **_UP)
+    await save_fid(key, "fid_gif", sent, "animation")
+
+
+async def _extra_sticker(ctx, chat_id: int, lang: str, key: str, src: str) -> None:
+    await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
+    m = await fetch_tiktok(src)
+    if not m:
+        raise RuntimeError("sticker: no media")
+    if m["videos"] and ffmpeg_path():
+        data, _ = await fetch_video(m, "sd")
+        webm = await to_sticker_webm(data) if data else None
+        if webm:
+            await ctx.bot.send_sticker(chat_id, InputFile(webm, filename="sticker.webm"),
+                                       reply_markup=_close_kb(lang), **_UP)
+            return
+    cover = None
+    for u in [m.get("cover")] + list(m.get("images") or [])[:1]:         # static fallback: cover / first photo
+        if u:
+            try:
+                cover = await download_bytes(u, max_bytes=20_000_000, timeout=20)
+            except TooBig:
+                cover = None
+            if cover:
+                break
+    webp = await asyncio.to_thread(_static_sticker, cover[0]) if cover else None
+    if not webp:
+        raise RuntimeError("sticker: nothing to build")
+    await ctx.bot.send_sticker(chat_id, InputFile(webp, filename="sticker.webp"),
+                               reply_markup=_close_kb(lang), **_UP)
+    await ctx.bot.send_message(chat_id, tx(lang, "stk_static"))
+
+
+async def _extra_comments(ctx, chat_id: int, lang: str, key: str, src: str) -> None:
+    await chat_action(ctx, chat_id, ChatAction.TYPING)
+    items = await fetch_comments(src)
+    if items is None:
+        raise RuntimeError("comments failed")
+    if not items:
+        await ctx.bot.send_message(chat_id, tx(lang, "cmt_none"), reply_markup=_close_kb(lang))
+        return
+    await ctx.bot.send_message(chat_id, comments_preview(lang, items), reply_markup=_close_kb(lang))
+    await ctx.bot.send_document(chat_id, InputFile(comments_txt(items).encode("utf-8"), filename=f"comments_{key}.txt"),
+                                caption=tx(lang, "cmt_file", n=len(items)), **_UP)
+
+
+async def send_extra(cb: "CB", data: str) -> None:
+    """dl_gif_<key> · dl_stk_<key> · dl_cmt_<key>"""
+    parts = data.split("_", 2)
+    if len(parts) != 3 or parts[1] not in ("gif", "stk", "cmt") or not safe_key(parts[2]):
+        return await cb.answer()
+    kind, key = parts[1], parts[2]
+    src = await _src_for(cb, key)
+    if not src:
+        return await cb.answer(cb.t("session_expired"), True)
+    if not await acquire_lock(cb.uid):
+        return await cb.answer(cb.t("busy_msg"), True)
+    chat_id = cb.q.message.chat_id
+    try:
+        await cb.answer(plain(cb.t(f"st_{kind}", bar="")).strip())
+        fn = {"gif": _extra_gif, "stk": _extra_sticker, "cmt": _extra_comments}[kind]
+        await fn(cb.ctx, chat_id, cb.lang, key, src)
+    except Exception as e:                                              # noqa: BLE001 — user gets a clean message
+        await report_error(cb.ctx, e, f"extra_{kind}")
+        try:
+            await cb.ctx.bot.send_message(chat_id, cb.t(f"{kind}_fail"))
+        except TelegramError:
+            pass
+    finally:
+        await release_lock(cb.uid)
+
+
 # ── audio on demand ──────────────────────────────────────────────────────────
 async def send_audio_from_session(cb: CB, key: str):
-    started = time.monotonic()
+    chat_id = cb.q.message.chat_id
+    if not safe_key(key):
+        return await cb.answer()
+    fid = await db_get(f"fc/{key}/fid_a")                               # sent before → instant
+    if isinstance(fid, str) and fid:
+        await cb.answer()
+        try:
+            return await cb.ctx.bot.send_audio(chat_id, fid, caption=f"🎵 {bot_tag()}",
+                                               reply_markup=audio_kb(cb.lang), **_UP)
+        except TelegramError as e:
+            log.info("cached audio failed (%s) → rebuild", e)
     s = await session_get(key)
+    if not s or not s.get("audio"):                                     # session gone → rebuild from the link
+        src = await _src_for(cb, key)
+        m = await fetch_tiktok(src) if src else None
+        if m and m["audio"]:
+            s = {k: m[k] for k in ("audio", "a_title", "a_author", "title", "creator", "src")}
     if not s or not s.get("audio"):
         return await cb.answer(cb.t("session_expired"), True)
     await cb.answer(plain(cb.t("st_audio", bar="")).strip())
-    chat_id = cb.q.message.chat_id
     await chat_action(cb.ctx, chat_id, ChatAction.UPLOAD_VOICE)
     try:
         res = await download_bytes(s["audio"])
@@ -2585,7 +3070,8 @@ async def send_audio_from_session(cb: CB, key: str):
         res = None
     if not res:
         return await cb.ctx.bot.send_message(chat_id, cb.t("no_audio"))
-    await send_audio_file(cb.ctx, chat_id, s, res[0], res[1], audio_kb(cb.lang))
+    sent = await send_audio_file(cb.ctx, chat_id, s, res[0], res[1], audio_kb(cb.lang))
+    await save_fid(key, "fid_a", sent, "audio")
 
 
 # ── shared admin helpers ─────────────────────────────────────────────────────
@@ -3000,21 +3486,55 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
 
     status = None
     try:
+        quality = await user_quality(uid)
         status = await msg.reply_text(tx(lang, "st_search", bar=bar(1)))
+
+        # ⚡ repeated link → Telegram already holds the file: send it by file_id (no API call / download / upload)
+        if await send_from_cache(ctx, chat_id, lang, url, quality):
+            await count_download(uid)
+            try:
+                await status.delete()
+            except TelegramError:
+                pass
+            return
+
         media = await fetch_tiktok(url)
         if not media:
             return await safe_edit(status, tx(lang, "invalid_link"))
 
-        # remember what the ".MP3" button needs (also acts as a tiny cache)
+        try:                                                           # metadata + link map for the cache
+            await remember_media(media, url)
+        except Exception as e:                                         # noqa: BLE001 — never block a download
+            log.info("remember_media failed: %s", e)
+
+        # remember what the ".MP3" button needs
         if media["audio"]:
             await session_save(media["key"], {k: media[k] for k in ("audio", "a_title", "a_author", "title", "creator", "src")})
 
         await safe_edit(status, tx(lang, "st_download", bar=bar(3)))
         auto_audio = bool(CFG.get("auto_audio"))
+        audio_only = quality == "audio" and bool(media["audio"]) and not media["images"]
         kb = result_kb(lang, media, with_audio=not auto_audio)
         delivered = False
 
-        if media["images"]:                                            # ── photo post
+        async def send_video_now(q: str) -> bool:
+            data, big = await fetch_video(media, q)
+            if data:
+                await safe_edit(status, tx(lang, "st_upload", bar=bar(4)))
+                await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
+                sent = await send_video_file(ctx, chat_id, media, data, kb)
+                await save_fid(media["key"], "fid_sd" if q == "sd" else "fid_hd", sent, "video")
+                return True
+            if big:                                                    # > 50 MB → link button
+                await ctx.bot.send_message(chat_id, f"{build_caption(media)}\n\n{tx(lang, 'too_big')}",
+                                           reply_markup=result_kb(lang, media, not auto_audio, direct=big))
+                return True
+            return False
+
+        if audio_only:                                                 # quality = "audio only" → MP3 instead of video
+            auto_audio = True
+
+        elif media["images"]:                                          # ── photo post
             limit = int(CFG.get("vip_photos" if is_vip(uid) else "max_photos", 15))
             files = await fetch_images(media["images"], limit)
             if not files:
@@ -3027,35 +3547,29 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
                 delivered = True
 
         elif media["videos"]:                                          # ── video post
-            data, big = await fetch_video(media)
-            if data:
-                await safe_edit(status, tx(lang, "st_upload", bar=bar(4)))
-                await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
-                await send_video_file(ctx, chat_id, media, data, kb)
-                delivered = True
-            elif big:                                                  # > 50 MB → link button
-                await ctx.bot.send_message(chat_id, f"{build_caption(media)}\n\n{tx(lang, 'too_big')}",
-                                           reply_markup=result_kb(lang, media, not auto_audio, direct=big))
-                delivered = True
+            delivered = await send_video_now(quality)
 
         elif media["audio"]:                                           # ── sound-only result
             auto_audio = True
 
-        # optional automatic MP3 (toggle in the panel) — only if we still have time
+        # automatic MP3 (panel toggle, or the user's "audio only" quality) — only if we still have time
         if auto_audio and media["audio"] and (not delivered or deadline_left(started) > 12):
             try:
                 res = await download_bytes(media["audio"], timeout=max(10.0, min(30.0, deadline_left(started) - 8)))
             except TooBig:
                 res = None
             if res:
-                await send_audio_file(ctx, chat_id, media, res[0], res[1], audio_kb(lang))
+                sent_a = await send_audio_file(ctx, chat_id, media, res[0], res[1], audio_kb(lang))
+                await save_fid(media["key"], "fid_a", sent_a, "audio")
                 delivered = True
+
+        if audio_only and not delivered and media["videos"]:           # MP3 failed → fall back to the video
+            delivered = await send_video_now("hd")
 
         if not delivered:
             return await safe_edit(status, tx(lang, "dl_fail"))
 
-        await db_incr("sys/cfg/total_dl")
-        await db_incr(f"users/{uid}/dl")
+        await count_download(uid)
         try:
             await status.delete()
         except TelegramError:
