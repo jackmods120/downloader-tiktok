@@ -3496,7 +3496,7 @@ async def _extra_comments(ctx, chat_id: int, lang: str, key: str, src: str) -> N
 # ── sticker packs (the "Make a sticker" section) ─────────────────────────────
 _HEX_RE = re.compile(r"[0-9a-f]{6}")
 PACK_MAX = 120                                  # static packs hold up to 120 stickers
-STK_EMOJI = "😀"
+STK_EMOJI = "🤎"
 
 
 def pack_url(name: str) -> str:
