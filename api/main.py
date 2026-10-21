@@ -37,6 +37,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import shutil
 import tempfile
 import time
@@ -181,7 +182,7 @@ L["ku"] = {
         "🔥 دۆزینەوە — گەڕان لە تیکتۆک و ترێندی وڵاتان\n"
         "🕵️ ستۆری — دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیمێک بنێرە\n"
         "🎞 GIF · 🧩 ستیکەر · 💬 کۆمێنت — دوگمەکانی ژێر ڤیدیۆکە\n"
-        "🖼 ستیکەر — وێنەیەک بنێرە و دەیکەم بە ستیکەر\n"
+        "🖼 ستیکەر — وێنەیەک بنێرە، یان پاکێجی ستیکەری خۆت دروست بکە\n"
         "📜 مێژوو · ⭐ دڵخواز — ڤیدیۆکانت بە یەک پەنجە دووبارە بنێرە\n"
         "🎁 بانگهێشت — هاوڕێ بهێنە و VIP وەربگرە\n"
         "⚙️ کوالێتی — لە ڕێکخستن HD / ئاسایی / تەنیا دەنگ هەڵبژێرە</blockquote>\n"
@@ -254,6 +255,18 @@ L["ku"] = {
     "b_ref_toggle": "🔘 بانگهێشتکردن: {status}",
     "sup_ref_title": "🎁 <b>ڕێکخستنی بانگهێشتکردن</b>\n\nدۆخ: {status}\n👥 ژمارەی بانگهێشتکراو بۆ خەڵات: <b>{need}</b>\n💎 ماوەی VIP: <b>{days}</b> ڕۆژ",
     "grp_welcome": "👋 سڵاو! من بۆتی دابەزاندنی تیکتۆکم.\n\nلینکی تیکتۆک لێرە بنێرە، ڤیدیۆکە بێ لۆگۆ دەنێرمەوە 🎬",
+    "stk_menu_nopack": "🖼 <b>دروستکردنی ستیکەر</b>\n\nوێنەیەک لە گەلەریەکەتەوە بنێرە و دەیکەم بە ستیکەر 🧩\n\n📦 دەتوانیت <b>پاکێجی ستیکەر</b> دروست بکەیت: هەموو وێنەکانت دەچنە ناو یەک پاکێج و دەتوانیت لە تێلیگرام زیادی بکەیت.\n\n💡 بۆ کوالێتی باشتر، وێنەکە وەک <b>فایل</b> بنێرە.",
+    "stk_menu_pack": "🖼 <b>دروستکردنی ستیکەر</b>\n\n📦 پاکێجی چالاک: <b>{title}</b> ({n}/120)\n\nهەر وێنەیەک بنێریت دەچێتە ناو ئەم پاکێجە 🧩\n💡 بۆ کوالێتی باشتر، وێنەکە وەک <b>فایل</b> بنێرە.",
+    "stk_menu_pending": "🖼 <b>دروستکردنی ستیکەر</b>\n\n📦 پاکێجی نوێ: <b>{title}</b>\n\nیەکەم وێنە بنێرە، پاکێجەکە پێی دروست دەکرێت 👇",
+    "b_stk_new": "📦 پاکێجی نوێ", "b_stk_open": "🔗 کردنەوەی پاکێج", "b_stk_list": "📂 پاکێجەکانم",
+    "stk_ask_title": "📦 <b>ناوی پاکێجەکە بنێرە</b>\n\nنموونە: <code>ستیکەرەکانی من</code>",
+    "stk_title_ok": "✅ پاکێجی <b>{title}</b> ئامادەیە.\n\nئێستا یەکەم وێنە بنێرە، پاکێجەکە پێی دروست دەکرێت 🖼",
+    "stk_title_bad": "⚠️ ناوەکە دەبێت لە ١ بۆ ٦٠ پیت بێت. دووبارە بینێرە:",
+    "stk_created": "🎉 <b>پاکێجەکەت دروست کرا!</b>\n📦 {title}\n\nدوگمەی خوارەوە دابگرە بۆ زیادکردنی بۆ تێلیگرام 👇",
+    "stk_full": "⚠️ ئەم پاکێجە پڕە (١٢٠ ستیکەر). پاکێجێکی نوێ دروست بکە.",
+    "stk_gone": "⚠️ ئەم پاکێجە لە تێلیگرام سڕاوەتەوە. پاکێجێکی نوێ دروست بکە.",
+    "stk_list_title": "📂 <b>پاکێجەکانم</b>\n\nپاکێجی چالاک بە ✅ دیاری کراوە، هەر یەکێک دابگرە بۆ گۆڕین:",
+    "stk_switched": "✅ پاکێجی چالاک گۆڕدرا",
     "force_join": (
         "🔒 <b>جۆینی ناچاری</b>\n\n"
         "بۆ بەردەوامبوون، سەرەتا ئەم چەناڵانە جۆین بکە، پاشان دوگمەی "
@@ -469,7 +482,7 @@ L["en"] = {
         "🔥 Discover — search TikTok or browse trending by country\n"
         "🕵️ Stories — tap <b>Secret story</b> and send a username\n"
         "🎞 GIF · 🧩 Sticker · 💬 Comments — buttons under the video\n"
-        "🖼 Sticker — send a photo and I turn it into a sticker\n"
+        "🖼 Sticker — send a photo, or build your own sticker pack\n"
         "📜 History · ⭐ Favorites — re-send your videos in one tap\n"
         "🎁 Invite — bring friends and earn VIP\n"
         "⚙️ Quality — pick HD / Standard / Audio only in Settings</blockquote>\n"
@@ -542,6 +555,18 @@ L["en"] = {
     "b_ref_toggle": "🔘 Invites: {status}",
     "sup_ref_title": "🎁 <b>Invite settings</b>\n\nStatus: {status}\n👥 Invites needed per reward: <b>{need}</b>\n💎 VIP length: <b>{days}</b> days",
     "grp_welcome": "👋 Hi! I'm a TikTok downloader bot.\n\nSend a TikTok link here and I'll reply with the video, no watermark 🎬",
+    "stk_menu_nopack": "🖼 <b>Make a sticker</b>\n\nSend a photo from your gallery and I'll turn it into a sticker 🧩\n\n📦 You can also create a <b>sticker pack</b>: all your photos go into one pack that you can add to Telegram.\n\n💡 For better quality, send the photo as a <b>file</b>.",
+    "stk_menu_pack": "🖼 <b>Make a sticker</b>\n\n📦 Active pack: <b>{title}</b> ({n}/120)\n\nEvery photo you send is added to this pack 🧩\n💡 For better quality, send the photo as a <b>file</b>.",
+    "stk_menu_pending": "🖼 <b>Make a sticker</b>\n\n📦 New pack: <b>{title}</b>\n\nSend the first photo and the pack will be created with it 👇",
+    "b_stk_new": "📦 New pack", "b_stk_open": "🔗 Open pack", "b_stk_list": "📂 My packs",
+    "stk_ask_title": "📦 <b>Send a name for your pack</b>\n\nExample: <code>My stickers</code>",
+    "stk_title_ok": "✅ Pack <b>{title}</b> is ready.\n\nNow send the first photo and the pack will be created with it 🖼",
+    "stk_title_bad": "⚠️ The name must be 1–60 characters. Send it again:",
+    "stk_created": "🎉 <b>Your pack is ready!</b>\n📦 {title}\n\nTap the button to add it to Telegram 👇",
+    "stk_full": "⚠️ This pack is full (120 stickers). Create a new pack.",
+    "stk_gone": "⚠️ This pack no longer exists on Telegram. Create a new pack.",
+    "stk_list_title": "📂 <b>My packs</b>\n\nThe active pack is marked ✅ — tap one to switch:",
+    "stk_switched": "✅ Active pack changed",
     "force_join": (
         "🔒 <b>Forced join</b>\n\n"
         "To continue, join the channels below first, then tap <b>“I joined”</b> 👇"
@@ -753,7 +778,7 @@ L["ar"] = {
         "🔥 اكتشف — ابحث في تيك توك أو تصفّح الرائج حسب البلد\n"
         "🕵️ القصص — اضغط <b>قصة سرية</b> وأرسل اسم مستخدم\n"
         "🎞 GIF · 🧩 ملصق · 💬 التعليقات — أزرار أسفل الفيديو\n"
-        "🖼 ملصق — أرسل صورة وسأحوّلها إلى ملصق\n"
+        "🖼 ملصق — أرسل صورة، أو أنشئ حزمة ملصقات خاصة بك\n"
         "📜 السجل · ⭐ المفضلة — أعد إرسال فيديوهاتك بضغطة واحدة\n"
         "🎁 دعوة — أحضر أصدقاءك واحصل على VIP\n"
         "⚙️ الجودة — اختر HD / عادية / صوت فقط من الإعدادات</blockquote>\n"
@@ -826,6 +851,18 @@ L["ar"] = {
     "b_ref_toggle": "🔘 الدعوات: {status}",
     "sup_ref_title": "🎁 <b>إعدادات الدعوات</b>\n\nالحالة: {status}\n👥 عدد الدعوات لكل مكافأة: <b>{need}</b>\n💎 مدة VIP: <b>{days}</b> يوم",
     "grp_welcome": "👋 مرحبًا! أنا بوت تحميل تيك توك.\n\nأرسل رابط تيك توك هنا وسأرد بالفيديو بدون علامة مائية 🎬",
+    "stk_menu_nopack": "🖼 <b>إنشاء ملصق</b>\n\nأرسل صورة من معرض هاتفك وسأحوّلها إلى ملصق 🧩\n\n📦 يمكنك أيضًا إنشاء <b>حزمة ملصقات</b>: تذهب كل صورك إلى حزمة واحدة يمكنك إضافتها إلى تيليجرام.\n\n💡 لجودة أفضل، أرسل الصورة كـ<b>ملف</b>.",
+    "stk_menu_pack": "🖼 <b>إنشاء ملصق</b>\n\n📦 الحزمة الحالية: <b>{title}</b> ({n}/120)\n\nكل صورة ترسلها تُضاف إلى هذه الحزمة 🧩\n💡 لجودة أفضل، أرسل الصورة كـ<b>ملف</b>.",
+    "stk_menu_pending": "🖼 <b>إنشاء ملصق</b>\n\n📦 حزمة جديدة: <b>{title}</b>\n\nأرسل أول صورة وستُنشأ الحزمة بها 👇",
+    "b_stk_new": "📦 حزمة جديدة", "b_stk_open": "🔗 فتح الحزمة", "b_stk_list": "📂 حزمي",
+    "stk_ask_title": "📦 <b>أرسل اسمًا لحزمتك</b>\n\nمثال: <code>ملصقاتي</code>",
+    "stk_title_ok": "✅ الحزمة <b>{title}</b> جاهزة.\n\nأرسل الآن أول صورة وستُنشأ الحزمة بها 🖼",
+    "stk_title_bad": "⚠️ يجب أن يكون الاسم من 1 إلى 60 حرفًا. أرسله مرة أخرى:",
+    "stk_created": "🎉 <b>تم إنشاء حزمتك!</b>\n📦 {title}\n\nاضغط الزر لإضافتها إلى تيليجرام 👇",
+    "stk_full": "⚠️ هذه الحزمة ممتلئة (120 ملصقًا). أنشئ حزمة جديدة.",
+    "stk_gone": "⚠️ هذه الحزمة لم تعد موجودة في تيليجرام. أنشئ حزمة جديدة.",
+    "stk_list_title": "📂 <b>حزمي</b>\n\nالحزمة الحالية معلّمة بـ ✅ — اضغط على أي حزمة للتبديل:",
+    "stk_switched": "✅ تم تغيير الحزمة الحالية",
     "force_join": (
         "🔒 <b>الاشتراك الإجباري</b>\n\n"
         "للمتابعة اشترك في القنوات التالية أولاً ثم اضغط <b>«اشتركت»</b> 👇"
@@ -2969,7 +3006,27 @@ async def route(cb: CB, data: str):
 
     if data == "ask_sticker":
         await cb.answer()
-        return await cb.q.message.reply_text(cb.t("ask_stk_prompt"))
+        text, kb = await stk_menu_view(uid, lang)
+        return await cb.edit(text, kb)
+
+    if data == "stk_new":
+        await cb.answer()
+        return await cb.q.message.reply_text(cb.t("stk_ask_title"), reply_markup=ForceReply(selective=True))
+
+    if data == "stk_list":
+        await cb.answer()
+        text, kb = await stk_list_view(uid, lang)
+        return await cb.edit(text, kb)
+
+    if data.startswith("stk_use_"):
+        hx = data[len("stk_use_"):]
+        if _HEX_RE.fullmatch(hx) and hx in await stk_packs(uid):
+            await db_put(f"stk/{uid}", {"active": hx})
+            await cb.answer(cb.t("stk_switched"))
+        else:
+            await cb.answer()
+        text, kb = await stk_list_view(uid, lang)
+        return await cb.edit(text, kb)
 
     if data == "ask_avatar":
         await cb.answer()
@@ -3436,6 +3493,135 @@ async def _extra_comments(ctx, chat_id: int, lang: str, key: str, src: str) -> N
                                 caption=tx(lang, "cmt_file", n=len(items)), **_UP)
 
 
+# ── sticker packs (the "Make a sticker" section) ─────────────────────────────
+_HEX_RE = re.compile(r"[0-9a-f]{6}")
+PACK_MAX = 120                                  # static packs hold up to 120 stickers
+STK_EMOJI = "😀"
+
+
+def pack_url(name: str) -> str:
+    return f"https://t.me/addstickers/{name}"
+
+
+async def stk_state(uid: int) -> dict:
+    d = await db_get(f"stk/{uid}")
+    return d if isinstance(d, dict) else {}
+
+
+async def stk_packs(uid: int) -> dict:
+    d = await db_get(f"stkpacks/{uid}")
+    return {k: v for k, v in d.items() if _HEX_RE.fullmatch(k) and isinstance(v, dict) and v.get("name")} \
+        if isinstance(d, dict) else {}
+
+
+async def stk_menu_view(uid: int, lang: str) -> tuple[str, Kb]:
+    st, packs = await stk_state(uid), await stk_packs(uid)
+    act = packs.get(st.get("active", ""))
+    rows = []
+    if st.get("pending"):
+        text = tx(lang, "stk_menu_pending", title=esc(st["pending"]))
+    elif act:
+        text = tx(lang, "stk_menu_pack", title=esc(act["title"]), n=int(act.get("n", 0)))
+        rows.append([Btn(tx(lang, "b_stk_open"), url=pack_url(act["name"]))])
+    else:
+        text = tx(lang, "stk_menu_nopack")
+    new_row = [Btn(tx(lang, "b_stk_new"), callback_data="stk_new")]
+    if packs:
+        new_row.append(Btn(tx(lang, "b_stk_list"), callback_data="stk_list"))
+    rows += [new_row, back_row(lang)]
+    return text, Kb(rows)
+
+
+async def stk_list_view(uid: int, lang: str) -> tuple[str, Kb]:
+    st, packs = await stk_state(uid), await stk_packs(uid)
+    rows = []
+    for hx, p in sorted(packs.items(), key=lambda kv: kv[1].get("ts", 0), reverse=True)[:8]:
+        mark = "✅ " if st.get("active") == hx else "⚪ "
+        rows.append([Btn(clip(f"{mark}{p.get('title', '')} ({int(p.get('n', 0))})", 38), callback_data=f"stk_use_{hx}"),
+                     Btn("🔗", url=pack_url(p["name"]))])
+    rows += [[Btn(tx(lang, "b_stk_new"), callback_data="stk_new")], back_row(lang, "ask_sticker")]
+    return tx(lang, "stk_list_title"), Kb(rows)
+
+
+def _input_sticker(webp: bytes):
+    """InputSticker across PTB versions (Bot API ≥ 7.2 wants the `format`)."""
+    from telegram import InputSticker                                   # type: ignore
+    f = InputFile(webp, filename="sticker.webp")
+    try:
+        return InputSticker(sticker=f, emoji_list=[STK_EMOJI], format="static")
+    except TypeError:
+        return InputSticker(sticker=f, emoji_list=[STK_EMOJI])
+
+
+async def _pack_create(ctx, uid: int, name: str, title: str, webp: bytes) -> None:
+    try:
+        await ctx.bot.create_new_sticker_set(user_id=uid, name=name, title=title, stickers=[_input_sticker(webp)])
+    except TypeError:                                                   # older PTB: separate sticker_format
+        await ctx.bot.create_new_sticker_set(user_id=uid, name=name, title=title,
+                                             stickers=[_input_sticker(webp)], sticker_format="static")
+
+
+async def _pack_add(ctx, uid: int, name: str, webp: bytes) -> None:
+    await ctx.bot.add_sticker_to_set(user_id=uid, name=name, sticker=_input_sticker(webp))
+
+
+def _pack_kb(lang: str, name: str | None, extra: list | None = None) -> Kb:
+    rows = []
+    if name:
+        rows.append([Btn(tx(lang, "b_stk_open"), url=pack_url(name))])
+    rows += (extra or []) + [[Btn(tx(lang, "b_delete"), callback_data="close")]]
+    return Kb(rows)
+
+
+async def deliver_sticker(ctx, uid: int, chat_id: int, lang: str, webp: bytes) -> None:
+    """Send the sticker — and put it into the user's pack (creating the pack with the first photo)."""
+    st, packs = await stk_state(uid), await stk_packs(uid)
+    new_btn = [[Btn(tx(lang, "b_stk_new"), callback_data="stk_new")]]
+    f = lambda: InputFile(webp, filename="sticker.webp")                # noqa: E731 — fresh upload object per send
+
+    if st.get("pending"):                                               # first photo → create the pack
+        hx = secrets.token_hex(3)
+        name, title = f"s{uid}_{hx}_by_{BOT_USERNAME}", st["pending"]
+        await _pack_create(ctx, uid, name, title, webp)
+        await db_put(f"stkpacks/{uid}/{hx}", {"name": name, "title": title, "n": 1, "ts": int(time.time())})
+        await db_put(f"stk/{uid}", {"active": hx})
+        await ctx.bot.send_sticker(chat_id, f(), reply_markup=_pack_kb(lang, name), **_UP)
+        await ctx.bot.send_message(chat_id, tx(lang, "stk_created", title=esc(title)),
+                                   reply_markup=Kb([[Btn(tx(lang, "b_stk_open"), url=pack_url(name))]]))
+        return
+
+    act = packs.get(st.get("active", ""))
+    if act:
+        hx = st["active"]
+        if int(act.get("n", 0)) >= PACK_MAX:
+            return await ctx.bot.send_message(chat_id, tx(lang, "stk_full"), reply_markup=Kb(new_btn))
+        try:
+            await _pack_add(ctx, uid, act["name"], webp)
+        except BadRequest as e:
+            msg = str(e).lower()
+            if "too_much" in msg or "too much" in msg:
+                await db_put(f"stkpacks/{uid}/{hx}/n", PACK_MAX)
+                return await ctx.bot.send_message(chat_id, tx(lang, "stk_full"), reply_markup=Kb(new_btn))
+            if "stickerset_invalid" in msg or "invalid" in msg or "not found" in msg:   # deleted inside Telegram
+                await db_del(f"stkpacks/{uid}/{hx}")
+                await db_del(f"stk/{uid}/active")
+                return await ctx.bot.send_message(chat_id, tx(lang, "stk_gone"), reply_markup=Kb(new_btn))
+            raise
+        await db_incr(f"stkpacks/{uid}/{hx}/n")
+        return await ctx.bot.send_sticker(chat_id, f(), reply_markup=_pack_kb(lang, act["name"]), **_UP)
+
+    await ctx.bot.send_sticker(chat_id, f(), reply_markup=_pack_kb(lang, None, new_btn), **_UP)   # single sticker, no pack
+
+
+def _is_stk_title_reply(msg) -> bool:
+    """True when the user is answering the 'send a name for your pack' prompt."""
+    r = getattr(msg, "reply_to_message", None)
+    if not r or not r.from_user or not r.from_user.is_bot or not r.text:
+        return False
+    heads = {plain(tx(l, "stk_ask_title")).split("\n")[0] for l in L}
+    return r.text.split("\n")[0].strip() in heads
+
+
 def _photo_file(msg) -> tuple[str, int] | None:
     """(file_id, size) of a gallery photo, or of an image sent as a file; None otherwise."""
     if getattr(msg, "photo", None):
@@ -3469,8 +3655,7 @@ async def process_photo_sticker(update: Update, ctx, lang: str) -> None:
         webp = await asyncio.to_thread(_static_sticker, raw)
         if not webp:
             return await safe_edit(status, tx(lang, "mkstk_fail"))
-        await ctx.bot.send_sticker(chat_id, InputFile(webp, filename="sticker.webp"),
-                                   reply_markup=_close_kb(lang), **_UP)
+        await deliver_sticker(ctx, uid, chat_id, lang, webp)
         try:
             await status.delete()
         except TelegramError:
@@ -4478,6 +4663,13 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if q and not q.startswith("/"):
             return await process_discover(update, ctx, lang, "search", q=q[:60])
         return await msg.reply_text(tx(lang, "ask_search_prompt"), reply_markup=ForceReply(selective=True))
+
+    if private and _is_stk_title_reply(msg):             # answer to the "name your sticker pack" prompt
+        title = (msg.text or "").strip()
+        if not title or title.startswith("/") or len(title) > 60:
+            return await msg.reply_text(tx(lang, "stk_title_bad"), reply_markup=ForceReply(selective=True))
+        await db_put(f"stk/{uid}/pending", title)
+        return await msg.reply_text(tx(lang, "stk_title_ok", title=esc(title)))
 
     if private and _is_story_reply(msg):                 # answer to the "secret story" prompt
         username = extract_username(text)
