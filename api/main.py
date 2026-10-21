@@ -267,6 +267,10 @@ L["ku"] = {
     "stk_gone": "⚠️ ئەم پاکێجە لە تێلیگرام سڕاوەتەوە. پاکێجێکی نوێ دروست بکە.",
     "stk_list_title": "📂 <b>پاکێجەکانم</b>\n\nپاکێجی چالاک بە ✅ دیاری کراوە، هەر یەکێک دابگرە بۆ گۆڕین:",
     "stk_switched": "✅ پاکێجی چالاک گۆڕدرا",
+    "stk_del_confirm": "⚠️ <b>دڵنیایت دەتەوێت ئەم پاکێجە بسڕیتەوە؟</b>\n\n📦 {title} ({n} ستیکەر)\n\nئەم کارە <b>ناگەڕێتەوە</b>: پاکێجەکە و هەموو ستیکەرەکانی لە تێلیگرام دەسڕدرێنەوە.",
+    "b_stk_del_yes": "✅ بەڵێ، بیسڕەوە", "b_stk_del_no": "❌ نەخێر، گەڕانەوە",
+    "stk_deleted": "🗑 پاکێجەکە سڕایەوە",
+    "stk_del_fail": "❌ نەتوانرا پاکێجەکە بسڕدرێتەوە. دووبارە هەوڵبدەرەوە.",
     "force_join": (
         "🔒 <b>جۆینی ناچاری</b>\n\n"
         "بۆ بەردەوامبوون، سەرەتا ئەم چەناڵانە جۆین بکە، پاشان دوگمەی "
@@ -567,6 +571,10 @@ L["en"] = {
     "stk_gone": "⚠️ This pack no longer exists on Telegram. Create a new pack.",
     "stk_list_title": "📂 <b>My packs</b>\n\nThe active pack is marked ✅ — tap one to switch:",
     "stk_switched": "✅ Active pack changed",
+    "stk_del_confirm": "⚠️ <b>Are you sure you want to delete this pack?</b>\n\n📦 {title} ({n} stickers)\n\nThis <b>cannot be undone</b>: the pack and all its stickers will be deleted from Telegram.",
+    "b_stk_del_yes": "✅ Yes, delete it", "b_stk_del_no": "❌ No, go back",
+    "stk_deleted": "🗑 Pack deleted",
+    "stk_del_fail": "❌ Could not delete the pack. Please try again.",
     "force_join": (
         "🔒 <b>Forced join</b>\n\n"
         "To continue, join the channels below first, then tap <b>“I joined”</b> 👇"
@@ -863,6 +871,10 @@ L["ar"] = {
     "stk_gone": "⚠️ هذه الحزمة لم تعد موجودة في تيليجرام. أنشئ حزمة جديدة.",
     "stk_list_title": "📂 <b>حزمي</b>\n\nالحزمة الحالية معلّمة بـ ✅ — اضغط على أي حزمة للتبديل:",
     "stk_switched": "✅ تم تغيير الحزمة الحالية",
+    "stk_del_confirm": "⚠️ <b>هل أنت متأكد أنك تريد حذف هذه الحزمة؟</b>\n\n📦 {title} ({n} ملصقًا)\n\nلا يمكن التراجع عن هذا: ستُحذف الحزمة وكل ملصقاتها من تيليجرام.",
+    "b_stk_del_yes": "✅ نعم، احذفها", "b_stk_del_no": "❌ لا، رجوع",
+    "stk_deleted": "🗑 تم حذف الحزمة",
+    "stk_del_fail": "❌ تعذّر حذف الحزمة. حاول مرة أخرى.",
     "force_join": (
         "🔒 <b>الاشتراك الإجباري</b>\n\n"
         "للمتابعة اشترك في القنوات التالية أولاً ثم اضغط <b>«اشتركت»</b> 👇"
@@ -3028,6 +3040,41 @@ async def route(cb: CB, data: str):
         text, kb = await stk_list_view(uid, lang)
         return await cb.edit(text, kb)
 
+    if data.startswith("stk_del_"):                                      # step 1: ask "are you sure?"
+        hx = data[len("stk_del_"):]
+        p = (await stk_packs(uid)).get(hx) if _HEX_RE.fullmatch(hx) else None
+        await cb.answer()
+        if not p:
+            text, kb = await stk_list_view(uid, lang)
+            return await cb.edit(text, kb)
+        return await cb.edit(cb.t("stk_del_confirm", title=esc(p["title"]), n=int(p.get("n", 0))),
+                             Kb([[Btn(cb.t("b_stk_del_yes"), callback_data=f"stk_delyes_{hx}")],
+                                 [Btn(cb.t("b_stk_del_no"), callback_data="stk_list")]]))
+
+    if data.startswith("stk_delyes_"):                                   # step 2: really delete
+        hx = data[len("stk_delyes_"):]
+        packs = await stk_packs(uid)
+        p = packs.get(hx) if _HEX_RE.fullmatch(hx) else None             # only the user's own packs
+        if p:
+            try:
+                await cb.ctx.bot.delete_sticker_set(p["name"])
+            except TelegramError as e:
+                if not any(w in str(e).lower() for w in ("stickerset_invalid", "invalid", "not found")):
+                    await report_error(cb.ctx, e, "stk_delete")
+                    return await cb.answer(cb.t("stk_del_fail"), True)    # (already gone in Telegram → just clean up)
+            await db_del(f"stkpacks/{uid}/{hx}")
+            if (await stk_state(uid)).get("active") == hx:
+                rest = {k: v for k, v in packs.items() if k != hx}
+                if rest:
+                    await db_put(f"stk/{uid}/active", max(rest, key=lambda k: rest[k].get("ts", 0)))
+                else:
+                    await db_del(f"stk/{uid}/active")
+            await cb.answer(cb.t("stk_deleted"))
+        else:
+            await cb.answer()
+        text, kb = await stk_list_view(uid, lang)
+        return await cb.edit(text, kb)
+
     if data == "ask_avatar":
         await cb.answer()
         return await cb.q.message.reply_text(cb.t("ask_avatar_prompt"), reply_markup=ForceReply(selective=True))
@@ -3534,11 +3581,14 @@ async def stk_menu_view(uid: int, lang: str) -> tuple[str, Kb]:
 
 async def stk_list_view(uid: int, lang: str) -> tuple[str, Kb]:
     st, packs = await stk_state(uid), await stk_packs(uid)
+    if not packs:
+        return await stk_menu_view(uid, lang)
     rows = []
     for hx, p in sorted(packs.items(), key=lambda kv: kv[1].get("ts", 0), reverse=True)[:8]:
         mark = "✅ " if st.get("active") == hx else "⚪ "
-        rows.append([Btn(clip(f"{mark}{p.get('title', '')} ({int(p.get('n', 0))})", 38), callback_data=f"stk_use_{hx}"),
-                     Btn("🔗", url=pack_url(p["name"]))])
+        rows.append([Btn(clip(f"{mark}{p.get('title', '')} ({int(p.get('n', 0))})", 28), callback_data=f"stk_use_{hx}"),
+                     Btn("🔗", url=pack_url(p["name"])),
+                     Btn("🗑", callback_data=f"stk_del_{hx}")])
     rows += [[Btn(tx(lang, "b_stk_new"), callback_data="stk_new")], back_row(lang, "ask_sticker")]
     return tx(lang, "stk_list_title"), Kb(rows)
 
