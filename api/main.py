@@ -41,6 +41,7 @@ import shutil
 import tempfile
 import time
 import traceback
+import urllib.parse
 from contextvars import ContextVar
 from datetime import datetime, timezone
 
@@ -66,6 +67,7 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
     Defaults,
+    ChatMemberHandler,
     MessageHandler,
     filters,
 )
@@ -128,6 +130,7 @@ admins_set:       set  = {OWNER_ID}
 channels_list:    list = []
 blocked_set:      set  = set()
 vip_set:          set  = set()
+vip_until:        dict = {}          # uid → epoch: temporary VIP earned through referrals
 last_cfg_load:    float = 0.0
 
 CFG: dict = {
@@ -143,6 +146,10 @@ CFG: dict = {
     "total_users":  0,
     "active_api":   "auto",
     "auto_audio":   False,
+    "ref_on":       True,       # referral system (free VIP for invites)
+    "ref_need":     5,          # invited users needed per reward
+    "ref_days":     3,          # VIP days per reward
+    "groups_on":    True,       # answer TikTok links posted in groups
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -175,6 +182,8 @@ L["ku"] = {
         "🕵️ ستۆری — دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیمێک بنێرە\n"
         "🎞 GIF · 🧩 ستیکەر · 💬 کۆمێنت — دوگمەکانی ژێر ڤیدیۆکە\n"
         "🖼 ستیکەر — وێنەیەک بنێرە و دەیکەم بە ستیکەر\n"
+        "📜 مێژوو · ⭐ دڵخواز — ڤیدیۆکانت بە یەک پەنجە دووبارە بنێرە\n"
+        "🎁 بانگهێشت — هاوڕێ بهێنە و VIP وەربگرە\n"
         "⚙️ کوالێتی — لە ڕێکخستن HD / ئاسایی / تەنیا دەنگ هەڵبژێرە</blockquote>\n"
         "💎 <b>VIP</b> — بێ جۆینی ناچاری و وێنەی زیاتر.\n"
         "📩 پەیوەندی: {dev}"
@@ -224,6 +233,27 @@ L["ku"] = {
     "st_mkstk": "🖼 <b>ستیکەرەکە ئامادە دەکرێت…</b>",
     "mkstk_fail": "❌ نەتوانرا ئەم وێنەیە بکرێت بە ستیکەر. وێنەیەکی تر تاقی بکەرەوە.",
     "mkstk_big": "⚠️ ئەم وێنەیە زۆر گەورەیە (زیاتر لە ٢٠MB).",
+    "b_hist": "📜 مێژوو", "b_favs": "⭐ دڵخوازەکان", "b_ref": "🎁 بانگهێشت",
+    "b_fav": "⭐ دڵخواز", "b_faved": "✅ دڵخوازە", "b_hist_clear": "🗑 پاککردنەوەی مێژوو",
+    "hist_title": "📜 <b>مێژووی دابەزاندن</b> · {n}\n\nهەر یەکێکیان دابگرە بۆ ناردنەوەی 👇",
+    "hist_empty": "📜 هێشتا هیچت دانەبەزاندووە.\nلینکی تیکتۆکێک بنێرە.",
+    "favs_title": "⭐ <b>دڵخوازەکان</b> · {n}\n\nهەر یەکێکیان دابگرە بۆ ناردنەوەی 👇",
+    "favs_empty": "⭐ لیستی دڵخوازەکان بەتاڵە.\nلە ژێر هەر ڤیدیۆیەک دوگمەی ⭐ دابگرە.",
+    "hist_cleared": "🗑 مێژوو پاککرایەوە",
+    "fav_added": "⭐ زیادکرا بۆ دڵخوازەکان",
+    "fav_removed": "🗑 لە دڵخوازەکان لابرا",
+    "fav_full": "⚠️ لیستی دڵخوازەکان پڕە ({n} دانە). یەکێک لابە.",
+    "ref_info": "🎁 <b>هاوڕێکانت بانگهێشت بکە</b>\n\nهەر <b>{need}</b> کەس بە لینکی تۆوە بێن و یەک ڤیدیۆ دابەزێنن، <b>{days} ڕۆژ VIP</b> وەردەگریت 💎\n\n👥 بانگهێشتکراوان: <b>{cnt}</b>\n📊 بۆ خەڵاتی داهاتوو: <b>{left}</b> کەسی تر ماوە\n\n🔗 لینکی تایبەتی تۆ:\n<code>{link}</code>",
+    "ref_vip_until": "💎 VIPەکەت تا <b>{until}</b> چالاکە",
+    "ref_off": "🎁 سیستەمی بانگهێشتکردن ئێستا ناچالاکە.",
+    "b_ref_share": "📤 ناردنی لینک بۆ هاوڕێکان",
+    "ref_share_text": "🎬 باشترین بۆتی دابەزاندنی تیکتۆک، بێ لۆگۆ! لێرەوە دەست پێبکە:",
+    "ref_progress": "👥 یەکێک بە لینکەکەتەوە هات و ڤیدیۆیەکی دابەزاند! ({cnt}/{need})",
+    "ref_reward": "🎉 <b>پیرۆزە!</b> <b>{days} ڕۆژ VIP</b> وەرگرت 💎\nتا <b>{until}</b> چالاکە.",
+    "b_sup_ref": "🎁 بانگهێشتکردن", "b_sup_groups": "👥 گرووپ: {status}",
+    "b_ref_toggle": "🔘 بانگهێشتکردن: {status}",
+    "sup_ref_title": "🎁 <b>ڕێکخستنی بانگهێشتکردن</b>\n\nدۆخ: {status}\n👥 ژمارەی بانگهێشتکراو بۆ خەڵات: <b>{need}</b>\n💎 ماوەی VIP: <b>{days}</b> ڕۆژ",
+    "grp_welcome": "👋 سڵاو! من بۆتی دابەزاندنی تیکتۆکم.\n\nلینکی تیکتۆک لێرە بنێرە، ڤیدیۆکە بێ لۆگۆ دەنێرمەوە 🎬",
     "force_join": (
         "🔒 <b>جۆینی ناچاری</b>\n\n"
         "بۆ بەردەوامبوون، سەرەتا ئەم چەناڵانە جۆین بکە، پاشان دوگمەی "
@@ -440,6 +470,8 @@ L["en"] = {
         "🕵️ Stories — tap <b>Secret story</b> and send a username\n"
         "🎞 GIF · 🧩 Sticker · 💬 Comments — buttons under the video\n"
         "🖼 Sticker — send a photo and I turn it into a sticker\n"
+        "📜 History · ⭐ Favorites — re-send your videos in one tap\n"
+        "🎁 Invite — bring friends and earn VIP\n"
         "⚙️ Quality — pick HD / Standard / Audio only in Settings</blockquote>\n"
         "💎 <b>VIP</b> — no forced join, more photos.\n"
         "📩 Contact: {dev}"
@@ -489,6 +521,27 @@ L["en"] = {
     "st_mkstk": "🖼 <b>Making your sticker…</b>",
     "mkstk_fail": "❌ Could not turn this image into a sticker. Try another one.",
     "mkstk_big": "⚠️ This image is too large (over 20 MB).",
+    "b_hist": "📜 History", "b_favs": "⭐ Favorites", "b_ref": "🎁 Invite",
+    "b_fav": "⭐ Favorite", "b_faved": "✅ Saved", "b_hist_clear": "🗑 Clear history",
+    "hist_title": "📜 <b>Download history</b> · {n}\n\nTap one to send it again 👇",
+    "hist_empty": "📜 You haven't downloaded anything yet.\nSend a TikTok link.",
+    "favs_title": "⭐ <b>Favorites</b> · {n}\n\nTap one to send it again 👇",
+    "favs_empty": "⭐ Your favorites list is empty.\nTap ⭐ under any video to add it.",
+    "hist_cleared": "🗑 History cleared",
+    "fav_added": "⭐ Added to favorites",
+    "fav_removed": "🗑 Removed from favorites",
+    "fav_full": "⚠️ Favorites are full ({n} items). Remove one first.",
+    "ref_info": "🎁 <b>Invite your friends</b>\n\nFor every <b>{need}</b> people who join with your link and download a video, you get <b>{days} days of VIP</b> 💎\n\n👥 Invited: <b>{cnt}</b>\n📊 Next reward: <b>{left}</b> more\n\n🔗 Your personal link:\n<code>{link}</code>",
+    "ref_vip_until": "💎 Your VIP is active until <b>{until}</b>",
+    "ref_off": "🎁 The invite system is currently off.",
+    "b_ref_share": "📤 Share your link",
+    "ref_share_text": "🎬 The best TikTok downloader bot — no watermark! Start here:",
+    "ref_progress": "👥 Someone joined with your link and downloaded a video! ({cnt}/{need})",
+    "ref_reward": "🎉 <b>Congratulations!</b> You earned <b>{days} days of VIP</b> 💎\nActive until <b>{until}</b>.",
+    "b_sup_ref": "🎁 Invites", "b_sup_groups": "👥 Groups: {status}",
+    "b_ref_toggle": "🔘 Invites: {status}",
+    "sup_ref_title": "🎁 <b>Invite settings</b>\n\nStatus: {status}\n👥 Invites needed per reward: <b>{need}</b>\n💎 VIP length: <b>{days}</b> days",
+    "grp_welcome": "👋 Hi! I'm a TikTok downloader bot.\n\nSend a TikTok link here and I'll reply with the video, no watermark 🎬",
     "force_join": (
         "🔒 <b>Forced join</b>\n\n"
         "To continue, join the channels below first, then tap <b>“I joined”</b> 👇"
@@ -701,6 +754,8 @@ L["ar"] = {
         "🕵️ القصص — اضغط <b>قصة سرية</b> وأرسل اسم مستخدم\n"
         "🎞 GIF · 🧩 ملصق · 💬 التعليقات — أزرار أسفل الفيديو\n"
         "🖼 ملصق — أرسل صورة وسأحوّلها إلى ملصق\n"
+        "📜 السجل · ⭐ المفضلة — أعد إرسال فيديوهاتك بضغطة واحدة\n"
+        "🎁 دعوة — أحضر أصدقاءك واحصل على VIP\n"
         "⚙️ الجودة — اختر HD / عادية / صوت فقط من الإعدادات</blockquote>\n"
         "💎 <b>VIP</b> — بدون اشتراك إجباري وصور أكثر.\n"
         "📩 للتواصل: {dev}"
@@ -750,6 +805,27 @@ L["ar"] = {
     "st_mkstk": "🖼 <b>جارٍ تجهيز الملصق…</b>",
     "mkstk_fail": "❌ تعذّر تحويل هذه الصورة إلى ملصق. جرّب صورة أخرى.",
     "mkstk_big": "⚠️ هذه الصورة كبيرة جدًا (أكثر من 20 ميغابايت).",
+    "b_hist": "📜 السجل", "b_favs": "⭐ المفضلة", "b_ref": "🎁 دعوة",
+    "b_fav": "⭐ مفضلة", "b_faved": "✅ تم الحفظ", "b_hist_clear": "🗑 مسح السجل",
+    "hist_title": "📜 <b>سجل التحميل</b> · {n}\n\nاضغط على أي عنصر لإرساله مجددًا 👇",
+    "hist_empty": "📜 لم تقم بتحميل أي شيء بعد.\nأرسل رابط تيك توك.",
+    "favs_title": "⭐ <b>المفضلة</b> · {n}\n\nاضغط على أي عنصر لإرساله مجددًا 👇",
+    "favs_empty": "⭐ قائمة المفضلة فارغة.\nاضغط ⭐ أسفل أي فيديو لإضافته.",
+    "hist_cleared": "🗑 تم مسح السجل",
+    "fav_added": "⭐ أُضيف إلى المفضلة",
+    "fav_removed": "🗑 أُزيل من المفضلة",
+    "fav_full": "⚠️ قائمة المفضلة ممتلئة ({n} عنصر). احذف عنصرًا أولًا.",
+    "ref_info": "🎁 <b>ادعُ أصدقاءك</b>\n\nلكل <b>{need}</b> أشخاص ينضمون عبر رابطك ويحمّلون فيديو، تحصل على <b>{days} أيام VIP</b> 💎\n\n👥 المدعوون: <b>{cnt}</b>\n📊 للمكافأة التالية: <b>{left}</b> آخرون\n\n🔗 رابطك الخاص:\n<code>{link}</code>",
+    "ref_vip_until": "💎 اشتراك VIP فعّال حتى <b>{until}</b>",
+    "ref_off": "🎁 نظام الدعوات متوقف حاليًا.",
+    "b_ref_share": "📤 مشاركة الرابط",
+    "ref_share_text": "🎬 أفضل بوت لتحميل تيك توك بدون علامة مائية! ابدأ من هنا:",
+    "ref_progress": "👥 انضم شخص عبر رابطك وحمّل فيديو! ({cnt}/{need})",
+    "ref_reward": "🎉 <b>مبروك!</b> حصلت على <b>{days} أيام VIP</b> 💎\nفعّال حتى <b>{until}</b>.",
+    "b_sup_ref": "🎁 الدعوات", "b_sup_groups": "👥 المجموعات: {status}",
+    "b_ref_toggle": "🔘 الدعوات: {status}",
+    "sup_ref_title": "🎁 <b>إعدادات الدعوات</b>\n\nالحالة: {status}\n👥 عدد الدعوات لكل مكافأة: <b>{need}</b>\n💎 مدة VIP: <b>{days}</b> يوم",
+    "grp_welcome": "👋 مرحبًا! أنا بوت تحميل تيك توك.\n\nأرسل رابط تيك توك هنا وسأرد بالفيديو بدون علامة مائية 🎬",
     "force_join": (
         "🔒 <b>الاشتراك الإجباري</b>\n\n"
         "للمتابعة اشترك في القنوات التالية أولاً ثم اضغط <b>«اشتركت»</b> 👇"
@@ -1001,7 +1077,7 @@ def as_list(v) -> list:
 def is_owner(uid) -> bool:   return uid == OWNER_ID
 def is_super(uid) -> bool:   return uid in super_admins_set or is_owner(uid)
 def is_admin(uid) -> bool:   return uid in admins_set or is_super(uid)
-def is_vip(uid) -> bool:     return uid in vip_set or is_super(uid)
+def is_vip(uid) -> bool:     return uid in vip_set or is_super(uid) or vip_until.get(uid, 0) > time.time()
 def is_blocked(uid) -> bool: return uid in blocked_set and not is_owner(uid)
 
 
@@ -1112,7 +1188,7 @@ async def db_incr(path: str, n: int = 1) -> bool:
 
 # ── shared configuration ──────────────────────────────────────────────────────
 async def load_cfg(force: bool = False) -> None:
-    global super_admins_set, admins_set, channels_list, blocked_set, vip_set, last_cfg_load
+    global super_admins_set, admins_set, channels_list, blocked_set, vip_set, vip_until, last_cfg_load
     if not DB_URL:
         return
     if not force and time.time() - last_cfg_load < CFG_TTL:
@@ -1126,6 +1202,11 @@ async def load_cfg(force: bool = False) -> None:
     channels_list    = [str(x) for x in as_list(d.get("channels"))]
     blocked_set      = {int(x) for x in as_list(d.get("blocked"))}
     vip_set          = {int(x) for x in as_list(d.get("vips"))}
+    vu = d.get("vip_until")
+    if isinstance(vu, dict):
+        now = time.time()
+        vip_until = {int(k): int(v) for k, v in vu.items()
+                     if str(k).isdigit() and isinstance(v, (int, float)) and v > now}
     if isinstance(d.get("cfg"), dict):
         CFG.update(d["cfg"])
 
@@ -1173,6 +1254,7 @@ async def ensure_user(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> tuple[d
         await db_put(f"users/{u.id}", ud)
         await db_incr("sys/cfg/total_users")
         await notify_new_user(ctx, u)
+        ud["_new"] = True                                         # in-memory only: first contact (not saved)
     return ud, user_lang(ud)
 
 
@@ -1299,40 +1381,296 @@ def media_from_cache(hit: dict) -> dict:
     }
 
 
-async def send_from_cache(ctx, chat_id: int, lang: str, url: str, quality: str) -> bool:
-    """Repeated link → send by file_id (≈1 s, no API call, no download, no upload). False → do it the normal way."""
+async def send_from_cache(ctx, chat_id: int, lang: str, url: str, quality: str) -> dict | None:
+    """Repeated link → send by file_id (≈1 s, no API call, no download, no upload). None → do it the normal way."""
     key = await db_get(f"uc/{_url_hash(url)}")
     if not safe_key(key):
-        return False
+        return None
     hit = await cache_get(key)
     if not hit:
-        return False
+        return None
     m = media_from_cache(hit)
     auto = bool(CFG.get("auto_audio"))
     try:
         if quality == "audio" and hit.get("fid_a"):
             await ctx.bot.send_audio(chat_id, hit["fid_a"], caption=f"🎵 {bot_tag()}",
                                      reply_markup=audio_kb(lang), **_UP)
-            return True
+            return m
         if quality == "audio":
-            return False
+            return None
         fid = hit.get("fid_hd" if quality == "hd" else "fid_sd")          # exactly the quality the user chose
         if not fid or (auto and m["audio"] and not hit.get("fid_a")):
-            return False
+            return None
         await ctx.bot.send_video(chat_id, fid, caption=build_caption(m),
                                  reply_markup=result_kb(lang, m, with_audio=not auto), **_UP)
         if auto and hit.get("fid_a"):
             await ctx.bot.send_audio(chat_id, hit["fid_a"], caption=f"🎵 {bot_tag()}",
                                      reply_markup=audio_kb(lang), **_UP)
-        return True
+        return m
     except TelegramError as e:
         log.info("cache send failed (%s) → normal path", e)
-        return False
+        return None
 
 
-async def count_download(uid: int) -> None:
+async def count_download(uid: int, ctx=None) -> None:
     await db_incr("sys/cfg/total_dl")
     await db_incr(f"users/{uid}/dl")
+    if ctx is not None and CFG.get("ref_on", True):                 # an invited user's first download pays the inviter
+        try:
+            await credit_referral(ctx, uid)
+        except Exception as e:                                       # noqa: BLE001 — never block a download
+            log.info("referral credit failed: %s", e)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 9c · REFERRAL (free VIP) · HISTORY · FAVORITES · GROUPS
+# ══════════════════════════════════════════════════════════════════════════════
+HIST_MAX, FAV_MAX, LIST_PAGE = 40, 60, 8
+
+
+def ref_link(uid: int) -> str:
+    return f"https://t.me/{BOT_USERNAME}?start=ref_{uid}"
+
+
+def fmt_ts(ts: int) -> str:
+    return time.strftime("%Y-%m-%d", time.gmtime(ts))
+
+
+async def grant_temp_vip(uid: int, days: float) -> int:
+    """Add `days` of VIP on top of what the user still has. → new expiry (epoch seconds)."""
+    until = max(vip_until.get(uid, 0), int(time.time())) + int(days * 86400)
+    vip_until[uid] = until
+    await db_put(f"sys/vip_until/{uid}", until)
+    return until
+
+
+async def register_referral(new_uid: int, raw: str) -> None:
+    """/start ref_<inviter> by a brand-new user → remembered; it counts after the first download."""
+    if not CFG.get("ref_on", True) or not raw.isdigit():
+        return
+    inviter = int(raw)
+    if inviter == new_uid or not await user_exists(inviter):
+        return
+    await db_put(f"users/{new_uid}/ref_by", inviter)
+
+
+async def credit_referral(ctx, uid: int) -> None:
+    """The invited user finished a first download → progress (or reward) for the inviter."""
+    inviter = await db_get(f"users/{uid}/ref_by")
+    if not isinstance(inviter, int):
+        return
+    await db_del(f"users/{uid}/ref_by")                        # one-shot: each invited user counts once
+    await db_incr(f"users/{inviter}/ref_cnt")
+    cnt = int(await db_get(f"users/{inviter}/ref_cnt", 0) or 0)
+    done = int(await db_get(f"users/{inviter}/ref_done", 0) or 0)
+    need = max(1, int(CFG.get("ref_need", 5)))
+    days = max(1, int(CFG.get("ref_days", 3)))
+    lang = user_lang(await db_get(f"users/{inviter}"))
+    if cnt // need > done:
+        n = cnt // need - done
+        until = await grant_temp_vip(inviter, days * n)
+        await db_put(f"users/{inviter}/ref_done", cnt // need)
+        text = tx(lang, "ref_reward", days=days * n, until=fmt_ts(until))
+    else:
+        text = tx(lang, "ref_progress", cnt=cnt % need, need=need)
+    try:
+        await ctx.bot.send_message(inviter, text)
+    except TelegramError as e:
+        log.info("referral notice failed: %s", e)
+
+
+async def ref_view(uid: int, lang: str) -> tuple[str, Kb]:
+    if not CFG.get("ref_on", True):
+        return tx(lang, "ref_off"), Kb([back_row(lang)])
+    ud = await db_get(f"users/{uid}")
+    cnt = int((ud or {}).get("ref_cnt", 0) or 0)
+    need = max(1, int(CFG.get("ref_need", 5)))
+    days = max(1, int(CFG.get("ref_days", 3)))
+    link = ref_link(uid)
+    text = tx(lang, "ref_info", need=need, days=days, cnt=cnt, left=need - cnt % need, link=link)
+    until = vip_until.get(uid, 0)
+    if until > time.time():
+        text += "\n\n" + tx(lang, "ref_vip_until", until=fmt_ts(until))
+    share = (f"https://t.me/share/url?url={urllib.parse.quote(link)}"
+             f"&text={urllib.parse.quote(tx(lang, 'ref_share_text'))}")
+    return text, Kb([[Btn(tx(lang, "b_ref_share"), url=share)], back_row(lang)])
+
+
+# ── history / favorites ──────────────────────────────────────────────────────
+async def hist_add(uid: int, media: dict) -> None:
+    key = media.get("key")
+    if not safe_key(key):
+        return
+    try:
+        await db_put(f"hist/{uid}/{key}", {"c": clip(media.get("creator") or "", 30),
+                                           "t": clip(media.get("title") or "", 60),
+                                           "ts": int(time.time()), "i": 1 if media.get("images") else 0})
+    except Exception as e:                                           # noqa: BLE001 — history is best effort
+        log.info("hist_add failed: %s", e)
+
+
+async def _load_items(path: str, cap: int) -> list:
+    d = await db_get(path)
+    if not isinstance(d, dict):
+        return []
+    items = [(k, v) for k, v in d.items() if safe_key(k) and isinstance(v, dict)]
+    items.sort(key=lambda kv: kv[1].get("ts", 0), reverse=True)
+    for k, _ in items[cap:]:                                         # keep the list tidy
+        await db_del(f"{path}/{k}")
+    return items[:cap]
+
+
+def _item_label(it: dict) -> str:
+    text = f"{'🖼' if it.get('i') else '🎬'} {it.get('c') or 'TikTok'}"
+    if it.get("t"):
+        text += f" · {it['t']}"
+    return clip(text, 40)
+
+
+async def list_view(uid: int, lang: str, kind: str, page: int) -> tuple[str, Kb]:
+    """kind: "hist" (download history) | "fav" (favorites)."""
+    hist = kind == "hist"
+    items = await _load_items(f"{'hist' if hist else 'fav'}/{uid}", HIST_MAX if hist else FAV_MAX)
+    if not items:
+        return tx(lang, "hist_empty" if hist else "favs_empty"), Kb([back_row(lang)])
+    pages = -(-len(items) // LIST_PAGE)
+    page = max(0, min(page, pages - 1))
+    rows = [[Btn(_item_label(v), callback_data=f"rs_{k}")] for k, v in items[page * LIST_PAGE:(page + 1) * LIST_PAGE]]
+    if pages > 1:
+        nav = []
+        if page > 0:
+            nav.append(Btn("◀️", callback_data=f"my_{kind}_{page - 1}"))
+        nav.append(Btn(f"{page + 1}/{pages}", callback_data="noop"))
+        if page < pages - 1:
+            nav.append(Btn("▶️", callback_data=f"my_{kind}_{page + 1}"))
+        rows.append(nav)
+    if hist:
+        rows.append([Btn(tx(lang, "b_hist_clear"), callback_data="hist_clr")])
+    rows.append(back_row(lang))
+    return tx(lang, "hist_title" if hist else "favs_title", n=len(items)), Kb(rows)
+
+
+async def _mark_fav_button(cb: "CB", key: str, on: bool) -> None:
+    try:
+        old = cb.q.message.reply_markup.inline_keyboard
+    except AttributeError:
+        return
+    rows = []
+    for row in old:
+        new = []
+        for b in row:
+            if b.callback_data == f"fav_{key}":
+                new.append(Btn(cb.t("b_faved" if on else "b_fav"), callback_data=b.callback_data))
+            elif b.callback_data:
+                new.append(Btn(b.text, callback_data=b.callback_data))
+            else:
+                new.append(Btn(b.text, url=b.url))
+        rows.append(new)
+    try:
+        await cb.q.message.edit_reply_markup(reply_markup=Kb(rows))
+    except TelegramError:
+        pass
+
+
+async def toggle_fav(cb: "CB", key: str) -> None:
+    if not safe_key(key):
+        return await cb.answer()
+    uid = cb.uid
+    if await db_get(f"fav/{uid}/{key}") is not None:
+        await db_del(f"fav/{uid}/{key}")
+        await cb.answer(cb.t("fav_removed"))
+        return await _mark_fav_button(cb, key, False)
+    if len((await db_get(f"fav/{uid}")) or {}) >= FAV_MAX:
+        return await cb.answer(cb.t("fav_full", n=FAV_MAX), True)
+    hit = await cache_get(key) or {}
+    await db_put(f"fav/{uid}/{key}", {"c": clip(hit.get("creator") or "TikTok", 30),
+                                      "t": clip(hit.get("title") or "", 60), "ts": int(time.time()), "i": 0})
+    await cb.answer(cb.t("fav_added"))
+    await _mark_fav_button(cb, key, True)
+
+
+# ── admin: referral settings ─────────────────────────────────────────────────
+async def ref_admin_view(cb: "CB") -> None:
+    need, days = int(CFG.get("ref_need", 5)), int(CFG.get("ref_days", 3))
+    on = CFG.get("ref_on", True)
+    rows = [
+        [Btn(cb.t("b_ref_toggle", status=status_word(cb.lang, on)), callback_data="sup_ref_t")],
+        [Btn("➖", callback_data="sup_ref_n-1"), Btn(f"👥 {need}", callback_data="noop"),
+         Btn("➕", callback_data="sup_ref_n+1")],
+        [Btn("-7", callback_data="sup_ref_d-7"), Btn("-1", callback_data="sup_ref_d-1"),
+         Btn(f"💎 {days}d", callback_data="noop"),
+         Btn("+1", callback_data="sup_ref_d+1"), Btn("+7", callback_data="sup_ref_d+7")],
+        back_row(cb.lang, "panel_unified"),
+    ]
+    await cb.edit(cb.t("sup_ref_title", status=status_word(cb.lang, on), need=need, days=days), Kb(rows))
+
+
+async def route_ref_admin(cb: "CB", data: str) -> None:
+    if data == "sup_ref_t":
+        await set_cfg(ref_on=not CFG.get("ref_on", True))
+    elif data.startswith(("sup_ref_n", "sup_ref_d")):
+        try:
+            delta = int(data[len("sup_ref_n"):])
+        except ValueError:
+            return await cb.answer()
+        if data.startswith("sup_ref_n"):
+            await set_cfg(ref_need=max(1, min(100, int(CFG.get("ref_need", 5)) + delta)))
+        else:
+            await set_cfg(ref_days=max(1, min(365, int(CFG.get("ref_days", 3)) + delta)))
+    await cb.answer()
+    await ref_admin_view(cb)
+
+
+# ── groups ───────────────────────────────────────────────────────────────────
+class _ReplyBot:
+    """In a group, every send to that chat becomes a reply to the user's link message."""
+    _WRAP = {"send_video", "send_audio", "send_photo", "send_document", "send_animation",
+             "send_media_group", "send_message"}
+
+    def __init__(self, bot, chat_id: int, mid: int):
+        self._bot, self._chat, self._mid = bot, chat_id, mid
+
+    def __getattr__(self, name):
+        fn = getattr(self._bot, name)
+        if name not in self._WRAP:
+            return fn
+
+        async def call(*a, **k):
+            target = a[0] if a else k.get("chat_id")
+            if target == self._chat:
+                k.setdefault("reply_parameters",
+                             ReplyParameters(message_id=self._mid, allow_sending_without_reply=True))
+            return await fn(*a, **k)
+        return call
+
+
+class _ReplyCtx:
+    def __init__(self, ctx, chat_id: int, mid: int):
+        self._ctx = ctx
+        self.bot = _ReplyBot(ctx.bot, chat_id, mid)
+
+    def __getattr__(self, name):
+        return getattr(self._ctx, name)
+
+
+async def on_my_chat_member(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """The bot was added to / removed from a group."""
+    ev = update.my_chat_member
+    if not ev or ev.chat.type not in ("group", "supergroup"):
+        return
+    old, new = ev.old_chat_member.status, ev.new_chat_member.status
+    gone = (ChatMemberStatus.LEFT, ChatMemberStatus.BANNED)
+    if new in gone:
+        await db_del(f"groups/{ev.chat.id}")
+        return
+    if old in gone and new in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR):
+        await db_put(f"groups/{ev.chat.id}", {"title": clip(ev.chat.title or "", 60), "ts": int(time.time())})
+        if CFG.get("groups_on", True):
+            lang = CFG.get("default_lang", "ku")
+            try:
+                await ctx.bot.send_message(ev.chat.id, tx(lang if lang in L else "ku", "grp_welcome"))
+            except TelegramError:
+                pass
 
 
 async def display_name(uid: int) -> str:
@@ -2262,7 +2600,10 @@ def result_kb(lang: str, m: dict, with_audio: bool, direct: str | None = None) -
         extra.append(Btn(tx(lang, "b_comments"), callback_data=f"dl_cmt_{key}"))
     if extra:
         rows.append(extra)
-    rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
+    last = [Btn(tx(lang, "b_delete"), callback_data="close")]
+    if safe_key(key):
+        last.insert(0, Btn(tx(lang, "b_fav"), callback_data=f"fav_{key}"))
+    rows.append(last)
     return Kb(rows)
 
 
@@ -2393,7 +2734,10 @@ def menu_view(uid: int, lang: str, name: str) -> tuple[str, Kb]:
          Btn(tx(lang, "b_avatar"), callback_data="ask_avatar")],
         [Btn(tx(lang, "b_story"), callback_data="ask_story"),
          Btn(tx(lang, "b_disc"), callback_data="ask_disc")],
-        [Btn(tx(lang, "b_mkstk"), callback_data="ask_sticker")],
+        [Btn(tx(lang, "b_mkstk"), callback_data="ask_sticker"),
+         Btn(tx(lang, "b_ref"), callback_data="show_ref")],
+        [Btn(tx(lang, "b_hist"), callback_data="my_hist_0"),
+         Btn(tx(lang, "b_favs"), callback_data="my_fav_0")],
         [Btn(tx(lang, "b_profile"), callback_data="show_profile"),
          Btn(tx(lang, "b_vip"), callback_data="show_vip")],
         [Btn(tx(lang, "b_lang"), callback_data="show_settings"),
@@ -2504,6 +2848,9 @@ async def chat_action(ctx, chat_id: int, action: str) -> None:
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     ud, lang = await ensure_user(update, ctx)
+    arg = (ctx.args[0] if getattr(ctx, "args", None) else "") or ""
+    if arg.startswith("ref_") and ud.get("_new"):                    # came through someone's invite link
+        await register_referral(uid, arg[4:])
     if not await gate_message(update, ctx, uid, lang):
         return
     text, kb = menu_view(uid, lang, update.effective_user.first_name or "")
@@ -2768,6 +3115,32 @@ async def route(cb: CB, data: str):
 
     if data == "show_vip":
         return await cb.edit(cb.t("vip_info", dev=esc(DEV)), Kb([back_row(lang)]))
+
+    if data == "show_ref":
+        text, kb = await ref_view(uid, lang)
+        return await cb.edit(text, kb)
+
+    if data.startswith(("my_hist_", "my_fav_")):
+        tail = data.rsplit("_", 1)[1]
+        text, kb = await list_view(uid, lang, "hist" if data.startswith("my_hist_") else "fav",
+                                   int(tail) if tail.isdigit() else 0)
+        return await cb.edit(text, kb)
+
+    if data == "hist_clr":
+        await db_del(f"hist/{uid}")
+        await cb.answer(cb.t("hist_cleared"))
+        text, kb = await list_view(uid, lang, "hist", 0)
+        return await cb.edit(text, kb)
+
+    if data.startswith("fav_"):
+        return await toggle_fav(cb, data[len("fav_"):])
+
+    if data.startswith("rs_"):                                       # send a history / favorite item again
+        hit = await cache_get(data[len("rs_"):])
+        if not hit or not hit.get("src"):
+            return await cb.answer(cb.t("session_expired"), True)
+        await cb.answer()
+        return await process_link(cb.update, cb.ctx, hit["src"], lang, time.monotonic())
 
     if data == "show_help":
         return await cb.edit(cb.t("help", dev=esc(DEV)), Kb([back_row(lang)]))
@@ -3178,6 +3551,9 @@ async def grant_vip(tid: int, on: bool) -> None:
     await load_cfg(force=True)
     (vip_set.add if on else vip_set.discard)(tid)
     await save_sys("vips")
+    if not on:                                                    # removing VIP also ends a referral VIP
+        vip_until.pop(tid, None)
+        await db_del(f"sys/vip_until/{tid}")
     if await user_exists(tid):
         await db_put(f"users/{tid}/vip", on)
 
@@ -3226,6 +3602,9 @@ async def show_panel(cb: CB):
                          callback_data="sup_toggle_maint")])
         rows.append([Btn(cb.t("b_sup_audio", status=status_word(lang, CFG.get("auto_audio", False))),
                          callback_data="sup_toggle_audio")])
+        rows.append([Btn(cb.t("b_sup_ref"), callback_data="sup_ref"),
+                     Btn(cb.t("b_sup_groups", status=status_word(lang, CFG.get("groups_on", True))),
+                         callback_data="sup_toggle_groups")])
         rows.append([Btn(cb.t("b_sup_botlang"), callback_data="sup_bot_lang")])
     if is_owner(uid):
         rows.append([Btn("▬▬▬  👑  ▬▬▬", callback_data="noop")])
@@ -3277,6 +3656,15 @@ async def route_super(cb: CB, data: str):
     if data == "sup_toggle_maint":
         await set_cfg(maintenance=not CFG.get("maintenance", False))
         return await show_panel(cb)
+
+    if data == "sup_toggle_groups":
+        await set_cfg(groups_on=not CFG.get("groups_on", True))
+        return await show_panel(cb)
+
+    if data == "sup_ref":
+        return await ref_admin_view(cb)
+    if data.startswith("sup_ref_"):
+        return await route_ref_admin(cb, data)
 
     if data == "sup_toggle_audio":
         await set_cfg(auto_audio=not CFG.get("auto_audio", False))
@@ -3579,14 +3967,19 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
     if not await acquire_lock(uid):
         return await msg.reply_text(tx(lang, "busy_msg"))
 
+    if update.effective_chat.type != "private":                       # groups: answer as a reply to the link
+        ctx = _ReplyCtx(ctx, chat_id, msg.message_id)
+
     status = None
     try:
         quality = await user_quality(uid)
         status = await msg.reply_text(tx(lang, "st_search", bar=bar(1)))
 
         # ⚡ repeated link → Telegram already holds the file: send it by file_id (no API call / download / upload)
-        if await send_from_cache(ctx, chat_id, lang, url, quality):
-            await count_download(uid)
+        cached = await send_from_cache(ctx, chat_id, lang, url, quality)
+        if cached:
+            await count_download(uid, ctx)
+            await hist_add(uid, cached)
             try:
                 await status.delete()
             except TelegramError:
@@ -3664,7 +4057,8 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
         if not delivered:
             return await safe_edit(status, tx(lang, "dl_fail"))
 
-        await count_download(uid)
+        await count_download(uid, ctx)
+        await hist_add(uid, media)
         try:
             await status.delete()
         except TelegramError:
@@ -4064,6 +4458,9 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = msg.text or msg.caption or ""
     url = extract_url(text)
 
+    if not private and (not url or not CFG.get("groups_on", True)):
+        return                                           # groups: only TikTok links matter — no DB work for chatter
+
     ud, lang = await ensure_user(update, ctx)
 
     if is_admin(uid) and private:                       # pending "type the ID" prompt?
@@ -4125,6 +4522,7 @@ def build_application() -> Application:
     )
     ptb.add_handler(CommandHandler("start", cmd_start))
     ptb.add_handler(CallbackQueryHandler(on_callback))
+    ptb.add_handler(ChatMemberHandler(on_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
     ptb.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND & ~filters.StatusUpdate.ALL, on_message))
     ptb.add_error_handler(on_error)
     return ptb
