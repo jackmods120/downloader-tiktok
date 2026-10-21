@@ -182,7 +182,7 @@ L["ku"] = {
         "🔥 دۆزینەوە — گەڕان لە تیکتۆک و ترێندی وڵاتان\n"
         "🕵️ ستۆری — دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیمێک بنێرە\n"
         "🎞 GIF · 🧩 ستیکەر · 💬 کۆمێنت — دوگمەکانی ژێر ڤیدیۆکە\n"
-        "🖼 ستیکەر — وێنەیەک بنێرە، یان پاکێجی ستیکەری خۆت دروست بکە\n"
+        "🖼 ستیکەر — وێنە یان ڤیدیۆ بنێرە (ستیکەری جوڵاو)، یان پاکێجی خۆت دروست بکە\n"
         "📜 مێژوو · ⭐ دڵخواز — ڤیدیۆکانت بە یەک پەنجە دووبارە بنێرە\n"
         "🎁 بانگهێشت — هاوڕێ بهێنە و VIP وەربگرە\n"
         "⚙️ کوالێتی — لە ڕێکخستن HD / ئاسایی / تەنیا دەنگ هەڵبژێرە</blockquote>\n"
@@ -255,12 +255,12 @@ L["ku"] = {
     "b_ref_toggle": "🔘 بانگهێشتکردن: {status}",
     "sup_ref_title": "🎁 <b>ڕێکخستنی بانگهێشتکردن</b>\n\nدۆخ: {status}\n👥 ژمارەی بانگهێشتکراو بۆ خەڵات: <b>{need}</b>\n💎 ماوەی VIP: <b>{days}</b> ڕۆژ",
     "grp_welcome": "👋 سڵاو! من بۆتی دابەزاندنی تیکتۆکم.\n\nلینکی تیکتۆک لێرە بنێرە، ڤیدیۆکە بێ لۆگۆ دەنێرمەوە 🎬",
-    "stk_menu_nopack": "🖼 <b>دروستکردنی ستیکەر</b>\n\nوێنەیەک لە گەلەریەکەتەوە بنێرە و دەیکەم بە ستیکەر 🧩\n\n📦 دەتوانیت <b>پاکێجی ستیکەر</b> دروست بکەیت: هەموو وێنەکانت دەچنە ناو یەک پاکێج و دەتوانیت لە تێلیگرام زیادی بکەیت.\n\n💡 بۆ کوالێتی باشتر، وێنەکە وەک <b>فایل</b> بنێرە.",
-    "stk_menu_pack": "🖼 <b>دروستکردنی ستیکەر</b>\n\n📦 پاکێجی چالاک: <b>{title}</b> ({n}/120)\n\nهەر وێنەیەک بنێریت دەچێتە ناو ئەم پاکێجە 🧩\n💡 بۆ کوالێتی باشتر، وێنەکە وەک <b>فایل</b> بنێرە.",
-    "stk_menu_pending": "🖼 <b>دروستکردنی ستیکەر</b>\n\n📦 پاکێجی نوێ: <b>{title}</b>\n\nیەکەم وێنە بنێرە، پاکێجەکە پێی دروست دەکرێت 👇",
+    "stk_menu_nopack": "🖼 <b>دروستکردنی ستیکەر</b>\n\nوێنەیەک لە گەلەریەکەتەوە بنێرە و دەیکەم بە ستیکەر 🧩\n🎞 ڤیدیۆیەکی کورت (تا ٣ چرکە) بنێرە و دەیکەم بە <b>ستیکەری جوڵاو</b>\n\n📦 دەتوانیت <b>پاکێجی ستیکەر</b> دروست بکەیت: هەموو ستیکەرەکانت دەچنە ناو یەک پاکێج و دەتوانیت لە تێلیگرام زیادی بکەیت.\n\n💡 بۆ کوالێتی باشتر، وێنەکە وەک <b>فایل</b> بنێرە.",
+    "stk_menu_pack": "🖼 <b>دروستکردنی ستیکەر</b>\n\n📦 پاکێجی چالاک: <b>{title}</b> ({n}/120)\n\nهەر وێنەیەک بنێریت دەچێتە ناو ئەم پاکێجە 🧩\n🎞 ڤیدیۆ دەبێتە ستیکەری جوڵاو و دەچێتە ناو <b>پاکێجێکی جیاواز</b>، چونکە تێلیگرام ستیکەری وێنە و ڤیدیۆ تێکەڵ ناکات.\n💡 بۆ کوالێتی باشتر، وێنەکە وەک <b>فایل</b> بنێرە.",
+    "stk_menu_pending": "🖼 <b>دروستکردنی ستیکەر</b>\n\n📦 پاکێجی نوێ: <b>{title}</b>\n\nیەکەم <b>وێنە یان ڤیدیۆ</b> بنێرە، پاکێجەکە پێی دروست دەکرێت (وێنە = پاکێجی ئاسایی، ڤیدیۆ = پاکێجی جوڵاو) 👇",
     "b_stk_new": "📦 پاکێجی نوێ", "b_stk_open": "🔗 کردنەوەی پاکێج", "b_stk_list": "📂 پاکێجەکانم",
     "stk_ask_title": "📦 <b>ناوی پاکێجەکە بنێرە</b>\n\nنموونە: <code>ستیکەرەکانی من</code>",
-    "stk_title_ok": "✅ پاکێجی <b>{title}</b> ئامادەیە.\n\nئێستا یەکەم وێنە بنێرە، پاکێجەکە پێی دروست دەکرێت 🖼",
+    "stk_title_ok": "✅ پاکێجی <b>{title}</b> ئامادەیە.\n\nئێستا یەکەم وێنە یان ڤیدیۆ بنێرە، پاکێجەکە پێی دروست دەکرێت 🖼",
     "stk_title_bad": "⚠️ ناوەکە دەبێت لە ١ بۆ ٦٠ پیت بێت. دووبارە بینێرە:",
     "stk_created": "🎉 <b>پاکێجەکەت دروست کرا!</b>\n📦 {title}\n\nدوگمەی خوارەوە دابگرە بۆ زیادکردنی بۆ تێلیگرام 👇",
     "stk_full": "⚠️ ئەم پاکێجە پڕە (١٢٠ ستیکەر). پاکێجێکی نوێ دروست بکە.",
@@ -271,6 +271,9 @@ L["ku"] = {
     "b_stk_del_yes": "✅ بەڵێ، بیسڕەوە", "b_stk_del_no": "❌ نەخێر، گەڕانەوە",
     "stk_deleted": "🗑 پاکێجەکە سڕایەوە",
     "stk_del_fail": "❌ نەتوانرا پاکێجەکە بسڕدرێتەوە. دووبارە هەوڵبدەرەوە.",
+    "stk_menu_vpack": "🎞 پاکێجی ستیکەری جوڵاو: <b>{title}</b> ({n}/120)",
+    "vstk_noffmpeg": "⚠️ ستیکەری جوڵاو لەم سێرڤەرەدا بەردەست نییە (پێویستی بە ffmpeg هەیە).",
+    "vstk_trim": "ℹ️ تێلیگرام تەنیا <b>٣ چرکە</b> بۆ ستیکەری جوڵاو ڕێگە دەدات، بۆیە سێ چرکەی یەکەمی ڤیدیۆکە بڕدرا.",
     "force_join": (
         "🔒 <b>جۆینی ناچاری</b>\n\n"
         "بۆ بەردەوامبوون، سەرەتا ئەم چەناڵانە جۆین بکە، پاشان دوگمەی "
@@ -486,7 +489,7 @@ L["en"] = {
         "🔥 Discover — search TikTok or browse trending by country\n"
         "🕵️ Stories — tap <b>Secret story</b> and send a username\n"
         "🎞 GIF · 🧩 Sticker · 💬 Comments — buttons under the video\n"
-        "🖼 Sticker — send a photo, or build your own sticker pack\n"
+        "🖼 Sticker — send a photo or a video (animated), or build your own pack\n"
         "📜 History · ⭐ Favorites — re-send your videos in one tap\n"
         "🎁 Invite — bring friends and earn VIP\n"
         "⚙️ Quality — pick HD / Standard / Audio only in Settings</blockquote>\n"
@@ -559,12 +562,12 @@ L["en"] = {
     "b_ref_toggle": "🔘 Invites: {status}",
     "sup_ref_title": "🎁 <b>Invite settings</b>\n\nStatus: {status}\n👥 Invites needed per reward: <b>{need}</b>\n💎 VIP length: <b>{days}</b> days",
     "grp_welcome": "👋 Hi! I'm a TikTok downloader bot.\n\nSend a TikTok link here and I'll reply with the video, no watermark 🎬",
-    "stk_menu_nopack": "🖼 <b>Make a sticker</b>\n\nSend a photo from your gallery and I'll turn it into a sticker 🧩\n\n📦 You can also create a <b>sticker pack</b>: all your photos go into one pack that you can add to Telegram.\n\n💡 For better quality, send the photo as a <b>file</b>.",
-    "stk_menu_pack": "🖼 <b>Make a sticker</b>\n\n📦 Active pack: <b>{title}</b> ({n}/120)\n\nEvery photo you send is added to this pack 🧩\n💡 For better quality, send the photo as a <b>file</b>.",
-    "stk_menu_pending": "🖼 <b>Make a sticker</b>\n\n📦 New pack: <b>{title}</b>\n\nSend the first photo and the pack will be created with it 👇",
+    "stk_menu_nopack": "🖼 <b>Make a sticker</b>\n\nSend a photo from your gallery and I'll turn it into a sticker 🧩\n🎞 Send a short video (up to 3 s) and I'll turn it into an <b>animated sticker</b>\n\n📦 You can also create a <b>sticker pack</b>: your stickers go into one pack that you can add to Telegram.\n\n💡 For better quality, send the photo as a <b>file</b>.",
+    "stk_menu_pack": "🖼 <b>Make a sticker</b>\n\n📦 Active pack: <b>{title}</b> ({n}/120)\n\nEvery photo you send is added to this pack 🧩\n🎞 A video becomes an animated sticker in a <b>separate pack</b>, because Telegram doesn't mix photo and video stickers.\n💡 For better quality, send the photo as a <b>file</b>.",
+    "stk_menu_pending": "🖼 <b>Make a sticker</b>\n\n📦 New pack: <b>{title}</b>\n\nSend the first <b>photo or video</b> and the pack will be created with it (photo = normal pack, video = animated pack) 👇",
     "b_stk_new": "📦 New pack", "b_stk_open": "🔗 Open pack", "b_stk_list": "📂 My packs",
     "stk_ask_title": "📦 <b>Send a name for your pack</b>\n\nExample: <code>My stickers</code>",
-    "stk_title_ok": "✅ Pack <b>{title}</b> is ready.\n\nNow send the first photo and the pack will be created with it 🖼",
+    "stk_title_ok": "✅ Pack <b>{title}</b> is ready.\n\nNow send the first photo or video and the pack will be created with it 🖼",
     "stk_title_bad": "⚠️ The name must be 1–60 characters. Send it again:",
     "stk_created": "🎉 <b>Your pack is ready!</b>\n📦 {title}\n\nTap the button to add it to Telegram 👇",
     "stk_full": "⚠️ This pack is full (120 stickers). Create a new pack.",
@@ -575,6 +578,9 @@ L["en"] = {
     "b_stk_del_yes": "✅ Yes, delete it", "b_stk_del_no": "❌ No, go back",
     "stk_deleted": "🗑 Pack deleted",
     "stk_del_fail": "❌ Could not delete the pack. Please try again.",
+    "stk_menu_vpack": "🎞 Animated pack: <b>{title}</b> ({n}/120)",
+    "vstk_noffmpeg": "⚠️ Animated stickers are not available on this server (ffmpeg is missing).",
+    "vstk_trim": "ℹ️ Telegram only allows <b>3 seconds</b> for an animated sticker, so the first 3 seconds of your video were used.",
     "force_join": (
         "🔒 <b>Forced join</b>\n\n"
         "To continue, join the channels below first, then tap <b>“I joined”</b> 👇"
@@ -786,7 +792,7 @@ L["ar"] = {
         "🔥 اكتشف — ابحث في تيك توك أو تصفّح الرائج حسب البلد\n"
         "🕵️ القصص — اضغط <b>قصة سرية</b> وأرسل اسم مستخدم\n"
         "🎞 GIF · 🧩 ملصق · 💬 التعليقات — أزرار أسفل الفيديو\n"
-        "🖼 ملصق — أرسل صورة، أو أنشئ حزمة ملصقات خاصة بك\n"
+        "🖼 ملصق — أرسل صورة أو فيديو (متحرك)، أو أنشئ حزمتك الخاصة\n"
         "📜 السجل · ⭐ المفضلة — أعد إرسال فيديوهاتك بضغطة واحدة\n"
         "🎁 دعوة — أحضر أصدقاءك واحصل على VIP\n"
         "⚙️ الجودة — اختر HD / عادية / صوت فقط من الإعدادات</blockquote>\n"
@@ -859,12 +865,12 @@ L["ar"] = {
     "b_ref_toggle": "🔘 الدعوات: {status}",
     "sup_ref_title": "🎁 <b>إعدادات الدعوات</b>\n\nالحالة: {status}\n👥 عدد الدعوات لكل مكافأة: <b>{need}</b>\n💎 مدة VIP: <b>{days}</b> يوم",
     "grp_welcome": "👋 مرحبًا! أنا بوت تحميل تيك توك.\n\nأرسل رابط تيك توك هنا وسأرد بالفيديو بدون علامة مائية 🎬",
-    "stk_menu_nopack": "🖼 <b>إنشاء ملصق</b>\n\nأرسل صورة من معرض هاتفك وسأحوّلها إلى ملصق 🧩\n\n📦 يمكنك أيضًا إنشاء <b>حزمة ملصقات</b>: تذهب كل صورك إلى حزمة واحدة يمكنك إضافتها إلى تيليجرام.\n\n💡 لجودة أفضل، أرسل الصورة كـ<b>ملف</b>.",
-    "stk_menu_pack": "🖼 <b>إنشاء ملصق</b>\n\n📦 الحزمة الحالية: <b>{title}</b> ({n}/120)\n\nكل صورة ترسلها تُضاف إلى هذه الحزمة 🧩\n💡 لجودة أفضل، أرسل الصورة كـ<b>ملف</b>.",
-    "stk_menu_pending": "🖼 <b>إنشاء ملصق</b>\n\n📦 حزمة جديدة: <b>{title}</b>\n\nأرسل أول صورة وستُنشأ الحزمة بها 👇",
+    "stk_menu_nopack": "🖼 <b>إنشاء ملصق</b>\n\nأرسل صورة من معرض هاتفك وسأحوّلها إلى ملصق 🧩\n🎞 أرسل فيديو قصيرًا (حتى 3 ثوانٍ) وسأحوّله إلى <b>ملصق متحرك</b>\n\n📦 يمكنك أيضًا إنشاء <b>حزمة ملصقات</b>: تذهب ملصقاتك إلى حزمة واحدة يمكنك إضافتها إلى تيليجرام.\n\n💡 لجودة أفضل، أرسل الصورة كـ<b>ملف</b>.",
+    "stk_menu_pack": "🖼 <b>إنشاء ملصق</b>\n\n📦 الحزمة الحالية: <b>{title}</b> ({n}/120)\n\nكل صورة ترسلها تُضاف إلى هذه الحزمة 🧩\n🎞 يتحول الفيديو إلى ملصق متحرك في <b>حزمة منفصلة</b>، لأن تيليجرام لا يخلط ملصقات الصور والفيديو.\n💡 لجودة أفضل، أرسل الصورة كـ<b>ملف</b>.",
+    "stk_menu_pending": "🖼 <b>إنشاء ملصق</b>\n\n📦 حزمة جديدة: <b>{title}</b>\n\nأرسل أول <b>صورة أو فيديو</b> وستُنشأ الحزمة به (صورة = حزمة عادية، فيديو = حزمة متحركة) 👇",
     "b_stk_new": "📦 حزمة جديدة", "b_stk_open": "🔗 فتح الحزمة", "b_stk_list": "📂 حزمي",
     "stk_ask_title": "📦 <b>أرسل اسمًا لحزمتك</b>\n\nمثال: <code>ملصقاتي</code>",
-    "stk_title_ok": "✅ الحزمة <b>{title}</b> جاهزة.\n\nأرسل الآن أول صورة وستُنشأ الحزمة بها 🖼",
+    "stk_title_ok": "✅ الحزمة <b>{title}</b> جاهزة.\n\nأرسل الآن أول صورة أو فيديو وستُنشأ الحزمة به 🖼",
     "stk_title_bad": "⚠️ يجب أن يكون الاسم من 1 إلى 60 حرفًا. أرسله مرة أخرى:",
     "stk_created": "🎉 <b>تم إنشاء حزمتك!</b>\n📦 {title}\n\nاضغط الزر لإضافتها إلى تيليجرام 👇",
     "stk_full": "⚠️ هذه الحزمة ممتلئة (120 ملصقًا). أنشئ حزمة جديدة.",
@@ -875,6 +881,9 @@ L["ar"] = {
     "b_stk_del_yes": "✅ نعم، احذفها", "b_stk_del_no": "❌ لا، رجوع",
     "stk_deleted": "🗑 تم حذف الحزمة",
     "stk_del_fail": "❌ تعذّر حذف الحزمة. حاول مرة أخرى.",
+    "stk_menu_vpack": "🎞 الحزمة المتحركة: <b>{title}</b> ({n}/120)",
+    "vstk_noffmpeg": "⚠️ الملصقات المتحركة غير متاحة على هذا الخادم (ffmpeg غير موجود).",
+    "vstk_trim": "ℹ️ يسمح تيليجرام بـ<b>3 ثوانٍ</b> فقط للملصق المتحرك، لذلك استُخدمت أول 3 ثوانٍ من الفيديو.",
     "force_join": (
         "🔒 <b>الاشتراك الإجباري</b>\n\n"
         "للمتابعة اشترك في القنوات التالية أولاً ثم اضغط <b>«اشتركت»</b> 👇"
@@ -3032,8 +3041,10 @@ async def route(cb: CB, data: str):
 
     if data.startswith("stk_use_"):
         hx = data[len("stk_use_"):]
-        if _HEX_RE.fullmatch(hx) and hx in await stk_packs(uid):
-            await db_put(f"stk/{uid}", {"active": hx})
+        packs = await stk_packs(uid)
+        if _HEX_RE.fullmatch(hx) and hx in packs:
+            await db_put(f"stk/{uid}/{_active_key(packs[hx])}", hx)
+            await db_del(f"stk/{uid}/pending")
             await cb.answer(cb.t("stk_switched"))
         else:
             await cb.answer()
@@ -3063,12 +3074,13 @@ async def route(cb: CB, data: str):
                     await report_error(cb.ctx, e, "stk_delete")
                     return await cb.answer(cb.t("stk_del_fail"), True)    # (already gone in Telegram → just clean up)
             await db_del(f"stkpacks/{uid}/{hx}")
-            if (await stk_state(uid)).get("active") == hx:
-                rest = {k: v for k, v in packs.items() if k != hx}
+            akey = _active_key(p)
+            if (await stk_state(uid)).get(akey) == hx:
+                rest = {k: v for k, v in packs.items() if k != hx and _fmt_of(v) == _fmt_of(p)}
                 if rest:
-                    await db_put(f"stk/{uid}/active", max(rest, key=lambda k: rest[k].get("ts", 0)))
+                    await db_put(f"stk/{uid}/{akey}", max(rest, key=lambda k: rest[k].get("ts", 0)))
                 else:
-                    await db_del(f"stk/{uid}/active")
+                    await db_del(f"stk/{uid}/{akey}")
             await cb.answer(cb.t("stk_deleted"))
         else:
             await cb.answer()
@@ -3498,7 +3510,7 @@ async def _extra_gif(ctx, chat_id: int, lang: str, key: str, src: str) -> None:
     await save_fid(key, "fid_gif", sent, "animation")
 
 
-async def _extra_sticker(ctx, chat_id: int, lang: str, key: str, src: str) -> None:
+async def _extra_sticker(ctx, chat_id: int, lang: str, key: str, src: str, uid: int = 0) -> None:
     await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
     m = await fetch_tiktok(src)
     if not m:
@@ -3507,6 +3519,8 @@ async def _extra_sticker(ctx, chat_id: int, lang: str, key: str, src: str) -> No
         data, _ = await fetch_video(m, "sd")
         webm = await to_sticker_webm(data) if data else None
         if webm:
+            if uid:
+                return await deliver_sticker(ctx, uid, chat_id, lang, webm, "video")
             await ctx.bot.send_sticker(chat_id, InputFile(webm, filename="sticker.webm"),
                                        reply_markup=_close_kb(lang), **_UP)
             return
@@ -3561,17 +3575,31 @@ async def stk_packs(uid: int) -> dict:
         if isinstance(d, dict) else {}
 
 
+def _fmt_of(p: dict) -> str:
+    return "video" if p.get("f") == "video" else "static"
+
+
+def _active_key(fmt_or_pack) -> str:
+    """Telegram never mixes photo and video stickers in one pack → each format has its own active pack."""
+    fmt = fmt_or_pack if isinstance(fmt_or_pack, str) else _fmt_of(fmt_or_pack)
+    return "vactive" if fmt == "video" else "active"
+
+
 async def stk_menu_view(uid: int, lang: str) -> tuple[str, Kb]:
     st, packs = await stk_state(uid), await stk_packs(uid)
-    act = packs.get(st.get("active", ""))
+    act, vact = packs.get(st.get("active", "")), packs.get(st.get("vactive", ""))
     rows = []
     if st.get("pending"):
         text = tx(lang, "stk_menu_pending", title=esc(st["pending"]))
-    elif act:
-        text = tx(lang, "stk_menu_pack", title=esc(act["title"]), n=int(act.get("n", 0)))
-        rows.append([Btn(tx(lang, "b_stk_open"), url=pack_url(act["name"]))])
     else:
-        text = tx(lang, "stk_menu_nopack")
+        text = (tx(lang, "stk_menu_pack", title=esc(act["title"]), n=int(act.get("n", 0)))
+                if act else tx(lang, "stk_menu_nopack"))
+        if vact:
+            text += "\n\n" + tx(lang, "stk_menu_vpack", title=esc(vact["title"]), n=int(vact.get("n", 0)))
+        for p in (act, vact):
+            if p:
+                rows.append([Btn(clip(f"{'🎞' if _fmt_of(p) == 'video' else '🖼'} {p['title']}", 30),
+                                 url=pack_url(p["name"]))])
     new_row = [Btn(tx(lang, "b_stk_new"), callback_data="stk_new")]
     if packs:
         new_row.append(Btn(tx(lang, "b_stk_list"), callback_data="stk_list"))
@@ -3585,37 +3613,39 @@ async def stk_list_view(uid: int, lang: str) -> tuple[str, Kb]:
         return await stk_menu_view(uid, lang)
     rows = []
     for hx, p in sorted(packs.items(), key=lambda kv: kv[1].get("ts", 0), reverse=True)[:8]:
-        mark = "✅ " if st.get("active") == hx else "⚪ "
-        rows.append([Btn(clip(f"{mark}{p.get('title', '')} ({int(p.get('n', 0))})", 28), callback_data=f"stk_use_{hx}"),
+        mark = "✅" if st.get(_active_key(p)) == hx else "⚪"
+        icon = "🎞" if _fmt_of(p) == "video" else "🖼"
+        rows.append([Btn(clip(f"{mark}{icon} {p.get('title', '')} ({int(p.get('n', 0))})", 28), callback_data=f"stk_use_{hx}"),
                      Btn("🔗", url=pack_url(p["name"])),
                      Btn("🗑", callback_data=f"stk_del_{hx}")])
     rows += [[Btn(tx(lang, "b_stk_new"), callback_data="stk_new")], back_row(lang, "ask_sticker")]
     return tx(lang, "stk_list_title"), Kb(rows)
 
 
-def _input_sticker(webp: bytes):
+def _input_sticker(data: bytes, fmt: str = "static"):
     """InputSticker across PTB versions (Bot API ≥ 7.2 wants the `format`)."""
     from telegram import InputSticker                                   # type: ignore
     # A *named file-like object*: PTB attaches it to the request. (A ready-made InputFile is passed through
     # un-attached → Telegram answers "field sticker must be of type string".)
-    f = io.BytesIO(webp)
-    f.name = "sticker.webp"
+    f = io.BytesIO(data)
+    f.name = "sticker.webm" if fmt == "video" else "sticker.webp"
     try:
-        return InputSticker(sticker=f, emoji_list=[STK_EMOJI], format="static")
+        return InputSticker(sticker=f, emoji_list=[STK_EMOJI], format=fmt)
     except TypeError:
         return InputSticker(sticker=f, emoji_list=[STK_EMOJI])
 
 
-async def _pack_create(ctx, uid: int, name: str, title: str, webp: bytes) -> None:
+async def _pack_create(ctx, uid: int, name: str, title: str, data: bytes, fmt: str = "static") -> None:
     try:
-        await ctx.bot.create_new_sticker_set(user_id=uid, name=name, title=title, stickers=[_input_sticker(webp)])
+        await ctx.bot.create_new_sticker_set(user_id=uid, name=name, title=title,
+                                             stickers=[_input_sticker(data, fmt)])
     except TypeError:                                                   # older PTB: separate sticker_format
         await ctx.bot.create_new_sticker_set(user_id=uid, name=name, title=title,
-                                             stickers=[_input_sticker(webp)], sticker_format="static")
+                                             stickers=[_input_sticker(data, fmt)], sticker_format=fmt)
 
 
-async def _pack_add(ctx, uid: int, name: str, webp: bytes) -> None:
-    await ctx.bot.add_sticker_to_set(user_id=uid, name=name, sticker=_input_sticker(webp))
+async def _pack_add(ctx, uid: int, name: str, data: bytes, fmt: str = "static") -> None:
+    await ctx.bot.add_sticker_to_set(user_id=uid, name=name, sticker=_input_sticker(data, fmt))
 
 
 def _pack_kb(lang: str, name: str | None, extra: list | None = None) -> Kb:
@@ -3626,30 +3656,33 @@ def _pack_kb(lang: str, name: str | None, extra: list | None = None) -> Kb:
     return Kb(rows)
 
 
-async def deliver_sticker(ctx, uid: int, chat_id: int, lang: str, webp: bytes) -> None:
-    """Send the sticker — and put it into the user's pack (creating the pack with the first photo)."""
+async def deliver_sticker(ctx, uid: int, chat_id: int, lang: str, data: bytes, fmt: str = "static") -> None:
+    """Send the sticker (photo → WEBP "static", video → WEBM "video") and put it into the user's pack of that
+    format — creating the pack with the first sticker when the user has just named a new one."""
+    ext, akey = ("webm" if fmt == "video" else "webp"), _active_key(fmt)
     st, packs = await stk_state(uid), await stk_packs(uid)
     new_btn = [[Btn(tx(lang, "b_stk_new"), callback_data="stk_new")]]
-    f = lambda: InputFile(webp, filename="sticker.webp")                # noqa: E731 — fresh upload object per send
+    f = lambda: InputFile(data, filename=f"sticker.{ext}")              # noqa: E731 — fresh upload object per send
 
-    if st.get("pending"):                                               # first photo → create the pack
+    if st.get("pending"):                                               # first sticker → create the pack
         hx = secrets.token_hex(3)
         name, title = f"s{uid}_{hx}_by_{BOT_USERNAME}", st["pending"]
-        await _pack_create(ctx, uid, name, title, webp)
-        await db_put(f"stkpacks/{uid}/{hx}", {"name": name, "title": title, "n": 1, "ts": int(time.time())})
-        await db_put(f"stk/{uid}", {"active": hx})
+        await _pack_create(ctx, uid, name, title, data, fmt)
+        await db_put(f"stkpacks/{uid}/{hx}", {"name": name, "title": title, "n": 1, "ts": int(time.time()), "f": fmt})
+        await db_put(f"stk/{uid}/{akey}", hx)
+        await db_del(f"stk/{uid}/pending")
         await ctx.bot.send_sticker(chat_id, f(), reply_markup=_pack_kb(lang, name), **_UP)
         await ctx.bot.send_message(chat_id, tx(lang, "stk_created", title=esc(title)),
                                    reply_markup=Kb([[Btn(tx(lang, "b_stk_open"), url=pack_url(name))]]))
         return
 
-    act = packs.get(st.get("active", ""))
-    if act:
-        hx = st["active"]
+    hx = st.get(akey, "")
+    act = packs.get(hx)
+    if act and _fmt_of(act) == fmt:
         if int(act.get("n", 0)) >= PACK_MAX:
             return await ctx.bot.send_message(chat_id, tx(lang, "stk_full"), reply_markup=Kb(new_btn))
         try:
-            await _pack_add(ctx, uid, act["name"], webp)
+            await _pack_add(ctx, uid, act["name"], data, fmt)
         except BadRequest as e:
             msg = str(e).lower()
             if "too_much" in msg or "too much" in msg:
@@ -3657,13 +3690,62 @@ async def deliver_sticker(ctx, uid: int, chat_id: int, lang: str, webp: bytes) -
                 return await ctx.bot.send_message(chat_id, tx(lang, "stk_full"), reply_markup=Kb(new_btn))
             if "stickerset_invalid" in msg or "invalid" in msg or "not found" in msg:   # deleted inside Telegram
                 await db_del(f"stkpacks/{uid}/{hx}")
-                await db_del(f"stk/{uid}/active")
+                await db_del(f"stk/{uid}/{akey}")
                 return await ctx.bot.send_message(chat_id, tx(lang, "stk_gone"), reply_markup=Kb(new_btn))
             raise
         await db_incr(f"stkpacks/{uid}/{hx}/n")
         return await ctx.bot.send_sticker(chat_id, f(), reply_markup=_pack_kb(lang, act["name"]), **_UP)
 
     await ctx.bot.send_sticker(chat_id, f(), reply_markup=_pack_kb(lang, None, new_btn), **_UP)   # single sticker, no pack
+
+
+def _video_file(msg) -> tuple[str, int, int] | None:
+    """(file_id, size, seconds) of a gallery video / GIF / round video / video sent as a file."""
+    for attr in ("video", "animation", "video_note"):
+        o = getattr(msg, attr, None)
+        if o:
+            d = getattr(o, "duration", 0) or 0
+            return o.file_id, o.file_size or 0, int(d.total_seconds()) if hasattr(d, "total_seconds") else int(d)
+    d = getattr(msg, "document", None)
+    if d and (getattr(d, "mime_type", None) or "").lower().startswith("video/"):
+        return d.file_id, d.file_size or 0, 0
+    return None
+
+
+async def process_video_sticker(update: Update, ctx, lang: str) -> None:
+    """A video the user sent → animated (video) sticker: WEBM/VP9, 512 px, ≤ 3 s, ≤ 256 KB, rounded corners."""
+    msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
+    if not await gate_message(update, ctx, uid, lang):
+        return
+    fid, size, seconds = _video_file(msg)
+    if size > 20_000_000:                                              # bots can download up to 20 MB
+        return await msg.reply_text(tx(lang, "mkstk_big"))
+    if not ffmpeg_path():
+        return await msg.reply_text(tx(lang, "vstk_noffmpeg"))
+    if not await acquire_lock(uid):
+        return await msg.reply_text(tx(lang, "busy_msg"))
+    status = None
+    try:
+        status = await msg.reply_text(tx(lang, "st_stk", bar=bar(2)))
+        await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
+        tg_file = await ctx.bot.get_file(fid)
+        raw = bytes(await tg_file.download_as_bytearray())
+        webm = await to_sticker_webm(raw)
+        if not webm:
+            return await safe_edit(status, tx(lang, "stk_fail"))
+        await deliver_sticker(ctx, uid, chat_id, lang, webm, "video")
+        if seconds > 3:
+            await ctx.bot.send_message(chat_id, tx(lang, "vstk_trim"))
+        try:
+            await status.delete()
+        except TelegramError:
+            pass
+    except Exception as e:                                              # noqa: BLE001 — user gets a clean message
+        await report_error(ctx, e, "video_sticker")
+        if status:
+            await safe_edit(status, tx(lang, "stk_fail"))
+    finally:
+        await release_lock(uid)
 
 
 def _is_stk_title_reply(msg) -> bool:
@@ -3735,8 +3817,10 @@ async def send_extra(cb: "CB", data: str) -> None:
     chat_id = cb.q.message.chat_id
     try:
         await cb.answer(plain(cb.t(f"st_{kind}", bar="")).strip())
-        fn = {"gif": _extra_gif, "stk": _extra_sticker, "cmt": _extra_comments}[kind]
-        await fn(cb.ctx, chat_id, cb.lang, key, src)
+        if kind == "stk":
+            await _extra_sticker(cb.ctx, chat_id, cb.lang, key, src, cb.uid)
+        else:
+            await {"gif": _extra_gif, "cmt": _extra_comments}[kind](cb.ctx, chat_id, cb.lang, key, src)
     except Exception as e:                                              # noqa: BLE001 — user gets a clean message
         await report_error(cb.ctx, e, f"extra_{kind}")
         try:
@@ -4729,6 +4813,9 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if username:
             return await process_story(update, ctx, username, lang, started)
         return await msg.reply_text(tx(lang, "ask_story_prompt"), reply_markup=ForceReply(selective=True))
+
+    if private and not url and _video_file(msg):         # a video / GIF → animated sticker
+        return await process_video_sticker(update, ctx, lang)
 
     if private and not url and _photo_file(msg):         # a photo / image file → sticker
         return await process_photo_sticker(update, ctx, lang)
