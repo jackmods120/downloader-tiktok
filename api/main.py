@@ -3546,7 +3546,10 @@ async def stk_list_view(uid: int, lang: str) -> tuple[str, Kb]:
 def _input_sticker(webp: bytes):
     """InputSticker across PTB versions (Bot API ≥ 7.2 wants the `format`)."""
     from telegram import InputSticker                                   # type: ignore
-    f = InputFile(webp, filename="sticker.webp")
+    # A *named file-like object*: PTB attaches it to the request. (A ready-made InputFile is passed through
+    # un-attached → Telegram answers "field sticker must be of type string".)
+    f = io.BytesIO(webp)
+    f.name = "sticker.webp"
     try:
         return InputSticker(sticker=f, emoji_list=[STK_EMOJI], format="static")
     except TypeError:
