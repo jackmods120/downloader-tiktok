@@ -174,6 +174,7 @@ L["ku"] = {
         "🔥 دۆزینەوە — گەڕان لە تیکتۆک و ترێندی وڵاتان\n"
         "🕵️ ستۆری — دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیمێک بنێرە\n"
         "🎞 GIF · 🧩 ستیکەر · 💬 کۆمێنت — دوگمەکانی ژێر ڤیدیۆکە\n"
+        "🖼 ستیکەر — وێنەیەک بنێرە و دەیکەم بە ستیکەر\n"
         "⚙️ کوالێتی — لە ڕێکخستن HD / ئاسایی / تەنیا دەنگ هەڵبژێرە</blockquote>\n"
         "💎 <b>VIP</b> — بێ جۆینی ناچاری و وێنەی زیاتر.\n"
         "📩 پەیوەندی: {dev}"
@@ -218,6 +219,11 @@ L["ku"] = {
     "cmt_file": "📄 هەموو {n} کۆمێنتەکە",
     "cmt_none": "💬 ئەم ڤیدیۆیە کۆمێنتی نییە یان نەتوانرا بهێنرێت.",
     "cmt_fail": "❌ نەتوانرا کۆمێنتەکان بهێنرێت.",
+    "b_mkstk": "🖼 دروستکردنی ستیکەر",
+    "ask_stk_prompt": "🖼 <b>دروستکردنی ستیکەر</b>\n\nوێنەیەک لە گەلەری مۆبایلەکەتەوە بنێرە، منیش دەیکەم بە ستیکەر 🧩\n\n💡 بۆ کوالێتی باشتر، وێنەکە وەک <b>فایل</b> بنێرە.",
+    "st_mkstk": "🖼 <b>ستیکەرەکە ئامادە دەکرێت…</b>",
+    "mkstk_fail": "❌ نەتوانرا ئەم وێنەیە بکرێت بە ستیکەر. وێنەیەکی تر تاقی بکەرەوە.",
+    "mkstk_big": "⚠️ ئەم وێنەیە زۆر گەورەیە (زیاتر لە ٢٠MB).",
     "force_join": (
         "🔒 <b>جۆینی ناچاری</b>\n\n"
         "بۆ بەردەوامبوون، سەرەتا ئەم چەناڵانە جۆین بکە، پاشان دوگمەی "
@@ -433,6 +439,7 @@ L["en"] = {
         "🔥 Discover — search TikTok or browse trending by country\n"
         "🕵️ Stories — tap <b>Secret story</b> and send a username\n"
         "🎞 GIF · 🧩 Sticker · 💬 Comments — buttons under the video\n"
+        "🖼 Sticker — send a photo and I turn it into a sticker\n"
         "⚙️ Quality — pick HD / Standard / Audio only in Settings</blockquote>\n"
         "💎 <b>VIP</b> — no forced join, more photos.\n"
         "📩 Contact: {dev}"
@@ -477,6 +484,11 @@ L["en"] = {
     "cmt_file": "📄 All {n} comments",
     "cmt_none": "💬 This video has no comments, or they could not be loaded.",
     "cmt_fail": "❌ Could not fetch the comments.",
+    "b_mkstk": "🖼 Make a sticker",
+    "ask_stk_prompt": "🖼 <b>Make a sticker</b>\n\nSend a photo from your gallery and I'll turn it into a sticker 🧩\n\n💡 For better quality, send the photo as a <b>file</b>.",
+    "st_mkstk": "🖼 <b>Making your sticker…</b>",
+    "mkstk_fail": "❌ Could not turn this image into a sticker. Try another one.",
+    "mkstk_big": "⚠️ This image is too large (over 20 MB).",
     "force_join": (
         "🔒 <b>Forced join</b>\n\n"
         "To continue, join the channels below first, then tap <b>“I joined”</b> 👇"
@@ -688,6 +700,7 @@ L["ar"] = {
         "🔥 اكتشف — ابحث في تيك توك أو تصفّح الرائج حسب البلد\n"
         "🕵️ القصص — اضغط <b>قصة سرية</b> وأرسل اسم مستخدم\n"
         "🎞 GIF · 🧩 ملصق · 💬 التعليقات — أزرار أسفل الفيديو\n"
+        "🖼 ملصق — أرسل صورة وسأحوّلها إلى ملصق\n"
         "⚙️ الجودة — اختر HD / عادية / صوت فقط من الإعدادات</blockquote>\n"
         "💎 <b>VIP</b> — بدون اشتراك إجباري وصور أكثر.\n"
         "📩 للتواصل: {dev}"
@@ -732,6 +745,11 @@ L["ar"] = {
     "cmt_file": "📄 جميع التعليقات ({n})",
     "cmt_none": "💬 لا توجد تعليقات لهذا الفيديو أو تعذّر جلبها.",
     "cmt_fail": "❌ تعذّر جلب التعليقات.",
+    "b_mkstk": "🖼 إنشاء ملصق",
+    "ask_stk_prompt": "🖼 <b>إنشاء ملصق</b>\n\nأرسل صورة من معرض هاتفك وسأحوّلها إلى ملصق 🧩\n\n💡 لجودة أفضل، أرسل الصورة كـ<b>ملف</b>.",
+    "st_mkstk": "🖼 <b>جارٍ تجهيز الملصق…</b>",
+    "mkstk_fail": "❌ تعذّر تحويل هذه الصورة إلى ملصق. جرّب صورة أخرى.",
+    "mkstk_big": "⚠️ هذه الصورة كبيرة جدًا (أكثر من 20 ميغابايت).",
     "force_join": (
         "🔒 <b>الاشتراك الإجباري</b>\n\n"
         "للمتابعة اشترك في القنوات التالية أولاً ثم اضغط <b>«اشتركت»</b> 👇"
@@ -2375,6 +2393,7 @@ def menu_view(uid: int, lang: str, name: str) -> tuple[str, Kb]:
          Btn(tx(lang, "b_avatar"), callback_data="ask_avatar")],
         [Btn(tx(lang, "b_story"), callback_data="ask_story"),
          Btn(tx(lang, "b_disc"), callback_data="ask_disc")],
+        [Btn(tx(lang, "b_mkstk"), callback_data="ask_sticker")],
         [Btn(tx(lang, "b_profile"), callback_data="show_profile"),
          Btn(tx(lang, "b_vip"), callback_data="show_vip")],
         [Btn(tx(lang, "b_lang"), callback_data="show_settings"),
@@ -2600,6 +2619,10 @@ async def route(cb: CB, data: str):
     if data == "ask_link":
         await cb.answer()
         return await cb.q.message.reply_text(cb.t("ask_link_prompt"), reply_markup=ForceReply(selective=True))
+
+    if data == "ask_sticker":
+        await cb.answer()
+        return await cb.q.message.reply_text(cb.t("ask_stk_prompt"))
 
     if data == "ask_avatar":
         await cb.answer()
@@ -2870,7 +2893,12 @@ def _static_sticker(img: bytes) -> bytes | None:
     """Fallback when ffmpeg is missing: the video cover as a static 512 px WEBP sticker (needs Pillow)."""
     try:
         from PIL import Image, ImageChops, ImageDraw, ImageOps          # type: ignore
-        im = ImageOps.contain(Image.open(io.BytesIO(img)).convert("RGBA"), (512, 512))
+        src = Image.open(io.BytesIO(img))
+        try:
+            src.draft("RGB", (1024, 1024))                              # JPEG: decode small → low memory
+        except Exception:                                               # noqa: BLE001
+            pass
+        im = ImageOps.contain(ImageOps.exif_transpose(src).convert("RGBA"), (512, 512))
         w, h = im.size
         k = 4                                                           # supersample → smooth corners
         mask = Image.new("L", (w * k, h * k), 0)
@@ -2878,9 +2906,12 @@ def _static_sticker(img: bytes) -> bytes | None:
                                                radius=int(min(w, h) * STICKER_RADIUS * k), fill=255)
         mask = mask.resize((w, h), Image.LANCZOS)
         im.putalpha(ImageChops.multiply(im.getchannel("A"), mask))
-        buf = io.BytesIO()
-        im.save(buf, "WEBP", quality=88, method=4)
-        return buf.getvalue() if len(buf.getvalue()) <= 512_000 else None
+        for q in (90, 75, 60, 45):                                      # sticker limit: 512 KB
+            buf = io.BytesIO()
+            im.save(buf, "WEBP", quality=q, method=4)
+            if len(buf.getvalue()) <= 512_000:
+                return buf.getvalue()
+        return None
     except Exception as e:                                              # noqa: BLE001
         log.info("static sticker failed: %s", e)
         return None
@@ -3030,6 +3061,53 @@ async def _extra_comments(ctx, chat_id: int, lang: str, key: str, src: str) -> N
     await ctx.bot.send_message(chat_id, comments_preview(lang, items), reply_markup=_close_kb(lang))
     await ctx.bot.send_document(chat_id, InputFile(comments_txt(items).encode("utf-8"), filename=f"comments_{key}.txt"),
                                 caption=tx(lang, "cmt_file", n=len(items)), **_UP)
+
+
+def _photo_file(msg) -> tuple[str, int] | None:
+    """(file_id, size) of a gallery photo, or of an image sent as a file; None otherwise."""
+    if getattr(msg, "photo", None):
+        ph = msg.photo[-1]
+        return ph.file_id, ph.file_size or 0
+    d = getattr(msg, "document", None)
+    mime = (getattr(d, "mime_type", None) or "").lower()
+    if d and mime.startswith("image/") and mime != "image/gif":
+        return d.file_id, d.file_size or 0
+    return None
+
+
+async def process_photo_sticker(update: Update, ctx, lang: str) -> None:
+    """A photo from the user's gallery → rounded 512 px sticker."""
+    msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
+    if not await gate_message(update, ctx, uid, lang):
+        return
+    fid, size = _photo_file(msg)
+    if size > 20_000_000:                                              # bots can download up to 20 MB
+        return await msg.reply_text(tx(lang, "mkstk_big"))
+    if not await acquire_lock(uid):
+        return await msg.reply_text(tx(lang, "busy_msg"))
+    status = None
+    try:
+        status = await msg.reply_text(tx(lang, "st_mkstk"))
+        await chat_action(ctx, chat_id, ChatAction.UPLOAD_PHOTO)
+        if not importlib.util.find_spec("PIL"):
+            raise RuntimeError("Pillow is missing — add `Pillow` to requirements.txt")
+        tg_file = await ctx.bot.get_file(fid)
+        raw = bytes(await tg_file.download_as_bytearray())
+        webp = await asyncio.to_thread(_static_sticker, raw)
+        if not webp:
+            return await safe_edit(status, tx(lang, "mkstk_fail"))
+        await ctx.bot.send_sticker(chat_id, InputFile(webp, filename="sticker.webp"),
+                                   reply_markup=_close_kb(lang), **_UP)
+        try:
+            await status.delete()
+        except TelegramError:
+            pass
+    except Exception as e:                                              # noqa: BLE001 — user gets a clean message
+        await report_error(ctx, e, "photo_sticker")
+        if status:
+            await safe_edit(status, tx(lang, "mkstk_fail"))
+    finally:
+        await release_lock(uid)
 
 
 async def send_extra(cb: "CB", data: str) -> None:
@@ -4009,6 +4087,9 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if username:
             return await process_story(update, ctx, username, lang, started)
         return await msg.reply_text(tx(lang, "ask_story_prompt"), reply_markup=ForceReply(selective=True))
+
+    if private and not url and _photo_file(msg):         # a photo / image file → sticker
+        return await process_photo_sticker(update, ctx, lang)
 
     if url:
         return await process_link(update, ctx, url, lang, started)
