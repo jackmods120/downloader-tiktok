@@ -115,6 +115,7 @@ COMMENTS_MAX   = 50                  # comments fetched per video
 COMMENTS_SHOW  = 10                  # comments previewed in the chat message
 GIF_SECONDS    = 10                  # longest GIF we make
 STICKER_MAX    = 256_000             # Telegram video-sticker size limit
+STICKER_RADIUS = 0.10                # rounded corners: radius = 10 % of the shorter side (matches the reference)
 QUALITIES      = ("hd", "sd", "audio")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
@@ -2848,7 +2849,8 @@ async def to_sticker_webm(data: bytes) -> bytes | None:
     for crf, fps in ((34, 30), (42, 24), (50, 20), (58, 15)):
         out = await run_ffmpeg(
             ["-t", "2.9", "-an",
-             "-vf", f"scale=512:512:force_original_aspect_ratio=decrease,fps={fps}",
+             "-vf", (f"scale=512:512:force_original_aspect_ratio=decrease,fps={fps},format=yuva420p,"
+                     f"geq=lum='p(X,Y)':cb='p(X,Y)':cr='p(X,Y)':a='{_round_alpha_expr()}'"),
              "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "0", "-crf", str(crf),
              "-deadline", "realtime", "-cpu-used", "5", "-row-mt", "1", "-auto-alt-ref", "0"],
             data, "webm", 25)
@@ -2857,11 +2859,25 @@ async def to_sticker_webm(data: bytes) -> bytes | None:
     return None
 
 
+def _round_alpha_expr() -> str:
+    """ffmpeg geq expression → alpha 0 outside a rounded rectangle (anti-aliased edge)."""
+    r = f"{STICKER_RADIUS}*min(W,H)"
+    return (f"st(0,abs(X+0.5-W/2)-(W/2-{r}));st(1,abs(Y+0.5-H/2)-(H/2-{r}));"
+            f"if(gt(ld(0),0)*gt(ld(1),0),clip(255*({r}+0.5-hypot(ld(0),ld(1))),0,255),255)")
+
+
 def _static_sticker(img: bytes) -> bytes | None:
     """Fallback when ffmpeg is missing: the video cover as a static 512 px WEBP sticker (needs Pillow)."""
     try:
-        from PIL import Image, ImageOps                                 # type: ignore
+        from PIL import Image, ImageChops, ImageDraw, ImageOps          # type: ignore
         im = ImageOps.contain(Image.open(io.BytesIO(img)).convert("RGBA"), (512, 512))
+        w, h = im.size
+        k = 4                                                           # supersample → smooth corners
+        mask = Image.new("L", (w * k, h * k), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, w * k - 1, h * k - 1),
+                                               radius=int(min(w, h) * STICKER_RADIUS * k), fill=255)
+        mask = mask.resize((w, h), Image.LANCZOS)
+        im.putalpha(ImageChops.multiply(im.getchannel("A"), mask))
         buf = io.BytesIO()
         im.save(buf, "WEBP", quality=88, method=4)
         return buf.getvalue() if len(buf.getvalue()) <= 512_000 else None
