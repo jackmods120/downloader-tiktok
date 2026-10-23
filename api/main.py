@@ -28,6 +28,7 @@ What changed in v15 (short version)
 """
 
 import asyncio
+import base64
 import hashlib
 import hmac
 import html
@@ -43,6 +44,7 @@ import tempfile
 import time
 import traceback
 import urllib.parse
+import zlib
 from contextvars import ContextVar
 from datetime import datetime, timezone
 
@@ -56,6 +58,7 @@ from telegram import (
     InputFile,
     InputMediaAudio,
     InputMediaPhoto,
+    LabeledPrice,
     ReplyParameters,
     Update,
 )
@@ -70,6 +73,7 @@ from telegram.ext import (
     Defaults,
     ChatMemberHandler,
     MessageHandler,
+    PreCheckoutQueryHandler,
     filters,
 )
 
@@ -87,6 +91,7 @@ TOKEN          = os.getenv("BOT_TOKEN", "").strip()
 DB_URL         = (os.getenv("DB_URL", "") or "").strip().rstrip("/")
 DB_SECRET      = os.getenv("DB_SECRET", "").strip()
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "").strip()      # optional but recommended
+CRON_SECRET    = os.getenv("CRON_SECRET", "").strip()         # protects /cron/follows (🔔 follow alerts)
 
 # ⚠️  Set OWNER_ID in Vercel → Environment Variables to YOUR Telegram numeric ID.
 #     The default below is the original developer's ID and gets full owner rights.
@@ -151,6 +156,8 @@ CFG: dict = {
     "ref_need":     5,          # invited users needed per reward
     "ref_days":     3,          # VIP days per reward
     "groups_on":    True,       # answer TikTok links posted in groups
+    "stars_on":     False,      # sell VIP for Telegram Stars (turn on in the panel after checking prices)
+    "stars_plans":  [[7, 50], [30, 150], [90, 400]],   # [days, Stars]
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -274,6 +281,36 @@ L["ku"] = {
     "stk_menu_vpack": "🎞 پاکێجی ستیکەری جوڵاو: <b>{title}</b> ({n}/120)",
     "vstk_noffmpeg": "⚠️ ستیکەری جوڵاو لەم سێرڤەرەدا بەردەست نییە (پێویستی بە ffmpeg هەیە).",
     "vstk_trim": "ℹ️ تێلیگرام تەنیا <b>٣ چرکە</b> بۆ ستیکەری جوڵاو ڕێگە دەدات، بۆیە سێ چرکەی یەکەمی ڤیدیۆکە بڕدرا.",
+    "b_top": "🏆 باشترینەکان", "b_fwlist": "🔔 فۆڵۆکراوەکان",
+    "lb_title": "🏆 <b>باشترین بانگهێشتکەران</b>\n<i>هەر کەسێک زیاتر هاوڕێ بهێنێت، پلەی بەرزتر دەبێت</i>",
+    "lb_empty": "هێشتا کەس بانگهێشتی کەسی نەکردووە. یەکەم کەس بە! 🎁",
+    "lb_you": "📍 پلەی تۆ: <b>#{rank}</b> — {n} بانگهێشتکراو",
+    "lb_hidden": "🙈 ناوی شاراوە",
+    "b_lb_hide": "🙈 ناوم بشارەوە", "b_lb_show": "👁 ناوم نیشان بدە",
+    "lb_toast_hide": "🙈 ناوت شاردرایەوە", "lb_toast_show": "👁 ناوت نیشان دەدرێت",
+    "stars_info": "⭐ <b>بە Telegram Stars بیکڕە</b> — یەکسەر چالاک دەبێت. هەر پلانێک بۆ ماوەیەکی دیاریکراوە و دەچێتە سەر VIPەکەی ئێستات.",
+    "b_buy": "💎 {days} ڕۆژ — {stars} ⭐",
+    "stars_off": "⚠️ کڕین ئێستا چالاک نییە.",
+    "stars_changed": "نرخەکە گۆڕدراوە. تکایە پلانەکە دووبارە هەڵبژێرە.",
+    "stars_thanks": "🎉 <b>سوپاس بۆ کڕینەکەت!</b>\n\n💎 {days} ڕۆژ VIP چالاک کرا\n📅 تا <b>{until}</b>",
+    "inv_title": "💎 VIP — {days} ڕۆژ",
+    "inv_desc": "{days} ڕۆژ VIP بۆ بۆتی دابەزاندنی تیکتۆک: ڤیدیۆی زیاتر و تایبەتمەندی تەواو.",
+    "b_sup_stars": "💎 Stars: {status}", "b_stars_toggle": "🔘 کڕین بە Stars: {status}",
+    "sup_stars_title": "💎 <b>ڕێکخستنی Telegram Stars</b>\n\nدۆخ: {status}\n💰 کۆی داهات: <b>{total}</b> ⭐\n\nنرخی هەر پلانێک بگۆڕە:",
+    "fw_b_off": "🔔 فۆڵۆکردن", "fw_b_on": "✅ فۆڵۆ کراوە",
+    "fw_on": "🔔 فۆڵۆ کرا! کاتێک ڤیدیۆی نوێ دابنێت ئاگادارت دەکەمەوە.",
+    "fw_off": "🔕 فۆڵۆ لابرا",
+    "fw_limit": "⚠️ گەیشتیتە سنووری فۆڵۆکردن ({n} ئەکاونت). VIP تا {vip} ئەکاونتی پێدەدات.",
+    "fw_empty": "🔔 هێشتا هیچ ئەکاونتێکت فۆڵۆ نەکردووە.\nپرۆفایلی تیکتۆکێک بکەرەوە و 🔔 دابگرە.",
+    "fw_list_title": "🔔 <b>فۆڵۆکراوەکانم</b> · {n}/{max}\n\nناوێک دابگرە بۆ دوایین ڤیدیۆکان، یان 🔕 بۆ لابردن:",
+    "fw_new": "🔔 <b>@{user}</b> ڤیدیۆیەکی نوێی دانا!\n\n{title}",
+    "fw_b_dl": "⬇️ دابەزاندن", "fw_b_stop": "🔕 ڕاگرتنی ئاگاداری",
+    "stk_menu_tip": "🎨 دوای ناردنی وێنە یان ڤیدیۆ، شێوەی ستیکەرەکە هەڵدەبژێریت: قوژبن خڕ، چوارگۆشە یان بازنە.\n✍️ بۆ نووسین لەسەر ستیکەر، نووسینەکە وەک <b>کاپشنی</b> وێنەکە بنێرە.",
+    "ss_ask": "🎨 <b>چ شێوەیەک دەتەوێت بۆ ستیکەرەکە؟</b>\n\n▭ <b>قوژبن خڕ</b> — ڕێژەی ڕەسەنی وێنەکە دەمێنێتەوە\n⬛ <b>چوارگۆشە</b> — ناوەڕاستی وێنەکە دەبڕدرێت بۆ چوارگۆشە\n⚪ <b>بازنە</b> — وەک وێنەی پرۆفایل",
+    "ss_expired": "⌛ ئەم داواکارییە بەسەرچوو. وێنە یان ڤیدیۆکە دووبارە بنێرە.",
+    "b_shape_round": "▭ قوژبن خڕ", "b_shape_sq": "⬛ چوارگۆشە", "b_shape_circle": "⚪ بازنە", "b_shape_cancel": "❌ هەڵوەشاندنەوە",
+    "stk_text_unsupported": "ℹ️ نووسینی کوردی لەسەر ئەم سێرڤەرە پشتگیری ناکرێت، بۆیە ستیکەرەکە بێ نووسین دروست کرا.",
+    "vstk_notext": "ℹ️ نووسین لەسەر ستیکەری جوڵاو پشتگیری ناکرێت (تەنیا لەسەر وێنە).",
     "force_join": (
         "🔒 <b>جۆینی ناچاری</b>\n\n"
         "بۆ بەردەوامبوون، سەرەتا ئەم چەناڵانە جۆین بکە، پاشان دوگمەی "
@@ -581,6 +618,36 @@ L["en"] = {
     "stk_menu_vpack": "🎞 Animated pack: <b>{title}</b> ({n}/120)",
     "vstk_noffmpeg": "⚠️ Animated stickers are not available on this server (ffmpeg is missing).",
     "vstk_trim": "ℹ️ Telegram only allows <b>3 seconds</b> for an animated sticker, so the first 3 seconds of your video were used.",
+    "b_top": "🏆 Top inviters", "b_fwlist": "🔔 Following",
+    "lb_title": "🏆 <b>Top inviters</b>\n<i>The more friends you bring, the higher you climb</i>",
+    "lb_empty": "Nobody has invited anyone yet. Be the first! 🎁",
+    "lb_you": "📍 Your rank: <b>#{rank}</b> — {n} invited",
+    "lb_hidden": "🙈 Hidden name",
+    "b_lb_hide": "🙈 Hide my name", "b_lb_show": "👁 Show my name",
+    "lb_toast_hide": "🙈 Your name is hidden", "lb_toast_show": "👁 Your name is visible",
+    "stars_info": "⭐ <b>Buy with Telegram Stars</b> — active instantly. Each plan lasts a fixed time and is added on top of your current VIP.",
+    "b_buy": "💎 {days} days — {stars} ⭐",
+    "stars_off": "⚠️ Purchases are not available right now.",
+    "stars_changed": "The price has changed. Please pick the plan again.",
+    "stars_thanks": "🎉 <b>Thank you for your purchase!</b>\n\n💎 {days} days of VIP activated\n📅 Until <b>{until}</b>",
+    "inv_title": "💎 VIP — {days} days",
+    "inv_desc": "{days} days of VIP for the TikTok downloader bot: more videos and every feature.",
+    "b_sup_stars": "💎 Stars: {status}", "b_stars_toggle": "🔘 Selling with Stars: {status}",
+    "sup_stars_title": "💎 <b>Telegram Stars settings</b>\n\nStatus: {status}\n💰 Total earned: <b>{total}</b> ⭐\n\nChange the price of each plan:",
+    "fw_b_off": "🔔 Follow", "fw_b_on": "✅ Following",
+    "fw_on": "🔔 Followed! I'll tell you when they post a new video.",
+    "fw_off": "🔕 Unfollowed",
+    "fw_limit": "⚠️ You reached the follow limit ({n} accounts). VIP allows up to {vip}.",
+    "fw_empty": "🔔 You don't follow any account yet.\nOpen a TikTok profile and tap 🔔.",
+    "fw_list_title": "🔔 <b>Following</b> · {n}/{max}\n\nTap a name for the latest videos, or 🔕 to unfollow:",
+    "fw_new": "🔔 <b>@{user}</b> posted a new video!\n\n{title}",
+    "fw_b_dl": "⬇️ Download", "fw_b_stop": "🔕 Stop alerts",
+    "stk_menu_tip": "🎨 After you send a photo or video you choose the shape: rounded, square or circle.\n✍️ To put text on a sticker, send it as the photo's <b>caption</b>.",
+    "ss_ask": "🎨 <b>Which shape do you want for the sticker?</b>\n\n▭ <b>Rounded</b> — keeps the photo's proportions\n⬛ <b>Square</b> — centre-cropped to a square\n⚪ <b>Circle</b> — like a profile picture",
+    "ss_expired": "⌛ This request expired. Please send the photo or video again.",
+    "b_shape_round": "▭ Rounded", "b_shape_sq": "⬛ Square", "b_shape_circle": "⚪ Circle", "b_shape_cancel": "❌ Cancel",
+    "stk_text_unsupported": "ℹ️ Kurdish/Arabic text isn't supported on this server, so the sticker was made without text.",
+    "vstk_notext": "ℹ️ Text on animated stickers is not supported (photos only).",
     "force_join": (
         "🔒 <b>Forced join</b>\n\n"
         "To continue, join the channels below first, then tap <b>“I joined”</b> 👇"
@@ -884,6 +951,36 @@ L["ar"] = {
     "stk_menu_vpack": "🎞 الحزمة المتحركة: <b>{title}</b> ({n}/120)",
     "vstk_noffmpeg": "⚠️ الملصقات المتحركة غير متاحة على هذا الخادم (ffmpeg غير موجود).",
     "vstk_trim": "ℹ️ يسمح تيليجرام بـ<b>3 ثوانٍ</b> فقط للملصق المتحرك، لذلك استُخدمت أول 3 ثوانٍ من الفيديو.",
+    "b_top": "🏆 الأفضل", "b_fwlist": "🔔 المتابَعون",
+    "lb_title": "🏆 <b>أفضل الداعين</b>\n<i>كلما أحضرت أصدقاء أكثر ارتفع ترتيبك</i>",
+    "lb_empty": "لم يدعُ أحد أحدًا بعد. كن الأول! 🎁",
+    "lb_you": "📍 ترتيبك: <b>#{rank}</b> — {n} مدعو",
+    "lb_hidden": "🙈 اسم مخفي",
+    "b_lb_hide": "🙈 أخفِ اسمي", "b_lb_show": "👁 أظهر اسمي",
+    "lb_toast_hide": "🙈 تم إخفاء اسمك", "lb_toast_show": "👁 اسمك ظاهر الآن",
+    "stars_info": "⭐ <b>اشترِ بنجوم تيليجرام</b> — يتفعل فورًا. كل خطة لمدة محددة وتُضاف إلى VIP الحالي.",
+    "b_buy": "💎 {days} أيام — {stars} ⭐",
+    "stars_off": "⚠️ الشراء غير متاح حاليًا.",
+    "stars_changed": "تغيّر السعر. يرجى اختيار الخطة مرة أخرى.",
+    "stars_thanks": "🎉 <b>شكرًا على الشراء!</b>\n\n💎 تم تفعيل {days} أيام VIP\n📅 حتى <b>{until}</b>",
+    "inv_title": "💎 VIP — {days} أيام",
+    "inv_desc": "{days} أيام VIP لبوت تحميل تيك توك: فيديوهات أكثر وكل المزايا.",
+    "b_sup_stars": "💎 النجوم: {status}", "b_stars_toggle": "🔘 البيع بالنجوم: {status}",
+    "sup_stars_title": "💎 <b>إعدادات نجوم تيليجرام</b>\n\nالحالة: {status}\n💰 إجمالي الأرباح: <b>{total}</b> ⭐\n\nعدّل سعر كل خطة:",
+    "fw_b_off": "🔔 متابعة", "fw_b_on": "✅ تتم المتابعة",
+    "fw_on": "🔔 تمت المتابعة! سأخبرك عندما ينشر فيديو جديدًا.",
+    "fw_off": "🔕 تم إلغاء المتابعة",
+    "fw_limit": "⚠️ وصلت إلى حد المتابعة ({n} حسابات). VIP يتيح حتى {vip}.",
+    "fw_empty": "🔔 لا تتابع أي حساب بعد.\nافتح ملف تيك توك واضغط 🔔.",
+    "fw_list_title": "🔔 <b>المتابَعون</b> · {n}/{max}\n\nاضغط على اسم لأحدث الفيديوهات، أو 🔕 لإلغاء المتابعة:",
+    "fw_new": "🔔 <b>@{user}</b> نشر فيديو جديدًا!\n\n{title}",
+    "fw_b_dl": "⬇️ تحميل", "fw_b_stop": "🔕 إيقاف التنبيهات",
+    "stk_menu_tip": "🎨 بعد إرسال صورة أو فيديو تختار الشكل: حواف مستديرة أو مربع أو دائرة.\n✍️ لكتابة نص على الملصق، أرسله كـ<b>تعليق</b> للصورة.",
+    "ss_ask": "🎨 <b>ما الشكل الذي تريده للملصق؟</b>\n\n▭ <b>حواف مستديرة</b> — تبقى نسبة الصورة كما هي\n⬛ <b>مربع</b> — قص من الوسط إلى مربع\n⚪ <b>دائرة</b> — مثل صورة الملف الشخصي",
+    "ss_expired": "⌛ انتهت صلاحية هذا الطلب. أرسل الصورة أو الفيديو مرة أخرى.",
+    "b_shape_round": "▭ حواف مستديرة", "b_shape_sq": "⬛ مربع", "b_shape_circle": "⚪ دائرة", "b_shape_cancel": "❌ إلغاء",
+    "stk_text_unsupported": "ℹ️ النص الكردي/العربي غير مدعوم على هذا الخادم، لذلك أُنشئ الملصق بدون نص.",
+    "vstk_notext": "ℹ️ النص على الملصقات المتحركة غير مدعوم (للصور فقط).",
     "force_join": (
         "🔒 <b>الاشتراك الإجباري</b>\n\n"
         "للمتابعة اشترك في القنوات التالية أولاً ثم اضغط <b>«اشتركت»</b> 👇"
@@ -1523,7 +1620,9 @@ async def credit_referral(ctx, uid: int) -> None:
     done = int(await db_get(f"users/{inviter}/ref_done", 0) or 0)
     need = max(1, int(CFG.get("ref_need", 5)))
     days = max(1, int(CFG.get("ref_days", 3)))
-    lang = user_lang(await db_get(f"users/{inviter}"))
+    iud = await db_get(f"users/{inviter}") or {}
+    lang = user_lang(iud)
+    await db_put(f"lb/{inviter}", {"n": cnt, "name": clip(iud.get("name") or "", 20), "h": 1 if iud.get("hide_lb") else 0})
     if cnt // need > done:
         n = cnt // need - done
         until = await grant_temp_vip(inviter, days * n)
@@ -2004,13 +2103,15 @@ def profile_card(lang: str, p: dict) -> str:
               bot=esc(BOT_USERNAME))
 
 
-def profile_kb(lang: str, user: str) -> Kb:
+def profile_kb(lang: str, user: str, followed: bool = False) -> Kb:
     rows = []
     if user.isascii() and len(user) <= 24:            # callback_data is limited to 64 bytes
         rows.append([Btn(tx(lang, "b_story"), callback_data=f"pf_s_{user}"),
                      Btn(tx(lang, "pf_b_vids"), callback_data=f"pf_v_{user}")])
         rows.append([Btn(tx(lang, "pf_b_file"), callback_data=f"pf_f_{user}"),
                      Btn(tx(lang, "pf_b_open"), url=f"https://www.tiktok.com/@{user}")])
+        if _USER_RE.fullmatch(user):
+            rows.append([Btn(tx(lang, "fw_b_on" if followed else "fw_b_off"), callback_data=f"fw_{user}")])
     rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
     return Kb(rows)
 
@@ -2796,6 +2897,8 @@ def menu_view(uid: int, lang: str, name: str) -> tuple[str, Kb]:
          Btn(tx(lang, "b_ref"), callback_data="show_ref")],
         [Btn(tx(lang, "b_hist"), callback_data="my_hist_0"),
          Btn(tx(lang, "b_favs"), callback_data="my_fav_0")],
+        [Btn(tx(lang, "b_fwlist"), callback_data="fw_list"),
+         Btn(tx(lang, "b_top"), callback_data="show_top")],
         [Btn(tx(lang, "b_profile"), callback_data="show_profile"),
          Btn(tx(lang, "b_vip"), callback_data="show_vip")],
         [Btn(tx(lang, "b_lang"), callback_data="show_settings"),
@@ -3230,7 +3333,43 @@ async def route(cb: CB, data: str):
         return await cb.edit(text, Kb([back_row(lang)]))
 
     if data == "show_vip":
-        return await cb.edit(cb.t("vip_info", dev=esc(DEV)), Kb([back_row(lang)]))
+        text, kb = await vip_view(uid, lang)
+        return await cb.edit(text, kb)
+
+    if data.startswith("buy_"):                                          # 💎 pay with Telegram Stars
+        tail = data[len("buy_"):]
+        return await send_stars_invoice(cb, int(tail) if tail.isdigit() else -1)
+
+    if data == "show_top":                                               # 🏆 best inviters
+        text, kb = await lb_view(uid, lang)
+        return await cb.edit(text, kb)
+
+    if data == "lb_hide":
+        hide = await lb_toggle_hide(uid)
+        await cb.answer(cb.t("lb_toast_hide" if hide else "lb_toast_show"))
+        text, kb = await lb_view(uid, lang)
+        return await cb.edit(text, kb)
+
+    if data == "fw_list":                                                # 🔔 followed accounts
+        await cb.answer()
+        text, kb = await follow_list_view(uid, lang)
+        return await cb.edit(text, kb)
+
+    if data.startswith(("fwx_", "fwu_")):
+        user = data[len("fwx_"):]
+        if _USER_RE.fullmatch(user):
+            await follow_remove(uid, user)
+        await cb.answer(cb.t("fw_off"))
+        if data.startswith("fwx_"):
+            text, kb = await follow_list_view(uid, lang)
+            return await cb.edit(text, kb)
+        return
+
+    if data.startswith("fw_"):
+        return await toggle_follow(cb, data[len("fw_"):])
+
+    if data.startswith("ss_"):                                           # 🎨 sticker shape chosen
+        return await choose_shape(cb, data)
 
     if data == "show_ref":
         text, kb = await ref_view(uid, lang)
@@ -3323,7 +3462,7 @@ def ffmpeg_path() -> str | None:
     return _ff_path
 
 
-async def run_ffmpeg(args: list, data: bytes, out_ext: str, timeout: float = 30.0) -> bytes | None:
+async def run_ffmpeg(args: list, data: bytes, out_ext: str, timeout: float = 30.0, extra: list | None = None) -> bytes | None:
     exe = ffmpeg_path()
     if not exe:
         return None
@@ -3331,8 +3470,14 @@ async def run_ffmpeg(args: list, data: bytes, out_ext: str, timeout: float = 30.
         src, dst = os.path.join(d, "in.mp4"), os.path.join(d, f"out.{out_ext}")
         with open(src, "wb") as f:
             f.write(data)
+        more: list = []
+        for n, (pre, blob) in enumerate(extra or []):                    # e.g. a looped PNG mask as input #1
+            path = os.path.join(d, f"extra{n}.png")
+            with open(path, "wb") as f:
+                f.write(blob)
+            more += [*pre, "-i", path]
         proc = await asyncio.create_subprocess_exec(
-            exe, "-y", "-v", "error", "-i", src, *args, dst,
+            exe, "-y", "-v", "error", "-i", src, *more, *args, dst,
             stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
         try:
             _, err = await asyncio.wait_for(proc.communicate(), timeout)
@@ -3356,19 +3501,56 @@ async def to_gif_mp4(data: bytes) -> bytes | None:
     return out if out and len(out) <= TG_MAX_BYTES else None
 
 
-async def to_sticker_webm(data: bytes) -> bytes | None:
+async def to_sticker_webm(data: bytes, shape: str = "round") -> bytes | None:
     """Telegram video sticker: WEBM/VP9, ≤3 s, one side exactly 512 px, ≤256 KB, no audio (needs ffmpeg)."""
+    pre = "crop='min(iw,ih)':'min(iw,ih)'," if shape in ("sq", "circle") else ""     # centre square crop
+    alpha = {"round": _round_alpha_expr, "circle": _circle_alpha_expr}.get(shape)
+    geq = f",geq=lum='p(X,Y)':cb='p(X,Y)':cr='p(X,Y)':a='{alpha()}'" if alpha else ""     # square → no mask
+    mask = _circle_mask_png() if shape == "circle" else None
     for crf, fps in ((34, 30), (42, 24), (50, 20), (58, 15)):
+        scale = f"scale=512:512:force_original_aspect_ratio=decrease,fps={fps}"
+        if mask:                                                         # circle: alphamerge with a looped mask image
+            graph = ["-filter_complex", f"[0:v]{pre}{scale},format=yuv420p[v];[1:v]format=gray[m];[v][m]alphamerge[out]",
+                     "-map", "[out]"]
+            extra = [(["-loop", "1"], mask)]
+        else:
+            graph = ["-vf", pre + scale + ",format=yuva420p" + geq]
+            extra = None
         out = await run_ffmpeg(
-            ["-t", "2.9", "-an",
-             "-vf", (f"scale=512:512:force_original_aspect_ratio=decrease,fps={fps},format=yuva420p,"
-                     f"geq=lum='p(X,Y)':cb='p(X,Y)':cr='p(X,Y)':a='{_round_alpha_expr()}'"),
+            ["-t", "2.9", "-an", *graph,
              "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "0", "-crf", str(crf),
              "-deadline", "realtime", "-cpu-used", "5", "-row-mt", "1", "-auto-alt-ref", "0"],
-            data, "webm", 25)
+            data, "webm", 25, extra)
         if out and len(out) <= STICKER_MAX:
             return out
     return None
+
+
+_CIRCLE_MASK = None
+
+
+def _circle_mask_png(size: int = 512) -> bytes | None:
+    """512×512 anti-aliased circle (white inside) — fed to ffmpeg's alphamerge. None when Pillow is missing."""
+    global _CIRCLE_MASK
+    if _CIRCLE_MASK is None:
+        try:
+            from PIL import Image, ImageDraw                            # type: ignore
+            k = 4
+            m = Image.new("L", (size * k, size * k), 0)
+            ImageDraw.Draw(m).ellipse((0, 0, size * k - 1, size * k - 1), fill=255)
+            buf = io.BytesIO()
+            m.resize((size, size), Image.LANCZOS).save(buf, "PNG")
+            _CIRCLE_MASK = buf.getvalue()
+        except Exception as e:                                          # noqa: BLE001
+            log.info("circle mask failed: %s", e)
+            _CIRCLE_MASK = b""
+    return _CIRCLE_MASK or None
+
+
+def _circle_alpha_expr() -> str:
+    """ffmpeg geq expression → alpha 0 outside the inscribed circle (anti-aliased edge)."""
+    r = "(min(W,H)/2)"
+    return f"clip(255*({r}+0.5-hypot(X+0.5-W/2,Y+0.5-H/2)),0,255)"
 
 
 def _round_alpha_expr() -> str:
@@ -3378,7 +3560,7 @@ def _round_alpha_expr() -> str:
             f"if(gt(ld(0),0)*gt(ld(1),0),clip(255*({r}+0.5-hypot(ld(0),ld(1))),0,255),255)")
 
 
-def _static_sticker(img: bytes) -> bytes | None:
+def _static_sticker(img: bytes, shape: str = "round", text: str = "") -> bytes | None:
     """Fallback when ffmpeg is missing: the video cover as a static 512 px WEBP sticker (needs Pillow)."""
     try:
         from PIL import Image, ImageChops, ImageDraw, ImageOps          # type: ignore
@@ -3387,14 +3569,23 @@ def _static_sticker(img: bytes) -> bytes | None:
             src.draft("RGB", (1024, 1024))                              # JPEG: decode small → low memory
         except Exception:                                               # noqa: BLE001
             pass
-        im = ImageOps.contain(ImageOps.exif_transpose(src).convert("RGBA"), (512, 512))
+        base = ImageOps.exif_transpose(src).convert("RGBA")
+        im = (ImageOps.fit(base, (512, 512), Image.LANCZOS) if shape in ("sq", "circle")
+              else ImageOps.contain(base, (512, 512)))
+        layer = _caption_layer(im.size, text, shape) if text else None
+        if layer is not None:                                           # caption text under the rounded mask
+            im = Image.alpha_composite(im, layer)
         w, h = im.size
-        k = 4                                                           # supersample → smooth corners
-        mask = Image.new("L", (w * k, h * k), 0)
-        ImageDraw.Draw(mask).rounded_rectangle((0, 0, w * k - 1, h * k - 1),
-                                               radius=int(min(w, h) * STICKER_RADIUS * k), fill=255)
-        mask = mask.resize((w, h), Image.LANCZOS)
-        im.putalpha(ImageChops.multiply(im.getchannel("A"), mask))
+        if shape != "sq":                                               # a plain square keeps its sharp corners
+            k = 4                                                       # supersample → smooth edge
+            mask = Image.new("L", (w * k, h * k), 0)
+            if shape == "circle":
+                ImageDraw.Draw(mask).ellipse((0, 0, w * k - 1, h * k - 1), fill=255)
+            else:
+                ImageDraw.Draw(mask).rounded_rectangle((0, 0, w * k - 1, h * k - 1),
+                                                       radius=int(min(w, h) * STICKER_RADIUS * k), fill=255)
+            mask = mask.resize((w, h), Image.LANCZOS)
+            im.putalpha(ImageChops.multiply(im.getchannel("A"), mask))
         for q in (90, 75, 60, 45):                                      # sticker limit: 512 KB
             buf = io.BytesIO()
             im.save(buf, "WEBP", quality=q, method=4)
@@ -3596,6 +3787,7 @@ async def stk_menu_view(uid: int, lang: str) -> tuple[str, Kb]:
                 if act else tx(lang, "stk_menu_nopack"))
         if vact:
             text += "\n\n" + tx(lang, "stk_menu_vpack", title=esc(vact["title"]), n=int(vact.get("n", 0)))
+        text += "\n\n" + tx(lang, "stk_menu_tip")
         for p in (act, vact):
             if p:
                 rows.append([Btn(clip(f"{'🎞' if _fmt_of(p) == 'video' else '🖼'} {p['title']}", 30),
@@ -3712,42 +3904,6 @@ def _video_file(msg) -> tuple[str, int, int] | None:
     return None
 
 
-async def process_video_sticker(update: Update, ctx, lang: str) -> None:
-    """A video the user sent → animated (video) sticker: WEBM/VP9, 512 px, ≤ 3 s, ≤ 256 KB, rounded corners."""
-    msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
-    if not await gate_message(update, ctx, uid, lang):
-        return
-    fid, size, seconds = _video_file(msg)
-    if size > 20_000_000:                                              # bots can download up to 20 MB
-        return await msg.reply_text(tx(lang, "mkstk_big"))
-    if not ffmpeg_path():
-        return await msg.reply_text(tx(lang, "vstk_noffmpeg"))
-    if not await acquire_lock(uid):
-        return await msg.reply_text(tx(lang, "busy_msg"))
-    status = None
-    try:
-        status = await msg.reply_text(tx(lang, "st_stk", bar=bar(2)))
-        await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
-        tg_file = await ctx.bot.get_file(fid)
-        raw = bytes(await tg_file.download_as_bytearray())
-        webm = await to_sticker_webm(raw)
-        if not webm:
-            return await safe_edit(status, tx(lang, "stk_fail"))
-        await deliver_sticker(ctx, uid, chat_id, lang, webm, "video")
-        if seconds > 3:
-            await ctx.bot.send_message(chat_id, tx(lang, "vstk_trim"))
-        try:
-            await status.delete()
-        except TelegramError:
-            pass
-    except Exception as e:                                              # noqa: BLE001 — user gets a clean message
-        await report_error(ctx, e, "video_sticker")
-        if status:
-            await safe_edit(status, tx(lang, "stk_fail"))
-    finally:
-        await release_lock(uid)
-
-
 def _is_stk_title_reply(msg) -> bool:
     """True when the user is answering the 'send a name for your pack' prompt."""
     r = getattr(msg, "reply_to_message", None)
@@ -3755,6 +3911,424 @@ def _is_stk_title_reply(msg) -> bool:
         return False
     heads = {plain(tx(l, "stk_ask_title")).split("\n")[0] for l in L}
     return r.text.split("\n")[0].strip() in heads
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 9d · LEADERBOARD · STARS (paid VIP) · FOLLOW ACCOUNTS · STICKER OPTIONS (crop + caption text)
+# ══════════════════════════════════════════════════════════════════════════════
+MEDALS = ("🥇", "🥈", "🥉")
+FOLLOW_MAX, FOLLOW_MAX_VIP = 5, 20
+_USER_RE = re.compile(r"[A-Za-z0-9_.]{1,24}")
+
+
+# ── 🏆 leaderboard of the best inviters ──────────────────────────────────────
+async def lb_view(uid: int, lang: str) -> tuple[str, Kb]:
+    d = await db_get("lb")
+    ranked = sorted(((int(k), v) for k, v in d.items() if str(k).isdigit() and isinstance(v, dict)),
+                    key=lambda kv: -int(kv[1].get("n", 0))) if isinstance(d, dict) else []
+    lines = []
+    for i, (u, v) in enumerate(ranked[:10], 1):
+        name = tx(lang, "lb_hidden") if v.get("h") else esc(clip(v.get("name") or "—", 20))
+        lines.append(f"{MEDALS[i - 1] if i <= 3 else f'{i}.'} {name} — <b>{int(v.get('n', 0))}</b>{' ⬅️' if u == uid else ''}")
+    text = tx(lang, "lb_title") + "\n\n" + ("\n".join(lines) if lines else tx(lang, "lb_empty"))
+    mine = next(((i, v) for i, (u, v) in enumerate(ranked, 1) if u == uid), None)
+    if mine and mine[0] > 10:
+        text += "\n\n" + tx(lang, "lb_you", rank=mine[0], n=int(mine[1].get("n", 0)))
+    hidden = bool(await db_get(f"users/{uid}/hide_lb"))
+    return text, Kb([[Btn(tx(lang, "b_ref"), callback_data="show_ref")],
+                     [Btn(tx(lang, "b_lb_show" if hidden else "b_lb_hide"), callback_data="lb_hide")],
+                     back_row(lang)])
+
+
+async def lb_toggle_hide(uid: int) -> bool:
+    hide = not bool(await db_get(f"users/{uid}/hide_lb"))
+    await db_put(f"users/{uid}/hide_lb", 1 if hide else 0)
+    if await db_get(f"lb/{uid}") is not None:
+        await db_put(f"lb/{uid}/h", 1 if hide else 0)
+    return hide
+
+
+# ── 💎 paid VIP with Telegram Stars (currency "XTR") ─────────────────────────
+def stars_plans() -> list:
+    """[(days, stars), …] from the admin config (validated)."""
+    raw = CFG.get("stars_plans")
+    out = []
+    for p in (raw.values() if isinstance(raw, dict) else raw) or []:
+        if isinstance(p, dict):
+            p = [p.get("0"), p.get("1")]
+        try:
+            days, price = int(p[0]), int(p[1])
+        except (TypeError, ValueError, IndexError):
+            continue
+        if days >= 1 and 1 <= price <= 2500:
+            out.append((days, price))
+    return out[:4] or [(7, 50), (30, 150), (90, 400)]
+
+
+async def vip_view(uid: int, lang: str) -> tuple[str, Kb]:
+    text = tx(lang, "vip_info", dev=esc(DEV))
+    until = vip_until.get(uid, 0)
+    if until > time.time():
+        text += "\n\n" + tx(lang, "ref_vip_until", until=fmt_ts(until))
+    rows = []
+    if CFG.get("stars_on", False):
+        text += "\n\n" + tx(lang, "stars_info")
+        rows += [[Btn(tx(lang, "b_buy", days=d, stars=s), callback_data=f"buy_{i}")] for i, (d, s) in enumerate(stars_plans())]
+    rows.append(back_row(lang))
+    return text, Kb(rows)
+
+
+async def send_stars_invoice(cb: "CB", idx: int) -> None:
+    plans = stars_plans()
+    if not CFG.get("stars_on", False) or not 0 <= idx < len(plans):
+        return await cb.answer(cb.t("stars_off"), True)
+    days, stars = plans[idx]
+    await cb.answer()
+    title = cb.t("inv_title", days=days)
+    await cb.ctx.bot.send_invoice(chat_id=cb.q.message.chat_id, title=title,
+                                  description=cb.t("inv_desc", days=days), payload=f"vip_{days}_{stars}",
+                                  provider_token="", currency="XTR",                       # Stars: no provider token
+                                  prices=[LabeledPrice(label=title, amount=stars)])
+
+
+async def on_pre_checkout(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Telegram asks 'may I charge?' — answer within 10 s, no database work."""
+    q = update.pre_checkout_query
+    ok = False
+    try:
+        kind, days, stars = q.invoice_payload.split("_")
+        ok = (kind == "vip" and bool(CFG.get("stars_on", False)) and q.currency == "XTR"
+              and (int(days), int(stars)) in stars_plans() and int(q.total_amount) == int(stars))
+    except (ValueError, AttributeError):
+        ok = False
+    lang = CFG.get("default_lang", "ku")
+    await q.answer(ok=ok, error_message=None if ok else tx(lang if lang in L else "ku", "stars_changed"))
+
+
+async def on_paid(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Stars arrived → VIP days on top of whatever the user still has. Idempotent per charge id."""
+    msg, uid = update.effective_message, update.effective_user.id
+    sp = msg.successful_payment
+    charge = str(sp.telegram_payment_charge_id)
+    ck = hashlib.md5(charge.encode()).hexdigest()[:20]
+    if await db_get(f"pay/{ck}") is not None:
+        return
+    try:
+        days = int(sp.invoice_payload.split("_")[1])
+    except (ValueError, IndexError):
+        days = 0
+    stars = int(sp.total_amount)
+    await db_put(f"pay/{ck}", {"c": charge, "u": uid, "d": days, "s": stars, "ts": int(time.time())})   # record first
+    until = await grant_temp_vip(uid, days) if days > 0 else 0
+    await db_incr("sys/cfg/stars_total", stars)
+    await db_incr(f"users/{uid}/stars", stars)
+    lang = user_lang(await db_get(f"users/{uid}"))
+    await msg.reply_text(tx(lang, "stars_thanks", days=days, until=fmt_ts(until) if until else "—"))
+    try:
+        await ctx.bot.send_message(OWNER_ID, f"💰 <b>+{stars} ⭐</b> · VIP {days}d\nuser: <code>{uid}</code>\n"
+                                             f"charge: <code>{esc(charge)}</code>")
+    except TelegramError:
+        pass
+
+
+async def cmd_refund(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """/refund <charge_id> — owner only. Needs python-telegram-bot ≥ 21.4 (refund_star_payment)."""
+    uid = update.effective_user.id
+    if not is_super(uid):
+        return
+    args = getattr(ctx, "args", None) or []
+    if len(args) != 1:
+        return await update.effective_message.reply_text("Usage: <code>/refund CHARGE_ID</code>")
+    rec = await db_get(f"pay/{hashlib.md5(args[0].encode()).hexdigest()[:20]}")
+    if not isinstance(rec, dict):
+        return await update.effective_message.reply_text("❌ Payment not found.")
+    if not hasattr(ctx.bot, "refund_star_payment"):
+        return await update.effective_message.reply_text("⚠️ Refunds need <code>python-telegram-bot&gt;=21.4</code> in requirements.txt.")
+    await ctx.bot.refund_star_payment(user_id=int(rec["u"]), telegram_payment_charge_id=rec["c"])
+    u = int(rec["u"])
+    left = max(int(time.time()), vip_until.get(u, 0) - int(rec.get("d", 0)) * 86400)       # take the VIP days back
+    vip_until[u] = left
+    await db_put(f"sys/vip_until/{u}", left)
+    await db_del(f"pay/{hashlib.md5(args[0].encode()).hexdigest()[:20]}")
+    await db_incr("sys/cfg/stars_total", -int(rec.get("s", 0)))
+    await update.effective_message.reply_text(f"✅ Refunded {int(rec.get('s', 0))} ⭐ to <code>{u}</code>.")
+
+
+async def stars_admin_view(cb: "CB") -> None:
+    plans, on = stars_plans(), CFG.get("stars_on", False)
+    total = int(await db_get("sys/cfg/stars_total", 0) or 0)
+    rows = [[Btn(cb.t("b_stars_toggle", status=status_word(cb.lang, on)), callback_data="sup_stars_t")]]
+    for i, (days, price) in enumerate(plans):
+        rows.append([Btn("-50", callback_data=f"sup_stars_p{i}-50"), Btn("-10", callback_data=f"sup_stars_p{i}-10"),
+                     Btn(f"{days}d · {price}⭐", callback_data="noop"),
+                     Btn("+10", callback_data=f"sup_stars_p{i}+10"), Btn("+50", callback_data=f"sup_stars_p{i}+50")])
+    rows.append(back_row(cb.lang, "panel_unified"))
+    await cb.edit(cb.t("sup_stars_title", status=status_word(cb.lang, on), total=total), Kb(rows))
+
+
+async def route_stars_admin(cb: "CB", data: str) -> None:
+    if data == "sup_stars_t":
+        await set_cfg(stars_on=not CFG.get("stars_on", False))
+    elif data.startswith("sup_stars_p"):
+        rest = data[len("sup_stars_p"):]
+        try:
+            i, delta = int(rest[0]), int(rest[1:])
+        except (ValueError, IndexError):
+            return await cb.answer()
+        plans = stars_plans()
+        if 0 <= i < len(plans):
+            plans[i] = (plans[i][0], max(1, min(2500, plans[i][1] + delta)))
+            await set_cfg(stars_plans=[[d, s] for d, s in plans])
+    await cb.answer()
+    await stars_admin_view(cb)
+
+
+# ── 🔔 follow TikTok accounts → a notice when they post ──────────────────────
+def _ukey(user: str) -> str:
+    return user.lower().replace(".", "~")                      # Firebase keys cannot contain "."
+
+
+async def is_following(uid: int, user: str) -> bool:
+    return await db_get(f"follow/{uid}/{_ukey(user)}") is not None
+
+
+async def follow_add(uid: int, user: str) -> str:
+    """→ "ok" | "exists" | "limit" """
+    mine = await db_get(f"follow/{uid}")
+    mine = mine if isinstance(mine, dict) else {}
+    uk = _ukey(user)
+    if uk in mine:
+        return "exists"
+    if len(mine) >= (FOLLOW_MAX_VIP if is_vip(uid) else FOLLOW_MAX):
+        return "limit"
+    await db_put(f"follow/{uid}/{uk}", int(time.time()))
+    await db_put(f"fsub/{uk}/{uid}", 1)
+    if await db_get(f"fmeta/{uk}") is None:                       # baseline NOW → only later videos are announced
+        items = await fetch_latest(user, 1)
+        last = max((int(m["key"]) for m in items or [] if str(m["key"]).isdigit()), default=0)
+        await db_put(f"fmeta/{uk}", {"last": last, "chk": int(time.time()), "u": user})
+    return "ok"
+
+
+async def follow_remove(uid: int, user: str) -> None:
+    uk = _ukey(user)
+    await db_del(f"follow/{uid}/{uk}")
+    await db_del(f"fsub/{uk}/{uid}")
+    if not await db_get(f"fsub/{uk}"):
+        await db_del(f"fmeta/{uk}")
+
+
+async def drop_user_follows(uid: int) -> None:
+    """The user blocked the bot → stop watching for them."""
+    mine = await db_get(f"follow/{uid}")
+    for uk in (mine if isinstance(mine, dict) else {}):
+        await db_del(f"fsub/{uk}/{uid}")
+        if not await db_get(f"fsub/{uk}"):
+            await db_del(f"fmeta/{uk}")
+    await db_del(f"follow/{uid}")
+
+
+async def follow_list_view(uid: int, lang: str) -> tuple[str, Kb]:
+    mine = await db_get(f"follow/{uid}")
+    if not isinstance(mine, dict) or not mine:
+        return tx(lang, "fw_empty"), Kb([back_row(lang)])
+    rows = []
+    for uk, ts in sorted(mine.items(), key=lambda kv: -int(kv[1] or 0)):
+        user = uk.replace("~", ".")
+        rows.append([Btn(clip(f"@{user}", 28), callback_data=f"pf_v_{user}"), Btn("🔕", callback_data=f"fwx_{user}")])
+    rows.append(back_row(lang))
+    return tx(lang, "fw_list_title", n=len(mine), max=FOLLOW_MAX_VIP if is_vip(uid) else FOLLOW_MAX), Kb(rows)
+
+
+async def _relabel_button(cb: "CB", callback_data: str, text: str) -> None:
+    try:
+        old = cb.q.message.reply_markup.inline_keyboard
+    except AttributeError:
+        return
+    rows = [[Btn(text, callback_data=b.callback_data) if b.callback_data == callback_data
+             else (Btn(b.text, callback_data=b.callback_data) if b.callback_data else Btn(b.text, url=b.url))
+             for b in row] for row in old]
+    try:
+        await cb.q.message.edit_reply_markup(reply_markup=Kb(rows))
+    except TelegramError:
+        pass
+
+
+async def toggle_follow(cb: "CB", user: str) -> None:
+    if not _USER_RE.fullmatch(user):
+        return await cb.answer()
+    if await is_following(cb.uid, user):
+        await follow_remove(cb.uid, user)
+        await cb.answer(cb.t("fw_off"))
+        return await _relabel_button(cb, f"fw_{user}", cb.t("fw_b_off"))
+    res = await follow_add(cb.uid, user)
+    if res == "limit":
+        return await cb.answer(cb.t("fw_limit", n=FOLLOW_MAX, vip=FOLLOW_MAX_VIP), True)
+    await cb.answer(cb.t("fw_on"))
+    await _relabel_button(cb, f"fw_{user}", cb.t("fw_b_on"))
+
+
+async def notify_follow(ctx, uid: int, lang: str, user: str, m: dict) -> bool:
+    """One 'new video' notice. False when the user blocked the bot."""
+    text = tx(lang, "fw_new", user=esc(user), title=esc(clip(m.get("title") or "", 150)))
+    kb = Kb([[Btn(tx(lang, "fw_b_dl"), callback_data=f"rs_{m['key']}"), Btn(tx(lang, "pf_b_open"), url=m["src"])],
+             [Btn(tx(lang, "fw_b_stop"), callback_data=f"fwu_{user}")]])
+    try:
+        if m.get("cover"):
+            try:
+                await ctx.bot.send_photo(uid, m["cover"], caption=text, reply_markup=kb)
+                return True
+            except Forbidden:
+                raise
+            except TelegramError:                                  # cover link refused → plain message
+                pass
+        await ctx.bot.send_message(uid, text, reply_markup=kb)
+        return True
+    except Forbidden:
+        return False
+    except TelegramError as e:
+        log.info("follow notice failed for %s: %s", uid, e)
+        return True
+
+
+async def run_follow_checks(ctx, budget: float = 40.0) -> dict:
+    """Called by the cron endpoint: look at the accounts that were checked longest ago, announce new videos."""
+    t0 = time.monotonic()
+    stats = {"accounts": 0, "new_videos": 0, "notices": 0}
+    meta = await db_get("fmeta")
+    if not isinstance(meta, dict):
+        return stats
+    langs: dict = {}
+    for uk, mt in sorted(meta.items(), key=lambda kv: int((kv[1] or {}).get("chk", 0) or 0)):
+        if time.monotonic() - t0 > budget - 8:
+            break
+        subs = await db_get(f"fsub/{uk}")
+        if not isinstance(subs, dict) or not subs:
+            await db_del(f"fmeta/{uk}")
+            continue
+        user = (mt or {}).get("u") or uk.replace("~", ".")
+        items = await fetch_latest(user, 5)
+        await db_put(f"fmeta/{uk}/chk", int(time.time()))
+        await asyncio.sleep(1.1)                                   # TikWM: about one request per second
+        stats["accounts"] += 1
+        ids = {int(m["key"]): m for m in items or [] if str(m["key"]).isdigit()}
+        if not ids:
+            continue
+        last = int((mt or {}).get("last", 0) or 0)
+        newest = max(ids)
+        if last == 0:                                              # first look → remember, announce nothing
+            await db_put(f"fmeta/{uk}/last", newest)
+            continue
+        fresh = [ids[i] for i in sorted(ids) if i > last][-3:]     # oldest first, at most 3 per account per run
+        if not fresh:
+            continue
+        await db_put(f"fmeta/{uk}/last", newest)
+        for m in fresh:
+            await remember_media(m, m["src"])                      # so the ⬇️ button can find the link later
+            stats["new_videos"] += 1
+            for s in list(subs):
+                s = int(s)
+                if s not in langs:
+                    langs[s] = user_lang(await db_get(f"users/{s}"))
+                if await notify_follow(ctx, s, langs[s], user, m):
+                    stats["notices"] += 1
+                else:
+                    await drop_user_follows(s)
+                    subs.pop(str(s), None)
+                await asyncio.sleep(0.05)
+    return stats
+
+
+# ── ✂️ sticker options: square crop + caption text ───────────────────────────
+_FONT_RAW = None
+_TXT_ENGINE = None
+_RTL_RE = re.compile(r"[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]")
+
+
+def text_engine() -> str:
+    """How Kurdish/Arabic text can be drawn here: 'raqm' (Pillow + libraqm) · 'reshape' (arabic-reshaper + python-bidi) · 'plain'."""
+    global _TXT_ENGINE
+    if _TXT_ENGINE is None:
+        _TXT_ENGINE = "plain"
+        try:
+            from PIL import features                               # type: ignore
+            if features.check("raqm"):
+                _TXT_ENGINE = "raqm"
+        except Exception:                                          # noqa: BLE001
+            pass
+        if _TXT_ENGINE == "plain":
+            try:
+                import arabic_reshaper                             # type: ignore  # noqa: F401
+                import bidi                                        # type: ignore  # noqa: F401
+                _TXT_ENGINE = "reshape"
+            except Exception:                                      # noqa: BLE001
+                pass
+    return _TXT_ENGINE
+
+
+def _font(size: int, engine: str):
+    from PIL import ImageFont                                      # type: ignore
+    global _FONT_RAW
+    if _FONT_RAW is None:
+        _FONT_RAW = zlib.decompress(base64.b64decode(_FONT_Z))
+    layout = ImageFont.Layout.RAQM if engine == "raqm" else ImageFont.Layout.BASIC
+    return ImageFont.truetype(io.BytesIO(_FONT_RAW), size, layout_engine=layout)
+
+
+def _shape(line: str, engine: str) -> tuple:
+    rtl = bool(_RTL_RE.search(line))
+    if engine == "raqm":
+        return line, ({"direction": "rtl", "language": "ckb"} if rtl else {})
+    if engine == "reshape" and rtl:
+        import arabic_reshaper                                     # type: ignore
+        try:
+            from bidi.algorithm import get_display                 # type: ignore
+        except ImportError:
+            from bidi import get_display                           # type: ignore
+        return get_display(arabic_reshaper.reshape(line)), {}
+    return line, {}
+
+
+def text_supported(text: str) -> bool:
+    return not (text and _RTL_RE.search(text) and text_engine() == "plain")
+
+
+def _caption_layer(size: tuple, text: str, shape: str = "round"):
+    """Transparent RGBA layer with the caption at the bottom: white text, black outline, ≤ 3 lines."""
+    from PIL import Image, ImageDraw                               # type: ignore
+    text = " ".join(text.split())[:80]
+    if not text or not text_supported(text):
+        return None
+    engine = text_engine()
+    w, h = size
+    layer = Image.new("RGBA", size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    lines: list = []
+    for fs in range(max(28, w // 7), 23, -4):
+        font, sw = _font(fs, engine), max(2, fs // 12)
+        maxw = int(w * 0.66) if shape == "circle" else w - 2 * (sw + 14)     # a circle is narrow near the bottom
+        lines, cur = [], ""
+        for word in text.split():
+            trial = (cur + " " + word).strip()
+            s, kw = _shape(trial, engine)
+            if cur and d.textlength(s, font=font, **kw) > maxw:
+                lines.append(cur)
+                cur = word
+            else:
+                cur = trial
+        if cur:
+            lines.append(cur)
+        widest = max(d.textlength(_shape(l, engine)[0], font=font, **_shape(l, engine)[1]) for l in lines)
+        if len(lines) <= 3 and widest <= maxw:
+            break
+    lh = int(fs * 1.3)
+    y = h - (int(h * 0.17) if shape == "circle" else 18) - lh * len(lines)
+    for i, line in enumerate(lines):
+        s, kw = _shape(line, engine)
+        d.text((w / 2, y + i * lh), s, font=font, fill=(255, 255, 255, 255), stroke_width=sw,
+               stroke_fill=(0, 0, 0, 255), anchor="ma", **kw)
+    return layer
+
 
 
 def _photo_file(msg) -> tuple[str, int] | None:
@@ -3769,38 +4343,112 @@ def _photo_file(msg) -> tuple[str, int] | None:
     return None
 
 
-async def process_photo_sticker(update: Update, ctx, lang: str) -> None:
-    """A photo from the user's gallery → rounded 512 px sticker."""
-    msg, uid, chat_id = update.effective_message, update.effective_user.id, update.effective_chat.id
+# ── 🎨 sticker shape: ask first (rounded · square · circle), then build ──────
+SHAPES = ("round", "sq", "circle")
+
+
+async def ask_sticker_shape(update: Update, ctx, lang: str, kind: str) -> None:
+    """A photo / video arrived → remember it and ask which shape the sticker should have."""
+    msg, uid = update.effective_message, update.effective_user.id
     if not await gate_message(update, ctx, uid, lang):
         return
-    fid, size = _photo_file(msg)
+    seconds = 0
+    if kind == "video":
+        fid, size, seconds = _video_file(msg)
+        if not ffmpeg_path():
+            return await msg.reply_text(tx(lang, "vstk_noffmpeg"))
+    else:
+        fid, size = _photo_file(msg)
     if size > 20_000_000:                                              # bots can download up to 20 MB
         return await msg.reply_text(tx(lang, "mkstk_big"))
-    if not await acquire_lock(uid):
-        return await msg.reply_text(tx(lang, "busy_msg"))
-    status = None
-    try:
-        status = await msg.reply_text(tx(lang, "st_mkstk"))
-        await chat_action(ctx, chat_id, ChatAction.UPLOAD_PHOTO)
-        if not importlib.util.find_spec("PIL"):
-            raise RuntimeError("Pillow is missing — add `Pillow` to requirements.txt")
-        tg_file = await ctx.bot.get_file(fid)
-        raw = bytes(await tg_file.download_as_bytearray())
-        webp = await asyncio.to_thread(_static_sticker, raw)
-        if not webp:
-            return await safe_edit(status, tx(lang, "mkstk_fail"))
-        await deliver_sticker(ctx, uid, chat_id, lang, webp)
+    mid = int(getattr(msg, "message_id", 0) or 0)
+    old = await db_get(f"stkq/{uid}")                                  # forget questions nobody answered for an hour
+    if isinstance(old, dict):
+        for k, v in list(old.items()):
+            if not isinstance(v, dict) or int(v.get("ts", 0)) < int(time.time()) - 3600:
+                await db_del(f"stkq/{uid}/{k}")
+    await db_put(f"stkq/{uid}/{mid}", {"k": kind, "f": fid, "s": seconds, "ts": int(time.time()),
+                                       "c": clip((getattr(msg, "caption", None) or "").strip(), 80)})
+    await msg.reply_text(tx(lang, "ss_ask"), reply_markup=Kb([
+        [Btn(tx(lang, "b_shape_round"), callback_data=f"ss_round_{mid}"),
+         Btn(tx(lang, "b_shape_sq"), callback_data=f"ss_sq_{mid}"),
+         Btn(tx(lang, "b_shape_circle"), callback_data=f"ss_circle_{mid}")],
+        [Btn(tx(lang, "b_shape_cancel"), callback_data=f"ss_x_{mid}")]]))
+
+
+async def process_photo_sticker(update: Update, ctx, lang: str) -> None:
+    await ask_sticker_shape(update, ctx, lang, "photo")
+
+
+async def process_video_sticker(update: Update, ctx, lang: str) -> None:
+    await ask_sticker_shape(update, ctx, lang, "video")
+
+
+async def _build_sticker(ctx, uid: int, chat_id: int, lang: str, rec: dict, shape: str) -> str | None:
+    """Download the user's media, render it in the chosen shape, deliver it. → None, or the key of an error text."""
+    video = rec.get("k") == "video"
+    await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO if video else ChatAction.UPLOAD_PHOTO)
+    if not video and not importlib.util.find_spec("PIL"):
+        raise RuntimeError("Pillow is missing — add `Pillow` to requirements.txt")
+    tg_file = await ctx.bot.get_file(rec["f"])
+    raw = bytes(await tg_file.download_as_bytearray())
+    caption = (rec.get("c") or "").strip()
+    if video:
+        webm = await to_sticker_webm(raw, shape)
+        if not webm:
+            return "stk_fail"
+        await deliver_sticker(ctx, uid, chat_id, lang, webm, "video")
+        if int(rec.get("s", 0)) > 3:
+            await ctx.bot.send_message(chat_id, tx(lang, "vstk_trim"))
+        if caption:
+            await ctx.bot.send_message(chat_id, tx(lang, "vstk_notext"))
+        return None
+    webp = await asyncio.to_thread(_static_sticker, raw, shape, caption)
+    if not webp:
+        return "mkstk_fail"
+    await deliver_sticker(ctx, uid, chat_id, lang, webp)
+    if caption and not text_supported(caption):
+        await ctx.bot.send_message(chat_id, tx(lang, "stk_text_unsupported"))
+    return None
+
+
+async def choose_shape(cb: "CB", data: str) -> None:
+    """ss_<round|sq|circle|x>_<message id> — the user answered the shape question."""
+    parts = data.split("_", 2)
+    if len(parts) != 3 or parts[1] not in SHAPES + ("x",) or not parts[2].isdigit():
+        return await cb.answer()
+    shape, mid, uid, lang = parts[1], parts[2], cb.uid, cb.lang
+    path, msg = f"stkq/{uid}/{mid}", cb.q.message
+    if shape == "x":                                                   # cancelled
+        await db_del(path)
+        await cb.answer()
         try:
-            await status.delete()
+            await msg.delete()
         except TelegramError:
             pass
+        return
+    rec = await db_get(path)
+    if not isinstance(rec, dict):
+        return await cb.answer(cb.t("ss_expired"), True)
+    if not await acquire_lock(uid):
+        return await cb.answer(cb.t("busy_msg"), True)
+    err = None
+    try:
+        await cb.answer()
+        await safe_edit(msg, tx(lang, "st_mkstk"))                    # replaces the question (buttons disappear)
+        err = await _build_sticker(cb.ctx, uid, msg.chat_id, lang, rec, shape)
     except Exception as e:                                              # noqa: BLE001 — user gets a clean message
-        await report_error(ctx, e, "photo_sticker")
-        if status:
-            await safe_edit(status, tx(lang, "mkstk_fail"))
+        await report_error(cb.ctx, e, "sticker_shape")
+        err = "stk_fail" if rec.get("k") == "video" else "mkstk_fail"
     finally:
         await release_lock(uid)
+    await db_del(path)
+    if err:
+        return await safe_edit(msg, tx(lang, err))
+    try:
+        await msg.delete()
+    except TelegramError:
+        pass
 
 
 async def send_extra(cb: "CB", data: str) -> None:
@@ -3927,6 +4575,8 @@ async def show_panel(cb: CB):
         rows.append([Btn(cb.t("b_sup_ref"), callback_data="sup_ref"),
                      Btn(cb.t("b_sup_groups", status=status_word(lang, CFG.get("groups_on", True))),
                          callback_data="sup_toggle_groups")])
+        rows.append([Btn(cb.t("b_sup_stars", status=status_word(lang, CFG.get("stars_on", False))),
+                         callback_data="sup_stars")])
         rows.append([Btn(cb.t("b_sup_botlang"), callback_data="sup_bot_lang")])
     if is_owner(uid):
         rows.append([Btn("▬▬▬  👑  ▬▬▬", callback_data="noop")])
@@ -3985,6 +4635,10 @@ async def route_super(cb: CB, data: str):
 
     if data == "sup_ref":
         return await ref_admin_view(cb)
+    if data == "sup_stars":
+        return await stars_admin_view(cb)
+    if data.startswith("sup_stars_"):
+        return await route_stars_admin(cb, data)
     if data.startswith("sup_ref_"):
         return await route_ref_admin(cb, data)
 
@@ -4413,7 +5067,8 @@ async def process_avatar(update: Update, ctx, username: str, lang: str, started:
         if info.get("private"):
             return await safe_edit(status, tx(lang, "private_account"))
 
-        card, kb = profile_card(lang, info), profile_kb(lang, info["user"])
+        followed = bool(_USER_RE.fullmatch(info["user"])) and await is_following(uid, info["user"])
+        card, kb = profile_card(lang, info), profile_kb(lang, info["user"], followed)
         await safe_edit(status, tx(lang, "st_avatar", bar=bar(3)))
         res = None
         if info.get("pic"):
@@ -4855,6 +5510,9 @@ def build_application() -> Application:
     ptb.add_handler(CommandHandler("start", cmd_start))
     ptb.add_handler(CallbackQueryHandler(on_callback))
     ptb.add_handler(ChatMemberHandler(on_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
+    ptb.add_handler(CommandHandler("refund", cmd_refund))
+    ptb.add_handler(PreCheckoutQueryHandler(on_pre_checkout))
+    ptb.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, on_paid))
     ptb.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND & ~filters.StatusUpdate.ALL, on_message))
     ptb.add_error_handler(on_error)
     return ptb
@@ -4927,6 +5585,32 @@ async def webhook(req: Request, full_path: str = ""):
     return {"ok": True}
 
 
+@app.get("/cron/follows")
+async def cron_follows(req: Request):
+    """Called by a scheduler (Vercel Cron or any free pinger): announce new videos of followed accounts."""
+    if not CRON_SECRET:
+        return JSONResponse({"ok": False, "error": "CRON_SECRET is not set"}, status_code=403)
+    try:
+        allowed = (hmac.compare_digest(req.headers.get("authorization", ""), f"Bearer {CRON_SECRET}")
+                   or hmac.compare_digest(req.query_params.get("key", ""), CRON_SECRET))
+    except TypeError:
+        allowed = False
+    if not allowed:
+        return JSONResponse({"ok": False, "error": "forbidden"}, status_code=403)
+    async with new_client() as client:
+        token = _http_ctx.set(client)
+        try:
+            ptb = await get_ptb()
+            await load_cfg()
+            stats = await run_follow_checks(_BotOnly(ptb.bot))
+        except Exception as e:                                          # noqa: BLE001
+            log.error("CRON ERROR: %s", traceback.format_exc())
+            return JSONResponse({"ok": False, "error": str(e)[:200]}, status_code=500)
+        finally:
+            _http_ctx.reset(token)
+    return {"ok": True, **stats}
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 13 · STATUS PAGE  (GET /)  — public overview, private diagnostics with ?key=
 # ══════════════════════════════════════════════════════════════════════════════
@@ -4986,6 +5670,10 @@ async def status_page(req: Request, full_path: str = ""):
         _row("Pillow", "ok" if importlib.util.find_spec("PIL") else "warn",
              "✓ Found" if importlib.util.find_spec("PIL") else "Missing",
              "" if importlib.util.find_spec("PIL") else "Add Pillow to requirements.txt (static sticker fallback)"),
+        _row("CRON_SECRET", "ok" if CRON_SECRET else "warn", "✓ Set" if CRON_SECRET else "Not set",
+             "" if CRON_SECRET else "Needed for 🔔 follow alerts (/cron/follows)"),
+        _row("Kurdish text on stickers", "ok" if text_engine() != "plain" else "warn", text_engine(),
+             "" if text_engine() != "plain" else "Add arabic-reshaper and python-bidi to requirements.txt"),
         _row("OWNER_ID", "ok" if OWNER_ID != 5977475208 else "warn", "✓ Custom" if OWNER_ID != 5977475208 else "Default",
              "" if OWNER_ID != 5977475208 else "Set your own Telegram ID — the default belongs to the original developer"),
     ]
@@ -5023,3 +5711,10 @@ async def status_page(req: Request, full_path: str = ""):
                  .replace("__DEV__", esc(DEV.lstrip("@"))).replace("__DEV_TXT__", esc(DEV))
                  .replace("__CH__", esc(CHANNEL_URL)))
     return HTMLResponse(page, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# EMBEDDED FONT — DejaVu Sans Bold (free licence), subset to Latin + Arabic-script letters, zlib + base64.
+# Used only for the caption text on photo stickers.
+# ══════════════════════════════════════════════════════════════════════════════
+_FONT_Z = "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"
