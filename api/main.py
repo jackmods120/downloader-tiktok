@@ -308,6 +308,9 @@ L["ku"] = {
     "stk_menu_tip": "🎨 دوای ناردنی وێنە یان ڤیدیۆ، شێوەی ستیکەرەکە هەڵدەبژێریت: قوژبن خڕ، چوارگۆشە یان بازنە.\n✍️ بۆ نووسین لەسەر ستیکەر، نووسینەکە وەک <b>کاپشنی</b> وێنەکە بنێرە.",
     "ss_ask": "🎨 <b>چ شێوەیەک دەتەوێت بۆ ستیکەرەکە؟</b>\n\n▭ <b>قوژبن خڕ</b> — ڕێژەی ڕەسەنی وێنەکە دەمێنێتەوە\n⬛ <b>چوارگۆشە</b> — ناوەڕاستی وێنەکە دەبڕدرێت بۆ چوارگۆشە\n⚪ <b>بازنە</b> — وەک وێنەی پرۆفایل",
     "ss_expired": "⌛ ئەم داواکارییە بەسەرچوو. وێنە یان ڤیدیۆکە دووبارە بنێرە.",
+    "b_font_auto": "🔄 خۆکار", "b_font_ku": "🔤 کوردی", "b_font_en": "🔠 ئینگلیزی",
+    "ss_font_hint": "🔤 <b>فۆنتی نووسینەکە</b> هەڵبژێرە: خۆکار، کوردی یان ئینگلیزی. پاشان شێوەکە.",
+    "stk_font_missing": "ℹ️ فۆنتی هەڵبژێردراو هەندێک پیتی ئەم نووسینەی نییە، بۆیە فۆنتی ناوەکیی بۆتەکە بەکارهات.",
     "b_shape_round": "▭ قوژبن خڕ", "b_shape_sq": "⬛ چوارگۆشە", "b_shape_circle": "⚪ بازنە", "b_shape_cancel": "❌ هەڵوەشاندنەوە",
     "stk_text_unsupported": "ℹ️ نووسینی کوردی لەسەر ئەم سێرڤەرە پشتگیری ناکرێت، بۆیە ستیکەرەکە بێ نووسین دروست کرا.",
     "vstk_notext": "ℹ️ نووسین لەسەر ستیکەری جوڵاو پشتگیری ناکرێت (تەنیا لەسەر وێنە).",
@@ -645,6 +648,9 @@ L["en"] = {
     "stk_menu_tip": "🎨 After you send a photo or video you choose the shape: rounded, square or circle.\n✍️ To put text on a sticker, send it as the photo's <b>caption</b>.",
     "ss_ask": "🎨 <b>Which shape do you want for the sticker?</b>\n\n▭ <b>Rounded</b> — keeps the photo's proportions\n⬛ <b>Square</b> — centre-cropped to a square\n⚪ <b>Circle</b> — like a profile picture",
     "ss_expired": "⌛ This request expired. Please send the photo or video again.",
+    "b_font_auto": "🔄 Auto", "b_font_ku": "🔤 Kurdish", "b_font_en": "🔠 English",
+    "ss_font_hint": "🔤 Pick the <b>font</b> for your text: Auto, Kurdish or English. Then the shape.",
+    "stk_font_missing": "ℹ️ The chosen font doesn't have some letters of this text, so the bot's built-in font was used.",
     "b_shape_round": "▭ Rounded", "b_shape_sq": "⬛ Square", "b_shape_circle": "⚪ Circle", "b_shape_cancel": "❌ Cancel",
     "stk_text_unsupported": "ℹ️ Kurdish/Arabic text isn't supported on this server, so the sticker was made without text.",
     "vstk_notext": "ℹ️ Text on animated stickers is not supported (photos only).",
@@ -978,6 +984,9 @@ L["ar"] = {
     "stk_menu_tip": "🎨 بعد إرسال صورة أو فيديو تختار الشكل: حواف مستديرة أو مربع أو دائرة.\n✍️ لكتابة نص على الملصق، أرسله كـ<b>تعليق</b> للصورة.",
     "ss_ask": "🎨 <b>ما الشكل الذي تريده للملصق؟</b>\n\n▭ <b>حواف مستديرة</b> — تبقى نسبة الصورة كما هي\n⬛ <b>مربع</b> — قص من الوسط إلى مربع\n⚪ <b>دائرة</b> — مثل صورة الملف الشخصي",
     "ss_expired": "⌛ انتهت صلاحية هذا الطلب. أرسل الصورة أو الفيديو مرة أخرى.",
+    "b_font_auto": "🔄 تلقائي", "b_font_ku": "🔤 كردي", "b_font_en": "🔠 إنجليزي",
+    "ss_font_hint": "🔤 اختر <b>خط</b> النص: تلقائي أو كردي أو إنجليزي. ثم الشكل.",
+    "stk_font_missing": "ℹ️ الخط المختار لا يحتوي بعض أحرف هذا النص، لذلك استُخدم الخط المدمج في البوت.",
     "b_shape_round": "▭ حواف مستديرة", "b_shape_sq": "⬛ مربع", "b_shape_circle": "⚪ دائرة", "b_shape_cancel": "❌ إلغاء",
     "stk_text_unsupported": "ℹ️ النص الكردي/العربي غير مدعوم على هذا الخادم، لذلك أُنشئ الملصق بدون نص.",
     "vstk_notext": "ℹ️ النص على الملصقات المتحركة غير مدعوم (للصور فقط).",
@@ -3560,7 +3569,7 @@ def _round_alpha_expr() -> str:
             f"if(gt(ld(0),0)*gt(ld(1),0),clip(255*({r}+0.5-hypot(ld(0),ld(1))),0,255),255)")
 
 
-def _static_sticker(img: bytes, shape: str = "round", text: str = "") -> bytes | None:
+def _static_sticker(img: bytes, shape: str = "round", text: str = "", font_choice: str = "auto") -> bytes | None:
     """Fallback when ffmpeg is missing: the video cover as a static 512 px WEBP sticker (needs Pillow)."""
     try:
         from PIL import Image, ImageChops, ImageDraw, ImageOps          # type: ignore
@@ -3572,7 +3581,7 @@ def _static_sticker(img: bytes, shape: str = "round", text: str = "") -> bytes |
         base = ImageOps.exif_transpose(src).convert("RGBA")
         im = (ImageOps.fit(base, (512, 512), Image.LANCZOS) if shape in ("sq", "circle")
               else ImageOps.contain(base, (512, 512)))
-        layer = _caption_layer(im.size, text, shape) if text else None
+        layer = _caption_layer(im.size, text, shape, font_choice) if text else None
         if layer is not None:                                           # caption text under the rounded mask
             im = Image.alpha_composite(im, layer)
         w, h = im.size
@@ -4327,14 +4336,31 @@ def _covers(raw: bytes, text: str) -> bool:
     return True
 
 
-def _font_source(text: str, engine: str, rtl: bool) -> bytes:
-    """The user's font for this script when it covers every letter of the caption, else the built-in one."""
-    raw = _custom_font("kurdish" if rtl else "english")[0]
+def _font_kind(rtl: bool, choice: str = "auto") -> str:
+    """choice: "auto" (by script) · "ku" (always kurdish.ttf) · "en" (always english.ttf)"""
+    return {"ku": "kurdish", "en": "english"}.get(choice) or ("kurdish" if rtl else "english")
+
+
+def font_fallback(text: str, choice: str = "auto") -> bool:
+    """True when the user's font for this choice exists but cannot draw every letter (the built-in font is used instead)."""
+    text = " ".join(text.split())[:80]
+    raw = _custom_font(_font_kind(bool(_RTL_RE.search(text)), choice))[0]
+    if not raw or not text:
+        return False
+    try:
+        return not _covers(raw, _shape(text, text_engine())[0])
+    except Exception:                                              # noqa: BLE001
+        return True
+
+
+def _font_source(text: str, engine: str, rtl: bool, choice: str = "auto") -> bytes:
+    """The user's font for this caption when it covers every letter, else the built-in one."""
+    raw = _custom_font(_font_kind(rtl, choice))[0]
     if raw:
         try:
             if _covers(raw, _shape(text, engine)[0]):
                 return raw
-            log.info("custom %s font lacks glyphs for this caption → built-in font", "kurdish" if rtl else "english")
+            log.info("custom %s font lacks glyphs for this caption → built-in font", _font_kind(rtl, choice))
         except Exception as e:                                      # noqa: BLE001 — a broken font file must not break stickers
             log.info("custom font unusable: %s", e)
     return _builtin_font()
@@ -4364,7 +4390,7 @@ def text_supported(text: str) -> bool:
     return not (text and _RTL_RE.search(text) and text_engine() == "plain")
 
 
-def _caption_layer(size: tuple, text: str, shape: str = "round"):
+def _caption_layer(size: tuple, text: str, shape: str = "round", font_choice: str = "auto"):
     """Transparent RGBA layer with the caption at the bottom: white text, black outline, ≤ 3 lines."""
     from PIL import Image, ImageDraw                               # type: ignore
     text = " ".join(text.split())[:80]
@@ -4375,7 +4401,7 @@ def _caption_layer(size: tuple, text: str, shape: str = "round"):
     layer = Image.new("RGBA", size, (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
     lines: list = []
-    raw = _font_source(text, engine, bool(_RTL_RE.search(text)))
+    raw = _font_source(text, engine, bool(_RTL_RE.search(text)), font_choice)
     for fs in range(max(28, w // 7), 23, -4):
         font, sw = _font(fs, engine, raw), max(2, fs // 12)
         maxw = int(w * 0.66) if shape == "circle" else w - 2 * (sw + 14)     # a circle is narrow near the bottom
@@ -4419,6 +4445,17 @@ def _photo_file(msg) -> tuple[str, int] | None:
 SHAPES = ("round", "sq", "circle")
 
 
+def _shape_kb(lang: str, mid: int, with_font: bool, ft: str) -> Kb:
+    rows = [[Btn(tx(lang, "b_shape_round"), callback_data=f"ss_round_{mid}"),
+             Btn(tx(lang, "b_shape_sq"), callback_data=f"ss_sq_{mid}"),
+             Btn(tx(lang, "b_shape_circle"), callback_data=f"ss_circle_{mid}")]]
+    if with_font:                                                      # which font draws the caption?
+        rows.append([Btn(("✅ " if ft == code else "") + tx(lang, key), callback_data=f"ss_f{code}_{mid}")
+                     for code, key in (("auto", "b_font_auto"), ("ku", "b_font_ku"), ("en", "b_font_en"))])
+    rows.append([Btn(tx(lang, "b_shape_cancel"), callback_data=f"ss_x_{mid}")])
+    return Kb(rows)
+
+
 async def ask_sticker_shape(update: Update, ctx, lang: str, kind: str) -> None:
     """A photo / video arrived → remember it and ask which shape the sticker should have."""
     msg, uid = update.effective_message, update.effective_user.id
@@ -4439,13 +4476,10 @@ async def ask_sticker_shape(update: Update, ctx, lang: str, kind: str) -> None:
         for k, v in list(old.items()):
             if not isinstance(v, dict) or int(v.get("ts", 0)) < int(time.time()) - 3600:
                 await db_del(f"stkq/{uid}/{k}")
-    await db_put(f"stkq/{uid}/{mid}", {"k": kind, "f": fid, "s": seconds, "ts": int(time.time()),
-                                       "c": clip((getattr(msg, "caption", None) or "").strip(), 80)})
-    await msg.reply_text(tx(lang, "ss_ask"), reply_markup=Kb([
-        [Btn(tx(lang, "b_shape_round"), callback_data=f"ss_round_{mid}"),
-         Btn(tx(lang, "b_shape_sq"), callback_data=f"ss_sq_{mid}"),
-         Btn(tx(lang, "b_shape_circle"), callback_data=f"ss_circle_{mid}")],
-        [Btn(tx(lang, "b_shape_cancel"), callback_data=f"ss_x_{mid}")]]))
+    caption = clip((getattr(msg, "caption", None) or "").strip(), 80)
+    await db_put(f"stkq/{uid}/{mid}", {"k": kind, "f": fid, "s": seconds, "ts": int(time.time()), "c": caption, "ft": "auto"})
+    text = tx(lang, "ss_ask") + (("\n\n" + tx(lang, "ss_font_hint")) if caption and kind == "photo" else "")
+    await msg.reply_text(text, reply_markup=_shape_kb(lang, mid, bool(caption) and kind == "photo", "auto"))
 
 
 async def process_photo_sticker(update: Update, ctx, lang: str) -> None:
@@ -4475,22 +4509,36 @@ async def _build_sticker(ctx, uid: int, chat_id: int, lang: str, rec: dict, shap
         if caption:
             await ctx.bot.send_message(chat_id, tx(lang, "vstk_notext"))
         return None
-    webp = await asyncio.to_thread(_static_sticker, raw, shape, caption)
+    font_choice = rec.get("ft") if rec.get("ft") in ("auto", "ku", "en") else "auto"
+    webp = await asyncio.to_thread(_static_sticker, raw, shape, caption, font_choice)
     if not webp:
         return "mkstk_fail"
     await deliver_sticker(ctx, uid, chat_id, lang, webp)
     if caption and not text_supported(caption):
         await ctx.bot.send_message(chat_id, tx(lang, "stk_text_unsupported"))
+    elif caption and font_fallback(caption, font_choice):               # their font lacks some letters → say so
+        await ctx.bot.send_message(chat_id, tx(lang, "stk_font_missing"))
     return None
 
 
 async def choose_shape(cb: "CB", data: str) -> None:
     """ss_<round|sq|circle|x>_<message id> — the user answered the shape question."""
     parts = data.split("_", 2)
-    if len(parts) != 3 or parts[1] not in SHAPES + ("x",) or not parts[2].isdigit():
+    if len(parts) != 3 or parts[1] not in SHAPES + ("x", "fauto", "fku", "fen") or not parts[2].isdigit():
         return await cb.answer()
     shape, mid, uid, lang = parts[1], parts[2], cb.uid, cb.lang
     path, msg = f"stkq/{uid}/{mid}", cb.q.message
+    if shape.startswith("f"):                                          # 🔤 font row: remember the choice, mark it ✅
+        if not isinstance(await db_get(path), dict):
+            return await cb.answer(cb.t("ss_expired"), True)
+        ft = shape[1:]
+        await db_put(f"{path}/ft", ft)
+        await cb.answer()
+        try:
+            await msg.edit_reply_markup(reply_markup=_shape_kb(lang, int(mid), True, ft))
+        except TelegramError:                                          # same choice tapped again → nothing changes
+            pass
+        return
     if shape == "x":                                                   # cancelled
         await db_del(path)
         await cb.answer()
