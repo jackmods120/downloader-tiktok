@@ -311,6 +311,12 @@ L["ku"] = {
     "b_font_auto": "🔄 خۆکار", "b_font_ku": "🔤 کوردی", "b_font_en": "🔠 ئینگلیزی",
     "ss_font_hint": "🔤 <b>فۆنتی نووسینەکە</b> هەڵبژێرە: خۆکار، کوردی یان ئینگلیزی. پاشان شێوەکە.",
     "stk_font_missing": "ℹ️ فۆنتی هەڵبژێردراو هەندێک پیتی ئەم نووسینەی نییە، بۆیە فۆنتی ناوەکیی بۆتەکە بەکارهات.",
+    "plink_label": "کردنەوەی پرۆفایل",
+    "b_sup_users": "📄 لیستی بەکارهێنەران (.txt)",
+    "users_preparing": "⏳ لیستەکە ئامادە دەکرێت…",
+    "users_file_caption": "📄 لیستی بەکارهێنەران — کۆی گشتی: <b>{n}</b>",
+    "ul_header": "📋 لیستی بەکارهێنەرانی بۆت — کۆی گشتی: {n} — {date} UTC",
+    "ul_block": "\n🔔 بەکارهێنەر #{n}\n\n✨ ناو: {name}\n🔗 یوزەر: {user}\n🆔 ئایدی: {id}\n👤 لینک: tg://user?id={id}\n🌐 زمانی ئەپ: {al}\n📅 {date}\n📥 دابەزاندن: {dl}\n🏅 پلە: {rank}\n🚫 بلۆک: {blocked}\n🗣 زمانی بۆت: {botlang}",
     "b_shape_round": "▭ قوژبن خڕ", "b_shape_sq": "⬛ چوارگۆشە", "b_shape_circle": "⚪ بازنە", "b_shape_cancel": "❌ هەڵوەشاندنەوە",
     "stk_text_unsupported": "ℹ️ نووسینی کوردی لەسەر ئەم سێرڤەرە پشتگیری ناکرێت، بۆیە ستیکەرەکە بێ نووسین دروست کرا.",
     "vstk_notext": "ℹ️ نووسین لەسەر ستیکەری جوڵاو پشتگیری ناکرێت (تەنیا لەسەر وێنە).",
@@ -455,8 +461,8 @@ L["ku"] = {
     ),
     "userinfo": (
         "🔎 <b>زانیاری بەکارهێنەر</b>\n\n"
-        "<blockquote>✨ ناو: {name}\n🔗 یوزەر: {user}\n🆔 ئایدی: <code>{id}</code>\n"
-        "🏅 پلە: {rank}\n🚫 بلۆک: {blocked}\n🌐 زمان: {lang}\n"
+        "<blockquote>✨ ناو: {name}\n🔗 یوزەر: {user}\n🆔 ئایدی: <code>{id}</code>\n👤 لینک: {plink}\n"
+        "🌐 زمانی ئەپ: {al}\n🏅 پلە: {rank}\n🚫 بلۆک: {blocked}\n🗣 زمانی بۆت: {lang}\n"
         "📥 دابەزاندن: <b>{dl}</b>\n📅 بەشداربوون: {date}</blockquote>"
     ),
     "yes": "بەڵێ", "no": "نەخێر",
@@ -501,7 +507,7 @@ L["ku"] = {
     "backup_prep": "⏳ ئامادە دەکرێت…",
     "new_user_notify": (
         "🔔 <b>بەکارهێنەری نوێ</b>\n\n"
-        "<blockquote>✨ ناو: {name}\n🔗 یوزەر: {uname}\n🆔 ئایدی: <code>{uid}</code>\n"
+        "<blockquote>✨ ناو: {name}\n🔗 یوزەر: {uname}\n🆔 ئایدی: <code>{uid}</code>\n👤 لینک: {plink}\n"
         "🌐 زمانی ئەپ: {app_lang}\n📅 {date}</blockquote>"
     ),
     "b_notify_block": "🚫 بلۆک", "b_notify_vip": "💎 VIP", "b_notify_admin": "🛡 ئەدمین", "b_notify_info": "🔎 زانیاری",
@@ -651,6 +657,12 @@ L["en"] = {
     "b_font_auto": "🔄 Auto", "b_font_ku": "🔤 Kurdish", "b_font_en": "🔠 English",
     "ss_font_hint": "🔤 Pick the <b>font</b> for your text: Auto, Kurdish or English. Then the shape.",
     "stk_font_missing": "ℹ️ The chosen font doesn't have some letters of this text, so the bot's built-in font was used.",
+    "plink_label": "Open profile",
+    "b_sup_users": "📄 Users list (.txt)",
+    "users_preparing": "⏳ Preparing the list…",
+    "users_file_caption": "📄 Users list — total: <b>{n}</b>",
+    "ul_header": "📋 Bot users — total: {n} — {date} UTC",
+    "ul_block": "\n🔔 User #{n}\n\n✨ Name: {name}\n🔗 User: {user}\n🆔 ID: {id}\n👤 Link: tg://user?id={id}\n🌐 App language: {al}\n📅 {date}\n📥 Downloads: {dl}\n🏅 Rank: {rank}\n🚫 Blocked: {blocked}\n🗣 Bot language: {botlang}",
     "b_shape_round": "▭ Rounded", "b_shape_sq": "⬛ Square", "b_shape_circle": "⚪ Circle", "b_shape_cancel": "❌ Cancel",
     "stk_text_unsupported": "ℹ️ Kurdish/Arabic text isn't supported on this server, so the sticker was made without text.",
     "vstk_notext": "ℹ️ Text on animated stickers is not supported (photos only).",
@@ -791,8 +803,8 @@ L["en"] = {
     ),
     "userinfo": (
         "🔎 <b>User info</b>\n\n"
-        "<blockquote>✨ Name: {name}\n🔗 User: {user}\n🆔 ID: <code>{id}</code>\n"
-        "🏅 Rank: {rank}\n🚫 Blocked: {blocked}\n🌐 Language: {lang}\n"
+        "<blockquote>✨ Name: {name}\n🔗 User: {user}\n🆔 ID: <code>{id}</code>\n👤 Link: {plink}\n"
+        "🌐 App language: {al}\n🏅 Rank: {rank}\n🚫 Blocked: {blocked}\n🗣 Bot language: {lang}\n"
         "📥 Downloads: <b>{dl}</b>\n📅 Joined: {date}</blockquote>"
     ),
     "yes": "Yes", "no": "No",
@@ -837,7 +849,7 @@ L["en"] = {
     "backup_prep": "⏳ Preparing…",
     "new_user_notify": (
         "🔔 <b>New user</b>\n\n"
-        "<blockquote>✨ Name: {name}\n🔗 User: {uname}\n🆔 ID: <code>{uid}</code>\n"
+        "<blockquote>✨ Name: {name}\n🔗 User: {uname}\n🆔 ID: <code>{uid}</code>\n👤 Link: {plink}\n"
         "🌐 App language: {app_lang}\n📅 {date}</blockquote>"
     ),
     "b_notify_block": "🚫 Block", "b_notify_vip": "💎 VIP", "b_notify_admin": "🛡 Admin", "b_notify_info": "🔎 Info",
@@ -987,6 +999,12 @@ L["ar"] = {
     "b_font_auto": "🔄 تلقائي", "b_font_ku": "🔤 كردي", "b_font_en": "🔠 إنجليزي",
     "ss_font_hint": "🔤 اختر <b>خط</b> النص: تلقائي أو كردي أو إنجليزي. ثم الشكل.",
     "stk_font_missing": "ℹ️ الخط المختار لا يحتوي بعض أحرف هذا النص، لذلك استُخدم الخط المدمج في البوت.",
+    "plink_label": "فتح الملف الشخصي",
+    "b_sup_users": "📄 قائمة المستخدمين (.txt)",
+    "users_preparing": "⏳ جارٍ تجهيز القائمة…",
+    "users_file_caption": "📄 قائمة المستخدمين — الإجمالي: <b>{n}</b>",
+    "ul_header": "📋 مستخدمو البوت — الإجمالي: {n} — {date} UTC",
+    "ul_block": "\n🔔 مستخدم #{n}\n\n✨ الاسم: {name}\n🔗 المستخدم: {user}\n🆔 المعرّف: {id}\n👤 الرابط: tg://user?id={id}\n🌐 لغة التطبيق: {al}\n📅 {date}\n📥 التحميلات: {dl}\n🏅 الرتبة: {rank}\n🚫 محظور: {blocked}\n🗣 لغة البوت: {botlang}",
     "b_shape_round": "▭ حواف مستديرة", "b_shape_sq": "⬛ مربع", "b_shape_circle": "⚪ دائرة", "b_shape_cancel": "❌ إلغاء",
     "stk_text_unsupported": "ℹ️ النص الكردي/العربي غير مدعوم على هذا الخادم، لذلك أُنشئ الملصق بدون نص.",
     "vstk_notext": "ℹ️ النص على الملصقات المتحركة غير مدعوم (للصور فقط).",
@@ -1127,8 +1145,8 @@ L["ar"] = {
     ),
     "userinfo": (
         "🔎 <b>معلومات المستخدم</b>\n\n"
-        "<blockquote>✨ الاسم: {name}\n🔗 المستخدم: {user}\n🆔 المعرّف: <code>{id}</code>\n"
-        "🏅 الرتبة: {rank}\n🚫 محظور: {blocked}\n🌐 اللغة: {lang}\n"
+        "<blockquote>✨ الاسم: {name}\n🔗 المستخدم: {user}\n🆔 المعرّف: <code>{id}</code>\n👤 الرابط: {plink}\n"
+        "🌐 لغة التطبيق: {al}\n🏅 الرتبة: {rank}\n🚫 محظور: {blocked}\n🗣 لغة البوت: {lang}\n"
         "📥 التحميلات: <b>{dl}</b>\n📅 الانضمام: {date}</blockquote>"
     ),
     "yes": "نعم", "no": "لا",
@@ -1173,7 +1191,7 @@ L["ar"] = {
     "backup_prep": "⏳ جارٍ التجهيز…",
     "new_user_notify": (
         "🔔 <b>مستخدم جديد</b>\n\n"
-        "<blockquote>✨ الاسم: {name}\n🔗 المستخدم: {uname}\n🆔 المعرّف: <code>{uid}</code>\n"
+        "<blockquote>✨ الاسم: {name}\n🔗 المستخدم: {uname}\n🆔 المعرّف: <code>{uid}</code>\n👤 الرابط: {plink}\n"
         "🌐 لغة التطبيق: {app_lang}\n📅 {date}</blockquote>"
     ),
     "b_notify_block": "🚫 حظر", "b_notify_vip": "💎 VIP", "b_notify_admin": "🛡 مشرف", "b_notify_info": "🔎 معلومات",
@@ -1182,7 +1200,7 @@ L["ar"] = {
 LANG_NAMES = {"ku": "🔴🔆🟢 کوردی", "en": "🇺🇸 English", "ar": "🇸🇦 العربية"}
 
 
-def tx(lang: str, key: str, **kw) -> str:
+def tx(lang: str, key: str, /, **kw) -> str:
     """Translate `key` into `lang` (falls back to Kurdish, then to the key)."""
     text = L.get(lang, L["ku"]).get(key) or L["ku"].get(key) or key
     try:
@@ -1412,14 +1430,24 @@ async def ensure_user(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> tuple[d
     ud = await db_get(f"users/{u.id}")
     if not isinstance(ud, dict):
         ud = {
-            "name": u.first_name or "", "user": u.username or "", "date": now_str(),
-            "vip": False, "dl": 0, "lang": CFG.get("default_lang", "ku"),
+            "name": u.first_name or "", "user": u.username or "", "al": u.language_code or "", "date": now_str(),
+            "vip": False, "dl": 0, "lang": "",                    # "" = not chosen yet → follows the bot's default language
         }
         await db_put(f"users/{u.id}", ud)
         await db_incr("sys/cfg/total_users")
         await notify_new_user(ctx, u)
         ud["_new"] = True                                         # in-memory only: first contact (not saved)
+    else:                                                          # keep the record complete (name, @username, app language)
+        fresh = {"name": u.first_name or "", "user": u.username or "", "al": u.language_code or ""}
+        changes = {k: v for k, v in fresh.items() if (v or k == "user") and ud.get(k, "") != v}
+        if changes:
+            ud.update(changes)
+            await db_patch(f"users/{u.id}", changes)
     return ud, user_lang(ud)
+
+
+def profile_link(lang: str, uid: int) -> str:
+    return f'<a href="tg://user?id={int(uid)}">{tx(lang, "plink_label")}</a>'
 
 
 async def notify_new_user(ctx, u) -> None:
@@ -1433,7 +1461,7 @@ async def notify_new_user(ctx, u) -> None:
         await ctx.bot.send_message(
             OWNER_ID,
             tx("ku", "new_user_notify", name=esc(u.first_name), uname=f"@{u.username}" if u.username else "—",
-               uid=u.id, app_lang=esc(u.language_code or "—"), date=now_str()),
+               uid=u.id, app_lang=esc(u.language_code or "—"), date=now_str(), plink=profile_link("ku", u.id)),
             reply_markup=kb,
         )
     except TelegramError as e:
@@ -3114,8 +3142,9 @@ async def route(cb: CB, data: str):
         if action == "adm":
             admins_set.add(tid); await save_sys("admins")
             return await cb.answer(cb.t("act_adm_added", id=tid), True)
-        if action == "inf":
-            return await cb.answer(await userinfo_text(cb.lang, tid), True)
+        if action == "inf":                                        # a real message: an alert is cut at 190 chars and can't hold a link
+            await cb.answer()
+            return await cb.ctx.bot.send_message(cb.q.message.chat_id, await userinfo_text(cb.lang, tid))
         return
 
     # ── user area ────────────────────────────────────────────────────────────
@@ -4652,12 +4681,32 @@ async def userinfo_text(lang: str, tid: int) -> str:
     ud = await db_get(f"users/{tid}")
     if not isinstance(ud, dict):
         return tx(lang, "user_not_found")
-    return tx(lang, "userinfo", name=esc(ud.get("name", "—")),
+    return tx(lang, "userinfo", name=esc(ud.get("name") or "—"),
               user=f"@{esc(ud['user'])}" if ud.get("user") else "—", id=tid,
               rank=tx(lang, f"rank_{rank_key(tid)}"),
               blocked=tx(lang, "yes") if tid in blocked_set else tx(lang, "no"),
-              lang=LANG_NAMES.get(ud.get("lang"), ud.get("lang", "—")),
-              dl=fmt_num(ud.get("dl", 0)), date=esc(ud.get("date", "—")))
+              lang=LANG_NAMES.get(user_lang(ud), "—"), al=esc(ud.get("al") or "—"), plink=profile_link(lang, tid),
+              dl=fmt_num(ud.get("dl", 0)), date=esc(ud.get("date") or "—"))
+
+
+async def export_users_txt(lang: str) -> tuple:
+    """Every user, complete, as one UTF-8 text file. → (bytes, count)"""
+    users = await all_users()
+    ids = sorted((int(k) for k in users if str(k).isdigit()),
+                 key=lambda i: ((users.get(str(i)) or {}).get("date") if isinstance(users.get(str(i)), dict) else "") or "", reverse=False)
+    out = [tx(lang, "ul_header", n=len(ids), date=now_str()), "=" * 34, ""]
+    for n, tid in enumerate(ids, 1):
+        ud = users.get(str(tid))
+        ud = ud if isinstance(ud, dict) else {}
+        clean = lambda v: " ".join(str(v).split()) or "—"          # noqa: E731 — one line per field, never empty
+        out.append(tx(lang, "ul_block", n=n, name=clean(ud.get("name") or ""),
+                      user=f"@{ud['user']}" if ud.get("user") else "—", id=tid, al=clean(ud.get("al") or ""),
+                      date=clean(ud.get("date") or ""), dl=int(ud.get("dl", 0) or 0),
+                      rank=tx(lang, f"rank_{rank_key(tid)}"),
+                      blocked=tx(lang, "yes") if tid in blocked_set else tx(lang, "no"),
+                      botlang=LANG_NAMES.get(user_lang(ud), "—")))
+        out.append("-" * 34)
+    return ("\ufeff" + "\n".join(out) + "\n").encode("utf-8"), len(ids)
 
 
 def confirm_kb(lang: str, yes_cb: str, no_cb: str) -> Kb:
@@ -4698,6 +4747,7 @@ async def show_panel(cb: CB):
         rows.append([Btn(cb.t("b_sup_stars", status=status_word(lang, CFG.get("stars_on", False))),
                          callback_data="sup_stars")])
         rows.append([Btn(cb.t("b_sup_botlang"), callback_data="sup_bot_lang")])
+        rows.append([Btn(cb.t("b_sup_users"), callback_data="sup_users_txt")])
     if is_owner(uid):
         rows.append([Btn("▬▬▬  👑  ▬▬▬", callback_data="noop")])
         rows.append([Btn(cb.t("b_own_super"), callback_data="own_super_adms"),
@@ -4752,6 +4802,13 @@ async def route_super(cb: CB, data: str):
     if data == "sup_toggle_groups":
         await set_cfg(groups_on=not CFG.get("groups_on", True))
         return await show_panel(cb)
+
+    if data == "sup_users_txt":                                          # 📄 every user, complete, as a .txt file
+        await cb.answer(cb.t("users_preparing"))
+        blob, n = await export_users_txt(lang)
+        return await cb.ctx.bot.send_document(
+            cb.q.message.chat_id, InputFile(blob, filename=f"users_{time.strftime('%Y-%m-%d')}.txt"),
+            caption=cb.t("users_file_caption", n=n), **_UP)
 
     if data == "sup_ref":
         return await ref_admin_view(cb)
