@@ -4266,13 +4266,84 @@ def text_engine() -> str:
     return _TXT_ENGINE
 
 
-def _font(size: int, engine: str):
-    from PIL import ImageFont                                      # type: ignore
+_CUSTOM_FONTS: dict = {}                                           # "kurdish" / "english" → (bytes | None, path | None)
+
+
+def _custom_font(kind: str) -> tuple:
+    """kurdish.ttf / english.ttf uploaded next to this file (or in /fonts, the repo root, …). Name case is ignored."""
+    if kind not in _CUSTOM_FONTS:
+        here, found = os.path.dirname(os.path.abspath(__file__)), (None, None)
+        dirs = [here, os.path.join(here, "fonts"), os.path.dirname(here), os.path.join(os.path.dirname(here), "fonts"),
+                os.getcwd(), os.path.join(os.getcwd(), "fonts"), os.path.join(os.getcwd(), "api"),
+                "/var/task", "/var/task/api", "/var/task/fonts"]
+        for d in dirs:
+            try:
+                for fn in os.listdir(d):
+                    if fn.lower() in (f"{kind}.ttf", f"{kind}.otf"):
+                        path = os.path.join(d, fn)
+                        with open(path, "rb") as f:
+                            found = (f.read(), path)
+                        break
+            except OSError:
+                continue
+            if found[0]:
+                break
+        _CUSTOM_FONTS[kind] = found
+    return _CUSTOM_FONTS[kind]
+
+
+def fonts_status() -> str:
+    parts = []
+    for kind in ("kurdish", "english"):
+        data, path = _custom_font(kind)
+        parts.append(f"{kind} ✓ {os.path.basename(path)}" if data else f"{kind} ✗ (built-in)")
+    return " · ".join(parts)
+
+
+def _builtin_font() -> bytes:
     global _FONT_RAW
     if _FONT_RAW is None:
         _FONT_RAW = zlib.decompress(base64.b64decode(_FONT_Z))
+    return _FONT_RAW
+
+
+def _covers(raw: bytes, text: str) -> bool:
+    """Does this font really have a glyph for every character? (a missing glyph draws a box or nothing)"""
+    from PIL import Image, ImageDraw, ImageFont                    # type: ignore
+    f = ImageFont.truetype(io.BytesIO(raw), 48, layout_engine=ImageFont.Layout.BASIC)
+
+    def draw(ch: str):
+        im = Image.new("L", (110, 110), 0)
+        ImageDraw.Draw(im).text((20, 10), ch, font=f, fill=255)
+        return im.getbbox(), im.tobytes()
+
+    notdef = draw("\uffff")[1]
+    for c in set(text):
+        if c.isspace() or c in "\u200c\u200d\u200e\u200f":
+            continue
+        box, data = draw(c)
+        if box is None or data == notdef:
+            return False
+    return True
+
+
+def _font_source(text: str, engine: str, rtl: bool) -> bytes:
+    """The user's font for this script when it covers every letter of the caption, else the built-in one."""
+    raw = _custom_font("kurdish" if rtl else "english")[0]
+    if raw:
+        try:
+            if _covers(raw, _shape(text, engine)[0]):
+                return raw
+            log.info("custom %s font lacks glyphs for this caption → built-in font", "kurdish" if rtl else "english")
+        except Exception as e:                                      # noqa: BLE001 — a broken font file must not break stickers
+            log.info("custom font unusable: %s", e)
+    return _builtin_font()
+
+
+def _font(size: int, engine: str, raw: bytes | None = None):
+    from PIL import ImageFont                                      # type: ignore
     layout = ImageFont.Layout.RAQM if engine == "raqm" else ImageFont.Layout.BASIC
-    return ImageFont.truetype(io.BytesIO(_FONT_RAW), size, layout_engine=layout)
+    return ImageFont.truetype(io.BytesIO(raw or _builtin_font()), size, layout_engine=layout)
 
 
 def _shape(line: str, engine: str) -> tuple:
@@ -4304,8 +4375,9 @@ def _caption_layer(size: tuple, text: str, shape: str = "round"):
     layer = Image.new("RGBA", size, (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
     lines: list = []
+    raw = _font_source(text, engine, bool(_RTL_RE.search(text)))
     for fs in range(max(28, w // 7), 23, -4):
-        font, sw = _font(fs, engine), max(2, fs // 12)
+        font, sw = _font(fs, engine, raw), max(2, fs // 12)
         maxw = int(w * 0.66) if shape == "circle" else w - 2 * (sw + 14)     # a circle is narrow near the bottom
         lines, cur = [], ""
         for word in text.split():
@@ -5672,6 +5744,8 @@ async def status_page(req: Request, full_path: str = ""):
              "" if importlib.util.find_spec("PIL") else "Add Pillow to requirements.txt (static sticker fallback)"),
         _row("CRON_SECRET", "ok" if CRON_SECRET else "warn", "✓ Set" if CRON_SECRET else "Not set",
              "" if CRON_SECRET else "Needed for 🔔 follow alerts (/cron/follows)"),
+        _row("Sticker fonts", "ok" if all(_custom_font(k)[0] for k in ("kurdish", "english")) else "warn", fonts_status(),
+             "" if all(_custom_font(k)[0] for k in ("kurdish", "english")) else "Optional: upload kurdish.ttf and english.ttf next to the Python file"),
         _row("Kurdish text on stickers", "ok" if text_engine() != "plain" else "warn", text_engine(),
              "" if text_engine() != "plain" else "Add arabic-reshaper and python-bidi to requirements.txt"),
         _row("OWNER_ID", "ok" if OWNER_ID != 5977475208 else "warn", "✓ Custom" if OWNER_ID != 5977475208 else "Default",
