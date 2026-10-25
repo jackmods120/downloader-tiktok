@@ -29,6 +29,7 @@ What changed in v15 (short version)
 
 import asyncio
 import base64
+import ctypes
 import hashlib
 import hmac
 import html
@@ -169,13 +170,17 @@ L: dict = {}
 L["ku"] = {
     # ── user-facing ───────────────────────────────────────────────────────────
     "welcome": (
-        "✨ <b>بەخێربێیت، {name}</b> {badge}\n\n"
-        "بە یەک لینک، ڤیدیۆ و وێنە و گۆرانییەکانی <b>تیکتۆک</b> دابەزێنە — "
-        "<b>بێ لۆگۆ</b> و بە کوالێتی بەرز.\n\n"
-        "<blockquote>🎬  ڤیدیۆی HD بێ واتەرمارک\n"
-        "🖼  هەموو وێنەکانی پۆستەکە\n"
-        "🎵  گۆرانی بە فۆرماتی MP3</blockquote>\n"
-        "👇 <b>لینکی تیکتۆکەکە بنێرە</b> و چەند چرکەیەک چاوەڕێ بکە."
+        "👋🏻 <b>سڵاو، {name}</b> {badge}\n\n"
+        "🤖 بەخێربێیت بۆ <b>پێشکەوتووترین بۆتی دابەزاندنی تیکتۆک</b> 🎬⬇️\n\n"
+        "<blockquote>📥 ڤیدیۆ <b>بێ لۆگۆ</b> بە کوالێتی بەرز 🎬✨\n"
+        "🖼️ هەموو وێنەکان بە <b>HD</b> 📸💎\n"
+        "🎧 گۆرانی <b>MP3</b> 🎵🔥\n"
+        "🧩 هەر وێنە یان ڤیدیۆیەک بکە بە <b>ستیکەر</b> — قوژبن خڕ، چوارگۆشە یان بازنە ✨\n"
+        "🔔 ئاگاداری کاتێک ئەکاونتە دڵخوازەکانت ڤیدیۆی نوێ دادەنێن 📌</blockquote>\n\n"
+        "⚡ خێرایی بەرز 🚀  ·  🏆 کوالێتی بەرز 💯  ·  👍🏻 بەکارهێنانی ئاسان 🎯\n"
+        "🎁 هاوڕێکانت بهێنە و <b>VIPی بەخۆڕایی</b> وەربگرە 💎\n\n"
+        "━━━━━━━━━━━━━━━━━━━\n\n"
+        "👇🏻 تەنیا <b>لینکی تیکتۆکەکە</b> 🔗 بنێرە بۆ دەستپێکردن 🚀"
     ),
     "help": (
         "<b>📖 ڕێنمایی بەکارهێنان</b>\n\n"
@@ -515,13 +520,17 @@ L["ku"] = {
 
 L["en"] = {
     "welcome": (
-        "✨ <b>Welcome, {name}</b> {badge}\n\n"
-        "Download <b>TikTok</b> videos, photos and music with a single link — "
-        "<b>no watermark</b>, high quality.\n\n"
-        "<blockquote>🎬  HD video without watermark\n"
-        "🖼  Every photo of a post\n"
-        "🎵  Music as MP3</blockquote>\n"
-        "👇 <b>Send a TikTok link</b> and wait a few seconds."
+        "👋🏻 <b>Hello, {name}</b> {badge}\n\n"
+        "🤖 Welcome to the <b>most advanced TikTok downloader bot</b> 🎬⬇️\n\n"
+        "<blockquote>📥 Videos <b>without watermark</b>, in high quality 🎬✨\n"
+        "🖼️ Every photo in <b>HD</b> 📸💎\n"
+        "🎧 <b>MP3</b> music 🎵🔥\n"
+        "🧩 Turn any photo or video into a <b>sticker</b> — rounded, square or circle ✨\n"
+        "🔔 Get alerts when your favourite accounts post a new video 📌</blockquote>\n\n"
+        "⚡ Lightning fast 🚀  ·  🏆 Top quality 💯  ·  👍🏻 Easy to use 🎯\n"
+        "🎁 Invite friends and earn <b>free VIP</b> 💎\n\n"
+        "━━━━━━━━━━━━━━━━━━━\n\n"
+        "👇🏻 Just send a <b>TikTok link</b> 🔗 to get started 🚀"
     ),
     "help": (
         "<b>📖 How to use</b>\n\n"
@@ -857,13 +866,17 @@ L["en"] = {
 
 L["ar"] = {
     "welcome": (
-        "✨ <b>أهلاً بك، {name}</b> {badge}\n\n"
-        "حمّل فيديوهات <b>تيك توك</b> وصورها وموسيقاها برابط واحد — "
-        "<b>بدون علامة مائية</b> وبجودة عالية.\n\n"
-        "<blockquote>🎬  فيديو HD بدون علامة مائية\n"
-        "🖼  جميع صور المنشور\n"
-        "🎵  الموسيقى بصيغة MP3</blockquote>\n"
-        "👇 <b>أرسل رابط تيك توك</b> وانتظر ثوانٍ قليلة."
+        "👋🏻 <b>أهلاً، {name}</b> {badge}\n\n"
+        "🤖 مرحبًا بك في <b>أكثر بوتات تحميل تيك توك تطورًا</b> 🎬⬇️\n\n"
+        "<blockquote>📥 فيديو <b>بدون علامة مائية</b> بجودة عالية 🎬✨\n"
+        "🖼️ كل الصور بجودة <b>HD</b> 📸💎\n"
+        "🎧 موسيقى <b>MP3</b> 🎵🔥\n"
+        "🧩 حوّل أي صورة أو فيديو إلى <b>ملصق</b> — حواف مستديرة أو مربع أو دائرة ✨\n"
+        "🔔 تنبيهات عند نشر حساباتك المفضلة لفيديو جديد 📌</blockquote>\n\n"
+        "⚡ سرعة عالية 🚀  ·  🏆 جودة ممتازة 💯  ·  👍🏻 سهل الاستخدام 🎯\n"
+        "🎁 ادعُ أصدقاءك واحصل على <b>VIP مجانًا</b> 💎\n\n"
+        "━━━━━━━━━━━━━━━━━━━\n\n"
+        "👇🏻 فقط أرسل <b>رابط تيك توك</b> 🔗 للبدء 🚀"
     ),
     "help": (
         "<b>📖 طريقة الاستخدام</b>\n\n"
@@ -4304,17 +4317,44 @@ def text_engine() -> str:
     return _TXT_ENGINE
 
 
+def _asset_dirs() -> list:
+    """Where uploaded files are searched: next to this file, /fonts, the repo root, the working dir, Vercel's /var/task."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    return [here, os.path.join(here, "fonts"), os.path.dirname(here), os.path.join(os.path.dirname(here), "fonts"),
+            os.getcwd(), os.path.join(os.getcwd(), "fonts"), os.path.join(os.getcwd(), "api"),
+            "/var/task", "/var/task/api", "/var/task/fonts"]
+
+
+_FRIBIDI = {"path": None, "loaded": False}
+
+
+def _preload_fribidi() -> None:
+    """Kurdish/Arabic shaping in Pillow (Raqm/HarfBuzz) needs libfribidi.so.0, which Vercel's Linux does not have.
+    If a copy of it is uploaded next to this file, load it BEFORE Pillow first looks for it (done once, at import)."""
+    for d in _asset_dirs():
+        try:
+            for fn in sorted(os.listdir(d)):
+                if fn.lower().startswith("libfribidi") and ".so" in fn.lower():
+                    path = os.path.join(d, fn)
+                    ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)      # Pillow's dlopen("libfribidi.so.0") now finds it
+                    _FRIBIDI.update(path=path, loaded=True)
+                    return
+        except OSError:
+            continue
+        except Exception as e:                                       # noqa: BLE001 — wrong CPU / corrupt file: keep going
+            log.info("libfribidi at %s could not be loaded: %s", d, e)
+
+
+_preload_fribidi()
+
 _CUSTOM_FONTS: dict = {}                                           # "kurdish" / "english" → (bytes | None, path | None)
 
 
 def _custom_font(kind: str) -> tuple:
     """kurdish.ttf / english.ttf uploaded next to this file (or in /fonts, the repo root, …). Name case is ignored."""
     if kind not in _CUSTOM_FONTS:
-        here, found = os.path.dirname(os.path.abspath(__file__)), (None, None)
-        dirs = [here, os.path.join(here, "fonts"), os.path.dirname(here), os.path.join(os.path.dirname(here), "fonts"),
-                os.getcwd(), os.path.join(os.getcwd(), "fonts"), os.path.join(os.getcwd(), "api"),
-                "/var/task", "/var/task/api", "/var/task/fonts"]
-        for d in dirs:
+        found = (None, None)
+        for d in _asset_dirs():
             try:
                 for fn in os.listdir(d):
                     if fn.lower() in (f"{kind}.ttf", f"{kind}.otf"):
@@ -4346,7 +4386,11 @@ def _builtin_font() -> bytes:
 
 
 def _covers(raw: bytes, text: str) -> bool:
-    """Does this font really have a glyph for every character? (a missing glyph draws a box or nothing)"""
+    return not _missing_chars(raw, text)
+
+
+def _missing_chars(raw: bytes, text: str) -> list:
+    """Characters this font cannot draw (a missing glyph draws a box or nothing)."""
     from PIL import Image, ImageDraw, ImageFont                    # type: ignore
     f = ImageFont.truetype(io.BytesIO(raw), 48, layout_engine=ImageFont.Layout.BASIC)
 
@@ -4356,13 +4400,14 @@ def _covers(raw: bytes, text: str) -> bool:
         return im.getbbox(), im.tobytes()
 
     notdef = draw("\uffff")[1]
-    for c in set(text):
+    missing = []
+    for c in sorted(set(text)):
         if c.isspace() or c in "\u200c\u200d\u200e\u200f":
             continue
         box, data = draw(c)
         if box is None or data == notdef:
-            return False
-    return True
+            missing.append(c)
+    return missing
 
 
 def _font_kind(rtl: bool, choice: str = "auto") -> str:
@@ -4380,6 +4425,19 @@ def font_fallback(text: str, choice: str = "auto") -> bool:
         return not _covers(raw, _shape(text, text_engine())[0])
     except Exception:                                              # noqa: BLE001
         return True
+
+
+def font_diag(text: str, choice: str = "auto") -> str:
+    """One technical line for the owner: engine, font file and the code points the font lacks."""
+    text = " ".join(text.split())[:80]
+    engine = text_engine()
+    kind = _font_kind(bool(_RTL_RE.search(text)), choice)
+    raw = _custom_font(kind)[0]
+    try:
+        miss = _missing_chars(raw, _shape(text, engine)[0]) if raw else []
+    except Exception as e:                                         # noqa: BLE001
+        return f"🛠 {engine} · {kind}.ttf · {type(e).__name__}"
+    return f"🛠 {engine} · {kind}.ttf · missing: " + (" ".join(f"U+{ord(c):04X}" for c in miss[:12]) or "—")
 
 
 def _font_source(text: str, engine: str, rtl: bool, choice: str = "auto") -> bytes:
@@ -4546,7 +4604,8 @@ async def _build_sticker(ctx, uid: int, chat_id: int, lang: str, rec: dict, shap
     if caption and not text_supported(caption):
         await ctx.bot.send_message(chat_id, tx(lang, "stk_text_unsupported"))
     elif caption and font_fallback(caption, font_choice):               # their font lacks some letters → say so
-        await ctx.bot.send_message(chat_id, tx(lang, "stk_font_missing"))
+        note = tx(lang, "stk_font_missing") + (f"\n\n{font_diag(caption, font_choice)}" if is_super(uid) else "")
+        await ctx.bot.send_message(chat_id, note)
     return None
 
 
@@ -5851,8 +5910,11 @@ async def status_page(req: Request, full_path: str = ""):
              "" if CRON_SECRET else "Needed for 🔔 follow alerts (/cron/follows)"),
         _row("Sticker fonts", "ok" if all(_custom_font(k)[0] for k in ("kurdish", "english")) else "warn", fonts_status(),
              "" if all(_custom_font(k)[0] for k in ("kurdish", "english")) else "Optional: upload kurdish.ttf and english.ttf next to the Python file"),
-        _row("Kurdish text on stickers", "ok" if text_engine() != "plain" else "warn", text_engine(),
-             "" if text_engine() != "plain" else "Add arabic-reshaper and python-bidi to requirements.txt"),
+        _row("libfribidi (Kurdish letter joining)", "ok" if _FRIBIDI["loaded"] else "warn",
+             f"✓ {os.path.basename(_FRIBIDI['path'])}" if _FRIBIDI["loaded"] else "not uploaded",
+             "" if _FRIBIDI["loaded"] else "Upload libfribidi.so.0 next to the Python file (needed when the engine below is not raqm)"),
+        _row("Kurdish text on stickers", "ok" if text_engine() == "raqm" else ("warn" if text_engine() == "plain" else "ok"), text_engine(),
+             {"raqm": "", "reshape": "Best quality needs raqm: upload libfribidi.so.0", "plain": "Upload libfribidi.so.0 (or add arabic-reshaper and python-bidi)"}[text_engine()]),
         _row("OWNER_ID", "ok" if OWNER_ID != 5977475208 else "warn", "✓ Custom" if OWNER_ID != 5977475208 else "Default",
              "" if OWNER_ID != 5977475208 else "Set your own Telegram ID — the default belongs to the original developer"),
     ]
