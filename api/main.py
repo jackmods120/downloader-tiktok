@@ -310,11 +310,11 @@ L["ku"] = {
     "fw_list_title": "🔔 <b>فۆڵۆکراوەکانم</b> · {n}/{max}\n\nناوێک دابگرە بۆ دوایین ڤیدیۆکان، یان 🔕 بۆ لابردن:",
     "fw_new": "🔔 <b>@{user}</b> ڤیدیۆیەکی نوێی دانا!\n\n{title}",
     "fw_b_dl": "⬇️ دابەزاندن", "fw_b_stop": "🔕 ڕاگرتنی ئاگاداری",
-    "stk_menu_tip": "🎨 دوای ناردنی وێنە یان ڤیدیۆ، شێوەی ستیکەرەکە هەڵدەبژێریت: قوژبن خڕ، چوارگۆشە یان بازنە.\n✍️ بۆ نووسین لەسەر ستیکەر، نووسینەکە وەک <b>کاپشنی</b> وێنەکە بنێرە.",
+    "stk_menu_tip": "🎨 دوای ناردنی وێنە یان ڤیدیۆ، شێوەی ستیکەرەکە هەڵدەبژێریت: قوژبن خڕ، چوارگۆشە یان بازنە.\n✍️ بۆ نووسین لەسەر ستیکەر (وێنە و ڤیدیۆ)، نووسینەکە وەک <b>کاپشنی</b> بنێرە، و فۆنت و ڕەنگەکەی هەڵبژێرە.",
     "ss_ask": "🎨 <b>چ شێوەیەک دەتەوێت بۆ ستیکەرەکە؟</b>\n\n▭ <b>قوژبن خڕ</b> — ڕێژەی ڕەسەنی وێنەکە دەمێنێتەوە\n⬛ <b>چوارگۆشە</b> — ناوەڕاستی وێنەکە دەبڕدرێت بۆ چوارگۆشە\n⚪ <b>بازنە</b> — وەک وێنەی پرۆفایل",
     "ss_expired": "⌛ ئەم داواکارییە بەسەرچوو. وێنە یان ڤیدیۆکە دووبارە بنێرە.",
     "b_font_auto": "🔄 خۆکار", "b_font_ku": "🔤 کوردی", "b_font_en": "🔠 ئینگلیزی",
-    "ss_font_hint": "🔤 <b>فۆنتی نووسینەکە</b> هەڵبژێرە: خۆکار، کوردی یان ئینگلیزی. پاشان شێوەکە.",
+    "ss_font_hint": "🔤 <b>فۆنت</b> و 🎨 <b>ڕەنگی</b> نووسینەکە هەڵبژێرە، پاشان شێوەکە.",
     "stk_font_missing": "ℹ️ فۆنتی هەڵبژێردراو هەندێک پیتی ئەم نووسینەی نییە، بۆیە فۆنتی ناوەکیی بۆتەکە بەکارهات.",
     "plink_label": "کردنەوەی پرۆفایل",
     "b_sup_users": "📄 لیستی بەکارهێنەران (.txt)",
@@ -322,6 +322,17 @@ L["ku"] = {
     "users_file_caption": "📄 لیستی بەکارهێنەران — کۆی گشتی: <b>{n}</b>",
     "ul_header": "📋 لیستی بەکارهێنەرانی بۆت — کۆی گشتی: {n} — {date} UTC",
     "ul_block": "\n🔔 بەکارهێنەر #{n}\n\n✨ ناو: {name}\n🔗 یوزەر: {user}\n🆔 ئایدی: {id}\n👤 لینک: tg://user?id={id}\n🌐 زمانی ئەپ: {al}\n📅 {date}\n📥 دابەزاندن: {dl}\n🏅 پلە: {rank}\n🚫 بلۆک: {blocked}\n🗣 زمانی بۆت: {botlang}",
+    "b_sup_activity": "🕵️ چالاکی بەکارهێنەر",
+    "act_ask": "🕵️ <b>چالاکی بەکارهێنەر</b>\n\nئایدی بەکارهێنەرەکە بنێرە، پێت دەڵێم چی دابەزاندووە و چی ناردووە بۆ بۆت.\n\n{write_id}",
+    "act_head": "🕵️ <b>چالاکی بەکارهێنەر</b>\n\n✨ ناو: {name}\n🔗 یوزەر: {user}\n🆔 ئایدی: <code>{id}</code>\n👤 لینک: {plink}\n📅 بەشداربوون: {date}\n📥 کۆی دابەزاندن: <b>{dl}</b>",
+    "act_dl_title": "📥 <b>دوایین دابەزاندنەکان</b> ({n})",
+    "act_msg_title": "📨 <b>دوایین ناردنەکانی بۆ بۆت</b> ({n})",
+    "act_none": "— هیچ تۆمارێک نییە —",
+    "act_note": "ℹ️ تۆماری ناردنەکان لە ئێستاوە دەست پێدەکات و تەنیا دوایین ٦٠ دەمێنێتەوە.",
+    "b_act_txt": "📄 هەمووی (.txt)",
+    "act_txt_head": "🕵️ چالاکی بەکارهێنەر {id} — {name} — {date} UTC",
+    "act_txt_dl": "📥 دابەزاندن ({n})",
+    "act_txt_msg": "📨 ناردن بۆ بۆت ({n})",
     "b_shape_round": "▭ قوژبن خڕ", "b_shape_sq": "⬛ چوارگۆشە", "b_shape_circle": "⚪ بازنە", "b_shape_cancel": "❌ هەڵوەشاندنەوە",
     "stk_text_unsupported": "ℹ️ نووسینی کوردی لەسەر ئەم سێرڤەرە پشتگیری ناکرێت، بۆیە ستیکەرەکە بێ نووسین دروست کرا.",
     "vstk_notext": "ℹ️ نووسین لەسەر ستیکەری جوڵاو پشتگیری ناکرێت (تەنیا لەسەر وێنە).",
@@ -660,11 +671,11 @@ L["en"] = {
     "fw_list_title": "🔔 <b>Following</b> · {n}/{max}\n\nTap a name for the latest videos, or 🔕 to unfollow:",
     "fw_new": "🔔 <b>@{user}</b> posted a new video!\n\n{title}",
     "fw_b_dl": "⬇️ Download", "fw_b_stop": "🔕 Stop alerts",
-    "stk_menu_tip": "🎨 After you send a photo or video you choose the shape: rounded, square or circle.\n✍️ To put text on a sticker, send it as the photo's <b>caption</b>.",
+    "stk_menu_tip": "🎨 After you send a photo or video you choose the shape: rounded, square or circle.\n✍️ To put text on a sticker (photo or video), send it as the <b>caption</b>, then pick its font and colour.",
     "ss_ask": "🎨 <b>Which shape do you want for the sticker?</b>\n\n▭ <b>Rounded</b> — keeps the photo's proportions\n⬛ <b>Square</b> — centre-cropped to a square\n⚪ <b>Circle</b> — like a profile picture",
     "ss_expired": "⌛ This request expired. Please send the photo or video again.",
     "b_font_auto": "🔄 Auto", "b_font_ku": "🔤 Kurdish", "b_font_en": "🔠 English",
-    "ss_font_hint": "🔤 Pick the <b>font</b> for your text: Auto, Kurdish or English. Then the shape.",
+    "ss_font_hint": "🔤 Pick the <b>font</b> and 🎨 <b>colour</b> of your text, then the shape.",
     "stk_font_missing": "ℹ️ The chosen font doesn't have some letters of this text, so the bot's built-in font was used.",
     "plink_label": "Open profile",
     "b_sup_users": "📄 Users list (.txt)",
@@ -672,6 +683,17 @@ L["en"] = {
     "users_file_caption": "📄 Users list — total: <b>{n}</b>",
     "ul_header": "📋 Bot users — total: {n} — {date} UTC",
     "ul_block": "\n🔔 User #{n}\n\n✨ Name: {name}\n🔗 User: {user}\n🆔 ID: {id}\n👤 Link: tg://user?id={id}\n🌐 App language: {al}\n📅 {date}\n📥 Downloads: {dl}\n🏅 Rank: {rank}\n🚫 Blocked: {blocked}\n🗣 Bot language: {botlang}",
+    "b_sup_activity": "🕵️ User activity",
+    "act_ask": "🕵️ <b>User activity</b>\n\nSend the user's ID and I'll tell you what they downloaded and what they sent to the bot.\n\n{write_id}",
+    "act_head": "🕵️ <b>User activity</b>\n\n✨ Name: {name}\n🔗 User: {user}\n🆔 ID: <code>{id}</code>\n👤 Link: {plink}\n📅 Joined: {date}\n📥 Total downloads: <b>{dl}</b>",
+    "act_dl_title": "📥 <b>Latest downloads</b> ({n})",
+    "act_msg_title": "📨 <b>Latest things sent to the bot</b> ({n})",
+    "act_none": "— nothing recorded —",
+    "act_note": "ℹ️ Sent-message logging starts now and keeps only the latest 60.",
+    "b_act_txt": "📄 Everything (.txt)",
+    "act_txt_head": "🕵️ User activity {id} — {name} — {date} UTC",
+    "act_txt_dl": "📥 Downloads ({n})",
+    "act_txt_msg": "📨 Sent to the bot ({n})",
     "b_shape_round": "▭ Rounded", "b_shape_sq": "⬛ Square", "b_shape_circle": "⚪ Circle", "b_shape_cancel": "❌ Cancel",
     "stk_text_unsupported": "ℹ️ Kurdish/Arabic text isn't supported on this server, so the sticker was made without text.",
     "vstk_notext": "ℹ️ Text on animated stickers is not supported (photos only).",
@@ -1006,11 +1028,11 @@ L["ar"] = {
     "fw_list_title": "🔔 <b>المتابَعون</b> · {n}/{max}\n\nاضغط على اسم لأحدث الفيديوهات، أو 🔕 لإلغاء المتابعة:",
     "fw_new": "🔔 <b>@{user}</b> نشر فيديو جديدًا!\n\n{title}",
     "fw_b_dl": "⬇️ تحميل", "fw_b_stop": "🔕 إيقاف التنبيهات",
-    "stk_menu_tip": "🎨 بعد إرسال صورة أو فيديو تختار الشكل: حواف مستديرة أو مربع أو دائرة.\n✍️ لكتابة نص على الملصق، أرسله كـ<b>تعليق</b> للصورة.",
+    "stk_menu_tip": "🎨 بعد إرسال صورة أو فيديو تختار الشكل: حواف مستديرة أو مربع أو دائرة.\n✍️ لكتابة نص على الملصق (صورة أو فيديو)، أرسله كـ<b>تعليق</b> ثم اختر خطه ولونه.",
     "ss_ask": "🎨 <b>ما الشكل الذي تريده للملصق؟</b>\n\n▭ <b>حواف مستديرة</b> — تبقى نسبة الصورة كما هي\n⬛ <b>مربع</b> — قص من الوسط إلى مربع\n⚪ <b>دائرة</b> — مثل صورة الملف الشخصي",
     "ss_expired": "⌛ انتهت صلاحية هذا الطلب. أرسل الصورة أو الفيديو مرة أخرى.",
     "b_font_auto": "🔄 تلقائي", "b_font_ku": "🔤 كردي", "b_font_en": "🔠 إنجليزي",
-    "ss_font_hint": "🔤 اختر <b>خط</b> النص: تلقائي أو كردي أو إنجليزي. ثم الشكل.",
+    "ss_font_hint": "🔤 اختر <b>خط</b> النص و🎨 <b>لونه</b>، ثم الشكل.",
     "stk_font_missing": "ℹ️ الخط المختار لا يحتوي بعض أحرف هذا النص، لذلك استُخدم الخط المدمج في البوت.",
     "plink_label": "فتح الملف الشخصي",
     "b_sup_users": "📄 قائمة المستخدمين (.txt)",
@@ -1018,6 +1040,17 @@ L["ar"] = {
     "users_file_caption": "📄 قائمة المستخدمين — الإجمالي: <b>{n}</b>",
     "ul_header": "📋 مستخدمو البوت — الإجمالي: {n} — {date} UTC",
     "ul_block": "\n🔔 مستخدم #{n}\n\n✨ الاسم: {name}\n🔗 المستخدم: {user}\n🆔 المعرّف: {id}\n👤 الرابط: tg://user?id={id}\n🌐 لغة التطبيق: {al}\n📅 {date}\n📥 التحميلات: {dl}\n🏅 الرتبة: {rank}\n🚫 محظور: {blocked}\n🗣 لغة البوت: {botlang}",
+    "b_sup_activity": "🕵️ نشاط المستخدم",
+    "act_ask": "🕵️ <b>نشاط المستخدم</b>\n\nأرسل معرّف المستخدم وسأخبرك بما حمّله وما أرسله إلى البوت.\n\n{write_id}",
+    "act_head": "🕵️ <b>نشاط المستخدم</b>\n\n✨ الاسم: {name}\n🔗 المستخدم: {user}\n🆔 المعرّف: <code>{id}</code>\n👤 الرابط: {plink}\n📅 الانضمام: {date}\n📥 إجمالي التحميلات: <b>{dl}</b>",
+    "act_dl_title": "📥 <b>آخر التحميلات</b> ({n})",
+    "act_msg_title": "📨 <b>آخر ما أرسله إلى البوت</b> ({n})",
+    "act_none": "— لا يوجد تسجيل —",
+    "act_note": "ℹ️ تسجيل الرسائل المرسلة يبدأ الآن ويحتفظ بآخر 60 فقط.",
+    "b_act_txt": "📄 الكل (.txt)",
+    "act_txt_head": "🕵️ نشاط المستخدم {id} — {name} — {date} UTC",
+    "act_txt_dl": "📥 التحميلات ({n})",
+    "act_txt_msg": "📨 المرسل إلى البوت ({n})",
     "b_shape_round": "▭ حواف مستديرة", "b_shape_sq": "⬛ مربع", "b_shape_circle": "⚪ دائرة", "b_shape_cancel": "❌ إلغاء",
     "stk_text_unsupported": "ℹ️ النص الكردي/العربي غير مدعوم على هذا الخادم، لذلك أُنشئ الملصق بدون نص.",
     "vstk_notext": "ℹ️ النص على الملصقات المتحركة غير مدعوم (للصور فقط).",
@@ -3552,26 +3585,90 @@ async def to_gif_mp4(data: bytes) -> bytes | None:
     return out if out and len(out) <= TG_MAX_BYTES else None
 
 
-async def to_sticker_webm(data: bytes, shape: str = "round") -> bytes | None:
-    """Telegram video sticker: WEBM/VP9, ≤3 s, one side exactly 512 px, ≤256 KB, no audio (needs ffmpeg)."""
-    pre = "crop='min(iw,ih)':'min(iw,ih)'," if shape in ("sq", "circle") else ""     # centre square crop
+async def ffmpeg_probe(data: bytes) -> dict:
+    """{"w","h","dur"} of the video as it is DISPLAYED (rotation applied) — read from `ffmpeg -i` (no ffprobe needed)."""
+    exe = ffmpeg_path()
+    if not exe:
+        return {}
+    with tempfile.TemporaryDirectory() as d:
+        src = os.path.join(d, "in.mp4")
+        with open(src, "wb") as f:
+            f.write(data)
+        proc = await asyncio.create_subprocess_exec(exe, "-hide_banner", "-i", src,
+                                                    stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
+        try:
+            _, err = await asyncio.wait_for(proc.communicate(), 15)
+        except asyncio.TimeoutError:
+            proc.kill()
+            return {}
+    return _parse_probe((err or b"").decode("utf-8", "ignore"))
+
+
+def _parse_probe(text: str) -> dict:
+    out: dict = {}
+    m = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", text)
+    if m:
+        out["dur"] = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
+    m = re.search(r"Video:[^\n]*?[,\s](\d{2,5})x(\d{2,5})[\s,\[]", text)
+    if m:
+        w, h = int(m.group(1)), int(m.group(2))
+        r = re.search(r"rotation of (-?\d+(?:\.\d+)?) degrees", text)
+        if r and int(abs(float(r.group(1)))) % 180 == 90:               # phone videos are often stored sideways
+            w, h = h, w
+        out.update(w=w, h=h)
+    return out
+
+
+def _fit_size(w: int, h: int) -> tuple:
+    """Even width/height with the longer side exactly 512 (what a Telegram video sticker needs)."""
+    f = 512 / max(w, h)
+    return max(2, int(round(w * f / 2)) * 2), max(2, int(round(h * f / 2)) * 2)
+
+
+def _caption_png(size: tuple, text: str, shape: str, font_choice: str, color: str) -> bytes | None:
+    layer = _caption_layer(size, text, shape, font_choice, color)
+    if layer is None:
+        return None
+    buf = io.BytesIO()
+    layer.save(buf, "PNG")
+    return buf.getvalue()
+
+
+async def to_sticker_webm(data: bytes, shape: str = "round", text: str = "", font_choice: str = "auto",
+                          color: str = "w") -> bytes | None:
+    """Telegram video sticker: WEBM/VP9, ≤3 s, one side exactly 512 px, ≤256 KB, no audio (needs ffmpeg).
+    shape: round · sq · circle.  text: optional caption drawn over the video (needs Pillow)."""
+    info = await ffmpeg_probe(data)
+    lim = f"{min(2.9, float(info.get('dur') or 2.9)) + 0.1:.2f}"          # looped helper images must not outlive the video
+    sq = shape in ("sq", "circle")
+    pre = "crop='min(iw,ih)':'min(iw,ih)'," if sq else ""                # centre square crop
+    overlay, size = None, (512, 512)
+    if text and text_supported(text) and (sq or (info.get("w") and info.get("h"))):
+        size = (512, 512) if sq else _fit_size(info["w"], info["h"])
+        try:
+            overlay = await asyncio.to_thread(_caption_png, size, text, shape, font_choice, color)
+        except Exception as e:                                          # noqa: BLE001 — never lose the sticker over its text
+            log.info("video caption failed: %s", e)
     alpha = {"round": _round_alpha_expr, "circle": _circle_alpha_expr}.get(shape)
-    geq = f",geq=lum='p(X,Y)':cb='p(X,Y)':cr='p(X,Y)':a='{alpha()}'" if alpha else ""     # square → no mask
+    geq = f"geq=lum='p(X,Y)':cb='p(X,Y)':cr='p(X,Y)':a='{alpha()}'" if alpha else ""     # square → no mask
     mask = _circle_mask_png() if shape == "circle" else None
     for crf, fps in ((34, 30), (42, 24), (50, 20), (58, 15)):
-        scale = f"scale=512:512:force_original_aspect_ratio=decrease,fps={fps}"
+        scale = f"scale={size[0]}:{size[1]},fps={fps}" if overlay else f"scale=512:512:force_original_aspect_ratio=decrease,fps={fps}"
+        parts, extra, last, idx = [f"[0:v]{pre}{scale},format=yuva420p[b0]"], [], "b0", 1
+        if overlay:                                                      # caption PNG, same size as the picture
+            extra.append((["-loop", "1", "-t", lim], overlay))
+            parts.append(f"[{idx}:v]format=rgba[t];[{last}][t]overlay=0:0:format=auto,format=yuva420p[b1]")
+            last, idx = "b1", idx + 1
         if mask:                                                         # circle: alphamerge with a looped mask image
-            graph = ["-filter_complex", f"[0:v]{pre}{scale},format=yuv420p[v];[1:v]format=gray[m];[v][m]alphamerge[out]",
-                     "-map", "[out]"]
-            extra = [(["-loop", "1"], mask)]
+            extra.append((["-loop", "1", "-t", lim], mask))
+            parts.append(f"[{last}]format=yuv420p[bv];[{idx}:v]format=gray[m];[bv][m]alphamerge[out]")
         else:
-            graph = ["-vf", pre + scale + ",format=yuva420p" + geq]
-            extra = None
+            parts.append(f"[{last}]{geq or 'null'}[out]")
         out = await run_ffmpeg(
-            ["-t", "2.9", "-an", *graph,
+            ["-t", "2.9", "-an", "-filter_complex", ";".join(parts), "-map", "[out]",
              "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "0", "-crf", str(crf),
              "-deadline", "realtime", "-cpu-used", "5", "-row-mt", "1", "-auto-alt-ref", "0"],
-            data, "webm", 25, extra)
+            data, "webm", 25, extra or None)
         if out and len(out) <= STICKER_MAX:
             return out
     return None
@@ -3611,7 +3708,7 @@ def _round_alpha_expr() -> str:
             f"if(gt(ld(0),0)*gt(ld(1),0),clip(255*({r}+0.5-hypot(ld(0),ld(1))),0,255),255)")
 
 
-def _static_sticker(img: bytes, shape: str = "round", text: str = "", font_choice: str = "auto") -> bytes | None:
+def _static_sticker(img: bytes, shape: str = "round", text: str = "", font_choice: str = "auto", color: str = "w") -> bytes | None:
     """Fallback when ffmpeg is missing: the video cover as a static 512 px WEBP sticker (needs Pillow)."""
     try:
         from PIL import Image, ImageChops, ImageDraw, ImageOps          # type: ignore
@@ -3623,7 +3720,7 @@ def _static_sticker(img: bytes, shape: str = "round", text: str = "", font_choic
         base = ImageOps.exif_transpose(src).convert("RGBA")
         im = (ImageOps.fit(base, (512, 512), Image.LANCZOS) if shape in ("sq", "circle")
               else ImageOps.contain(base, (512, 512)))
-        layer = _caption_layer(im.size, text, shape, font_choice) if text else None
+        layer = _caption_layer(im.size, text, shape, font_choice, color) if text else None
         if layer is not None:                                           # caption text under the rounded mask
             im = Image.alpha_composite(im, layer)
         w, h = im.size
@@ -3968,6 +4065,10 @@ def _is_stk_title_reply(msg) -> bool:
 # 9d · LEADERBOARD · STARS (paid VIP) · FOLLOW ACCOUNTS · STICKER OPTIONS (crop + caption text)
 # ══════════════════════════════════════════════════════════════════════════════
 MEDALS = ("🥇", "🥈", "🥉")
+COLORS = {"w": ((255, 255, 255), (0, 0, 0)), "k": ((0, 0, 0), (255, 255, 255)), "y": ((255, 214, 0), (0, 0, 0)),
+          "r": ((255, 59, 48), (0, 0, 0)), "g": ((52, 199, 89), (0, 0, 0)), "b": ((10, 132, 255), (0, 0, 0)),
+          "p": ((255, 45, 146), (0, 0, 0))}               # code → (text colour, outline colour)
+COLOR_DOTS = {"w": "⚪", "k": "⚫", "y": "🟡", "r": "🔴", "g": "🟢", "b": "🔵", "p": "🟣"}
 FOLLOW_MAX, FOLLOW_MAX_VIP = 5, 20
 _USER_RE = re.compile(r"[A-Za-z0-9_.]{1,24}")
 
@@ -4477,7 +4578,7 @@ def text_supported(text: str) -> bool:
     return not (text and _RTL_RE.search(text) and text_engine() == "plain")
 
 
-def _caption_layer(size: tuple, text: str, shape: str = "round", font_choice: str = "auto"):
+def _caption_layer(size: tuple, text: str, shape: str = "round", font_choice: str = "auto", color: str = "w"):
     """Transparent RGBA layer with the caption at the bottom: white text, black outline, ≤ 3 lines."""
     from PIL import Image, ImageDraw                               # type: ignore
     text = " ".join(text.split())[:80]
@@ -4488,6 +4589,7 @@ def _caption_layer(size: tuple, text: str, shape: str = "round", font_choice: st
     layer = Image.new("RGBA", size, (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
     lines: list = []
+    fill, stroke = COLORS.get(color, COLORS["w"])
     raw = _font_source(text, engine, bool(_RTL_RE.search(text)), font_choice)
     for fs in range(max(28, w // 7), 23, -4):
         font, sw = _font(fs, engine, raw), max(2, fs // 12)
@@ -4510,10 +4612,120 @@ def _caption_layer(size: tuple, text: str, shape: str = "round", font_choice: st
     y = h - (int(h * 0.17) if shape == "circle" else 18) - lh * len(lines)
     for i, line in enumerate(lines):
         s, kw = _shape(line, engine)
-        d.text((w / 2, y + i * lh), s, font=font, fill=(255, 255, 255, 255), stroke_width=sw,
-               stroke_fill=(0, 0, 0, 255), anchor="ma", **kw)
+        d.text((w / 2, y + i * lh), s, font=font, fill=fill + (255,), stroke_width=sw,
+               stroke_fill=stroke + (255,), anchor="ma", **kw)
     return layer
 
+
+
+# ── 🕵️ what a user did: downloads (from the history) + what they sent to the bot (owner only) ──────────────
+ACT_KEEP = 60
+ACT_ICONS = {"l": "🔗", "t": "✉️", "p": "🖼", "v": "🎞", "s": "🧩", "a": "🎙", "d": "📎", "c": "⌨️", "o": "❔"}
+ACT_WORDS = {"l": "link", "t": "text", "p": "photo", "v": "video", "s": "sticker", "a": "audio", "d": "file", "c": "command", "o": "other"}
+
+
+def _msg_kind(msg, text: str, url) -> str:
+    if url:
+        return "l"
+    if getattr(msg, "photo", None):
+        return "p"
+    if any(getattr(msg, a, None) for a in ("video", "animation", "video_note")):
+        return "v"
+    if getattr(msg, "sticker", None):
+        return "s"
+    if any(getattr(msg, a, None) for a in ("voice", "audio")):
+        return "a"
+    if getattr(msg, "document", None):
+        return "d"
+    if text:
+        return "c" if text.startswith("/") else "t"
+    return "o"
+
+
+async def act_log(uid: int, msg, text: str, url) -> None:
+    """Remember one incoming message (kind + text/caption). Best effort — never blocks the real work."""
+    try:
+        kind = _msg_kind(msg, text, url)
+        shown = text or ""
+        if not shown and kind == "d":
+            shown = getattr(getattr(msg, "document", None), "file_name", None) or ""
+        now = time.time()
+        await db_put(f"act/{uid}/{int(now * 1000)}", {"k": kind, "x": clip(shown, 200), "ts": int(now)})
+        if secrets.randbelow(25) == 0:                                  # keep each user's log short
+            d = await db_get(f"act/{uid}")
+            if isinstance(d, dict) and len(d) > ACT_KEEP:
+                for k in sorted(d)[:len(d) - ACT_KEEP]:
+                    await db_del(f"act/{uid}/{k}")
+    except Exception as e:                                              # noqa: BLE001
+        log.info("act_log failed: %s", e)
+
+
+async def _act_events(tid: int) -> list:
+    d = await db_get(f"act/{tid}")
+    items = sorted(((k, v) for k, v in d.items() if isinstance(v, dict)), key=lambda kv: kv[0], reverse=True) if isinstance(d, dict) else []
+    return [(int(v.get("ts") or int(k) // 1000), v) for k, v in items if str(k).isdigit()]
+
+
+async def _act_downloads(tid: int) -> list:
+    d = await db_get(f"hist/{tid}")
+    items = [(k, v) for k, v in d.items() if safe_key(k) and isinstance(v, dict)] if isinstance(d, dict) else []
+    return sorted(items, key=lambda kv: -int(kv[1].get("ts", 0) or 0))
+
+
+def _when(ts, full: bool = False) -> str:
+    return time.strftime("%Y-%m-%d %H:%M" if full else "%m-%d %H:%M", time.gmtime(int(ts or 0)))
+
+
+async def activity_report(lang: str, tid: int) -> str:
+    ud = await db_get(f"users/{tid}")
+    ud = ud if isinstance(ud, dict) else {}
+    dls, evs = await _act_downloads(tid), await _act_events(tid)
+    head = tx(lang, "act_head", name=esc(" ".join(str(ud.get("name") or "—").split())),
+              user=f"@{esc(ud['user'])}" if ud.get("user") else "—", id=tid, plink=profile_link(lang, tid),
+              date=esc(ud.get("date") or "—"), dl=fmt_num(ud.get("dl", 0)))
+    srcs = {}
+    for key, _ in dls[:10]:
+        meta = await cache_get(key)
+        srcs[key] = (meta or {}).get("src")
+
+    def build(n: int) -> str:
+        d_lines = []
+        for key, it in dls[:n]:
+            link = f' <a href="{html.escape(srcs[key], quote=True)}">🔗</a>' if srcs.get(key) else ""
+            title = f" — {esc(clip(it['t'], 50))}" if it.get("t") else ""
+            d_lines.append(f"• <code>{_when(it.get('ts'))}</code> {'🖼' if it.get('i') else '🎬'} {esc(clip(it.get('c') or 'TikTok', 24))}{title}{link}")
+        e_lines = [f"• <code>{_when(ts)}</code> {ACT_ICONS.get(ev.get('k'), '❔')} {esc(clip(ev.get('x') or '—', 90))}"
+                   for ts, ev in evs[:n + 2]]
+        return (head + "\n\n" + tx(lang, "act_dl_title", n=len(dls)) + "\n" + ("\n".join(d_lines) or tx(lang, "act_none"))
+                + "\n\n" + tx(lang, "act_msg_title", n=len(evs)) + "\n" + ("\n".join(e_lines) or tx(lang, "act_none"))
+                + "\n\n" + tx(lang, "act_note"))
+    for n in (10, 8, 6, 4, 2, 1):                                       # a message may hold 4096 characters
+        text = build(n)
+        if len(text) <= 3900:
+            return text
+    return text
+
+
+async def activity_view(lang: str, tid: int) -> tuple:
+    return await activity_report(lang, tid), Kb([
+        [Btn(tx(lang, "b_act_txt"), callback_data=f"sup_actt_{tid}"), Btn(tx(lang, "b_refresh"), callback_data=f"sup_act_{tid}")],
+        back_row(lang, "panel_unified")])
+
+
+async def activity_txt(lang: str, tid: int) -> bytes:
+    ud = await db_get(f"users/{tid}")
+    ud = ud if isinstance(ud, dict) else {}
+    dls, evs = await _act_downloads(tid), await _act_events(tid)
+    one = lambda v: " ".join(str(v).split()) or "—"                     # noqa: E731
+    out = [tx(lang, "act_txt_head", id=tid, name=one(ud.get("name") or ""), date=now_str()), "=" * 34, "",
+           tx(lang, "act_txt_dl", n=len(dls)), ""]
+    for key, it in dls:
+        src = ((await cache_get(key)) or {}).get("src") or "—"
+        out.append(f"[{_when(it.get('ts'), True)}] {one(it.get('c') or 'TikTok')} | {one(it.get('t') or '')} | {src}")
+    out += ["", "=" * 34, tx(lang, "act_txt_msg", n=len(evs)), ""]
+    for ts, ev in evs:
+        out.append(f"[{_when(ts, True)}] {ACT_ICONS.get(ev.get('k'), '❔')} {ACT_WORDS.get(ev.get('k'), 'other')} | {one(ev.get('x') or '')}")
+    return ("\ufeff" + "\n".join(out) + "\n").encode("utf-8")
 
 
 def _photo_file(msg) -> tuple[str, int] | None:
@@ -4532,13 +4744,14 @@ def _photo_file(msg) -> tuple[str, int] | None:
 SHAPES = ("round", "sq", "circle")
 
 
-def _shape_kb(lang: str, mid: int, with_font: bool, ft: str) -> Kb:
+def _shape_kb(lang: str, mid: int, with_font: bool, ft: str, cl: str = "w") -> Kb:
     rows = [[Btn(tx(lang, "b_shape_round"), callback_data=f"ss_round_{mid}"),
              Btn(tx(lang, "b_shape_sq"), callback_data=f"ss_sq_{mid}"),
              Btn(tx(lang, "b_shape_circle"), callback_data=f"ss_circle_{mid}")]]
     if with_font:                                                      # which font draws the caption?
         rows.append([Btn(("✅ " if ft == code else "") + tx(lang, key), callback_data=f"ss_f{code}_{mid}")
                      for code, key in (("auto", "b_font_auto"), ("ku", "b_font_ku"), ("en", "b_font_en"))])
+        rows.append([Btn(("✅" if cl == code else "") + COLOR_DOTS[code], callback_data=f"ss_c{code}_{mid}") for code in COLORS])
     rows.append([Btn(tx(lang, "b_shape_cancel"), callback_data=f"ss_x_{mid}")])
     return Kb(rows)
 
@@ -4564,9 +4777,10 @@ async def ask_sticker_shape(update: Update, ctx, lang: str, kind: str) -> None:
             if not isinstance(v, dict) or int(v.get("ts", 0)) < int(time.time()) - 3600:
                 await db_del(f"stkq/{uid}/{k}")
     caption = clip((getattr(msg, "caption", None) or "").strip(), 80)
-    await db_put(f"stkq/{uid}/{mid}", {"k": kind, "f": fid, "s": seconds, "ts": int(time.time()), "c": caption, "ft": "auto"})
-    text = tx(lang, "ss_ask") + (("\n\n" + tx(lang, "ss_font_hint")) if caption and kind == "photo" else "")
-    await msg.reply_text(text, reply_markup=_shape_kb(lang, mid, bool(caption) and kind == "photo", "auto"))
+    await db_put(f"stkq/{uid}/{mid}", {"k": kind, "f": fid, "s": seconds, "ts": int(time.time()), "c": caption,
+                                       "ft": "auto", "cl": "w"})
+    text = tx(lang, "ss_ask") + (("\n\n" + tx(lang, "ss_font_hint")) if caption else "")
+    await msg.reply_text(text, reply_markup=_shape_kb(lang, mid, bool(caption), "auto", "w"))
 
 
 async def process_photo_sticker(update: Update, ctx, lang: str) -> None:
@@ -4586,18 +4800,22 @@ async def _build_sticker(ctx, uid: int, chat_id: int, lang: str, rec: dict, shap
     tg_file = await ctx.bot.get_file(rec["f"])
     raw = bytes(await tg_file.download_as_bytearray())
     caption = (rec.get("c") or "").strip()
+    font_choice = rec.get("ft") if rec.get("ft") in ("auto", "ku", "en") else "auto"
+    color = rec.get("cl") if rec.get("cl") in COLORS else "w"
     if video:
-        webm = await to_sticker_webm(raw, shape)
+        webm = await to_sticker_webm(raw, shape, caption, font_choice, color)
         if not webm:
             return "stk_fail"
         await deliver_sticker(ctx, uid, chat_id, lang, webm, "video")
         if int(rec.get("s", 0)) > 3:
             await ctx.bot.send_message(chat_id, tx(lang, "vstk_trim"))
-        if caption:
-            await ctx.bot.send_message(chat_id, tx(lang, "vstk_notext"))
+        if caption and not text_supported(caption):
+            await ctx.bot.send_message(chat_id, tx(lang, "stk_text_unsupported"))
+        elif caption and font_fallback(caption, font_choice):
+            note = tx(lang, "stk_font_missing") + (f"\n\n{font_diag(caption, font_choice)}" if is_super(uid) else "")
+            await ctx.bot.send_message(chat_id, note)
         return None
-    font_choice = rec.get("ft") if rec.get("ft") in ("auto", "ku", "en") else "auto"
-    webp = await asyncio.to_thread(_static_sticker, raw, shape, caption, font_choice)
+    webp = await asyncio.to_thread(_static_sticker, raw, shape, caption, font_choice, color)
     if not webp:
         return "mkstk_fail"
     await deliver_sticker(ctx, uid, chat_id, lang, webp)
@@ -4612,18 +4830,24 @@ async def _build_sticker(ctx, uid: int, chat_id: int, lang: str, rec: dict, shap
 async def choose_shape(cb: "CB", data: str) -> None:
     """ss_<round|sq|circle|x>_<message id> — the user answered the shape question."""
     parts = data.split("_", 2)
-    if len(parts) != 3 or parts[1] not in SHAPES + ("x", "fauto", "fku", "fen") or not parts[2].isdigit():
+    if len(parts) != 3 or parts[1] not in SHAPES + ("x", "fauto", "fku", "fen") + tuple("c" + k for k in COLORS) or not parts[2].isdigit():
         return await cb.answer()
     shape, mid, uid, lang = parts[1], parts[2], cb.uid, cb.lang
     path, msg = f"stkq/{uid}/{mid}", cb.q.message
-    if shape.startswith("f"):                                          # 🔤 font row: remember the choice, mark it ✅
-        if not isinstance(await db_get(path), dict):
+    if shape.startswith("f") or (len(shape) == 2 and shape[0] == "c"):  # 🔤 font / 🎨 colour row: remember it, mark it ✅
+        cur = await db_get(path)
+        if not isinstance(cur, dict):
             return await cb.answer(cb.t("ss_expired"), True)
-        ft = shape[1:]
-        await db_put(f"{path}/ft", ft)
+        ft, cl = cur.get("ft", "auto"), cur.get("cl", "w")
+        if shape.startswith("f"):
+            ft = shape[1:]
+            await db_put(f"{path}/ft", ft)
+        else:
+            cl = shape[1]
+            await db_put(f"{path}/cl", cl)
         await cb.answer()
         try:
-            await msg.edit_reply_markup(reply_markup=_shape_kb(lang, int(mid), True, ft))
+            await msg.edit_reply_markup(reply_markup=_shape_kb(lang, int(mid), True, ft, cl))
         except TelegramError:                                          # same choice tapped again → nothing changes
             pass
         return
@@ -4806,7 +5030,8 @@ async def show_panel(cb: CB):
         rows.append([Btn(cb.t("b_sup_stars", status=status_word(lang, CFG.get("stars_on", False))),
                          callback_data="sup_stars")])
         rows.append([Btn(cb.t("b_sup_botlang"), callback_data="sup_bot_lang")])
-        rows.append([Btn(cb.t("b_sup_users"), callback_data="sup_users_txt")])
+        rows.append([Btn(cb.t("b_sup_users"), callback_data="sup_users_txt"),
+                     Btn(cb.t("b_sup_activity"), callback_data="sup_activity")])
     if is_owner(uid):
         rows.append([Btn("▬▬▬  👑  ▬▬▬", callback_data="noop")])
         rows.append([Btn(cb.t("b_own_super"), callback_data="own_super_adms"),
@@ -4861,6 +5086,17 @@ async def route_super(cb: CB, data: str):
     if data == "sup_toggle_groups":
         await set_cfg(groups_on=not CFG.get("groups_on", True))
         return await show_panel(cb)
+
+    if data == "sup_activity":                                           # 🕵️ ask for a user ID
+        return await ask_input(cb, "activity", cb.t("act_ask", write_id=cb.t("write_id")), "panel_unified")
+    if data.startswith("sup_act_") and data[len("sup_act_"):].isdigit():   # refresh
+        text, kb = await activity_view(lang, int(data[len("sup_act_"):]))
+        return await cb.edit(text, kb)
+    if data.startswith("sup_actt_") and data[len("sup_actt_"):].isdigit():  # the full log as a .txt file
+        tid = int(data[len("sup_actt_"):])
+        await cb.answer(cb.t("users_preparing"))
+        return await cb.ctx.bot.send_document(
+            cb.q.message.chat_id, InputFile(await activity_txt(lang, tid), filename=f"activity_{tid}.txt"), **_UP)
 
     if data == "sup_users_txt":                                          # 📄 every user, complete, as a .txt file
         await cb.answer(cb.t("users_preparing"))
@@ -5061,7 +5297,7 @@ async def route_owner(cb: CB, data: str):
 _NEEDS = {  # prompt → minimum role
     "broadcast": is_admin, "blk_add": is_admin, "blk_rm": is_admin, "info": is_admin,
     "adm_add": is_super, "vip_add": is_super, "add_ch": is_super,
-    "sup_add": is_owner, "set_welcome": is_owner,
+    "sup_add": is_owner, "set_welcome": is_owner, "activity": is_super,
 }
 
 
@@ -5140,6 +5376,9 @@ async def handle_prompt(update: Update, ctx, state: str, lang: str, started: flo
         return await msg.reply_text(tx(lang, "act_unblocked", id=tid))
     if state == "info":
         return await msg.reply_text(await userinfo_text(lang, tid))
+    if state == "activity":
+        text, kb = await activity_view(lang, tid)
+        return await msg.reply_text(text, reply_markup=kb)
     if state == "adm_add":
         admins_set.add(tid); await save_sys("admins")
         return await msg.reply_text(tx(lang, "act_adm_added", id=tid))
@@ -5680,6 +5919,8 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         state = await pop_wait(uid)
         if state:
             return await handle_prompt(update, ctx, state, lang, started)
+
+    await act_log(uid, msg, text, url)                   # the owner can review this in the panel (🕵️)
 
     if private:
         fld = _aedit_field(msg)                          # answer to an "edit audio name" prompt
