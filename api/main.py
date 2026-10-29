@@ -30,6 +30,7 @@ What changed in v15 (short version)
 import asyncio
 import base64
 import ctypes
+import functools
 import hashlib
 import hmac
 import html
@@ -54,7 +55,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from telegram import (
     ForceReply,
-    InlineKeyboardButton as Btn,
+    InlineKeyboardButton,
     InlineKeyboardMarkup as Kb,
     InputFile,
     InputMediaAudio,
@@ -157,6 +158,8 @@ CFG: dict = {
     "ref_need":     5,          # invited users needed per reward
     "ref_days":     3,          # VIP days per reward
     "groups_on":    True,       # answer TikTok links posted in groups
+    "pe_on":        False,      # premium (custom) emoji in texts and on buttons — needs Telegram Premium on the bot owner's account
+    "btn_style":    False,      # coloured inline buttons (Bot API 9.4)
     "stars_on":     False,      # sell VIP for Telegram Stars (turn on in the panel after checking prices)
     "stars_plans":  [[7, 50], [30, 150], [90, 400]],   # [days, Stars]
 }
@@ -333,6 +336,24 @@ L["ku"] = {
     "act_txt_head": "🕵️ چالاکی بەکارهێنەر {id} — {name} — {date} UTC",
     "act_txt_dl": "📥 دابەزاندن ({n})",
     "act_txt_msg": "📨 ناردن بۆ بۆت ({n})",
+    "b_sup_pe": "💎 ئیمۆجی و ڕەنگی دوگمە",
+    "pe_title": "💎 <b>ئیمۆجی پریمیۆم و ڕەنگی دوگمە</b>\n\n💎 ئیمۆجی پریمیۆم: {pe}\n🎨 ڕەنگی دوگمەکان: {st}\n📦 پاکێج: {pack} ({n} ئیمۆجی)\n\nℹ️ ئیمۆجی پریمیۆم تەنیا کار دەکات ئەگەر خاوەنی بۆتەکە (ئەو ئەکاونتەی بە @BotFather بۆتەکەی دروست کردووە) Telegram Premiumی چالاک هەبێت. ڕەنگی دوگمەکان پێویستی بەمە نییە.",
+    "b_pe_emoji": "💎 ئیمۆجی پریمیۆم: {status}",
+    "b_pe_style": "🎨 ڕەنگی دوگمەکان: {status}",
+    "b_pe_pack": "📦 زیادکردنی پاکێجی ئیمۆجی",
+    "b_pe_test": "🧪 تاقیکردنەوە",
+    "b_pe_del": "🗑 سڕینەوەی پاکێج",
+    "pe_ask_pack": "📦 <b>پاکێجی ئیمۆجی</b>\n\nلینکی پاکێجێکی ئیمۆجی بنێرە، وەک <code>t.me/addemoji/...</code>\n\nئیمۆجییەکی پریمیۆم لە تێلیگرام دابگرە، ناوی پاکێجەکەی نیشان دەدات و لینکەکەی دەتوانیت کۆپی بکەیت.",
+    "pe_pack_ok": "✅ پاکێجی <b>{pack}</b> خرایە ناو بۆتەکە ({n} ئیمۆجی). ئێستا «تاقیکردنەوە» دابگرە.",
+    "pe_pack_bad": "❌ {why}",
+    "pe_why_link": "لینکەکە دروست نییە. وەک t.me/addemoji/ناو بینێرە.",
+    "pe_why_type": "ئەمە پاکێجی ئیمۆجی نییە (پاکێجی ستیکەرە)، یان هیچ ئیمۆجییەکی تێدا نییە.",
+    "pe_why_find": "پاکێجەکە نەدۆزرایەوە: {err}",
+    "pe_not_ready": "⚠️ سەرەتا پاکێجی ئیمۆجی زیاد بکە.",
+    "pe_no_hooks": "⚠️ نەتوانرا پارێزەرەکە دابمەزرێت. بەکارهێنانی ئەم تایبەتمەندییە ناکرێت لەسەر ئەم وەشانەی کتێبخانە.",
+    "pe_test_ok": "✅ تێلیگرام قبوڵی کرد. پەیامی تاقیکردنەوەکە ببینە: ئەگەر ئیمۆجییەکە ئەنیمەیتکراو نەبوو، Premium چالاک نییە.",
+    "pe_test_fail": "❌ تێلیگرام ڕەتی کردەوە: {err}",
+    "pe_autooff": "⚠️ ئیمۆجی پریمیۆم و ڕەنگی دوگمەکان خۆکارانە ناچالاک کران، چونکە تێلیگرام ڕەتی کردنەوە:\n<code>{err}</code>",
     "b_shape_round": "▭ قوژبن خڕ", "b_shape_sq": "⬛ چوارگۆشە", "b_shape_circle": "⚪ بازنە", "b_shape_cancel": "❌ هەڵوەشاندنەوە",
     "stk_text_unsupported": "ℹ️ نووسینی کوردی لەسەر ئەم سێرڤەرە پشتگیری ناکرێت، بۆیە ستیکەرەکە بێ نووسین دروست کرا.",
     "vstk_notext": "ℹ️ نووسین لەسەر ستیکەری جوڵاو پشتگیری ناکرێت (تەنیا لەسەر وێنە).",
@@ -694,6 +715,24 @@ L["en"] = {
     "act_txt_head": "🕵️ User activity {id} — {name} — {date} UTC",
     "act_txt_dl": "📥 Downloads ({n})",
     "act_txt_msg": "📨 Sent to the bot ({n})",
+    "b_sup_pe": "💎 Emoji & button colours",
+    "pe_title": "💎 <b>Premium emoji & button colours</b>\n\n💎 Premium emoji: {pe}\n🎨 Button colours: {st}\n📦 Pack: {pack} ({n} emoji)\n\nℹ️ Premium emoji only work when the bot's owner (the account that created it in @BotFather) has an active Telegram Premium. Button colours don't need it.",
+    "b_pe_emoji": "💎 Premium emoji: {status}",
+    "b_pe_style": "🎨 Button colours: {status}",
+    "b_pe_pack": "📦 Add an emoji pack",
+    "b_pe_test": "🧪 Test",
+    "b_pe_del": "🗑 Remove pack",
+    "pe_ask_pack": "📦 <b>Emoji pack</b>\n\nSend the link of an emoji pack, like <code>t.me/addemoji/...</code>\n\nTap a premium emoji in Telegram and it shows its pack — you can copy the pack's link.",
+    "pe_pack_ok": "✅ Pack <b>{pack}</b> added ({n} emoji). Now tap \"Test\".",
+    "pe_pack_bad": "❌ {why}",
+    "pe_why_link": "That link is not valid. Send it like t.me/addemoji/name.",
+    "pe_why_type": "This is not an emoji pack (it is a sticker pack), or it has no emoji.",
+    "pe_why_find": "Pack not found: {err}",
+    "pe_not_ready": "⚠️ Add an emoji pack first.",
+    "pe_no_hooks": "⚠️ The safety layer could not be installed, so this feature can't be used with this library version.",
+    "pe_test_ok": "✅ Telegram accepted it. Look at the test message: if the emoji is not animated, Premium is not active.",
+    "pe_test_fail": "❌ Telegram refused: {err}",
+    "pe_autooff": "⚠️ Premium emoji and button colours were switched off automatically because Telegram refused them:\n<code>{err}</code>",
     "b_shape_round": "▭ Rounded", "b_shape_sq": "⬛ Square", "b_shape_circle": "⚪ Circle", "b_shape_cancel": "❌ Cancel",
     "stk_text_unsupported": "ℹ️ Kurdish/Arabic text isn't supported on this server, so the sticker was made without text.",
     "vstk_notext": "ℹ️ Text on animated stickers is not supported (photos only).",
@@ -1051,6 +1090,24 @@ L["ar"] = {
     "act_txt_head": "🕵️ نشاط المستخدم {id} — {name} — {date} UTC",
     "act_txt_dl": "📥 التحميلات ({n})",
     "act_txt_msg": "📨 المرسل إلى البوت ({n})",
+    "b_sup_pe": "💎 الإيموجي وألوان الأزرار",
+    "pe_title": "💎 <b>الإيموجي المميز وألوان الأزرار</b>\n\n💎 الإيموجي المميز: {pe}\n🎨 ألوان الأزرار: {st}\n📦 الحزمة: {pack} ({n} إيموجي)\n\nℹ️ الإيموجي المميز يعمل فقط إذا كان لدى مالك البوت (الحساب الذي أنشأه في @BotFather) اشتراك Telegram Premium فعّال. ألوان الأزرار لا تحتاج إلى ذلك.",
+    "b_pe_emoji": "💎 الإيموجي المميز: {status}",
+    "b_pe_style": "🎨 ألوان الأزرار: {status}",
+    "b_pe_pack": "📦 إضافة حزمة إيموجي",
+    "b_pe_test": "🧪 اختبار",
+    "b_pe_del": "🗑 حذف الحزمة",
+    "pe_ask_pack": "📦 <b>حزمة الإيموجي</b>\n\nأرسل رابط حزمة إيموجي، مثل <code>t.me/addemoji/...</code>\n\nاضغط على إيموجي مميز في تيليجرام ليظهر اسم حزمته ويمكنك نسخ رابطها.",
+    "pe_pack_ok": "✅ أُضيفت الحزمة <b>{pack}</b> ({n} إيموجي). الآن اضغط «اختبار».",
+    "pe_pack_bad": "❌ {why}",
+    "pe_why_link": "الرابط غير صالح. أرسله بهذا الشكل t.me/addemoji/name.",
+    "pe_why_type": "هذه ليست حزمة إيموجي (إنها حزمة ملصقات)، أو لا تحتوي على إيموجي.",
+    "pe_why_find": "لم يتم العثور على الحزمة: {err}",
+    "pe_not_ready": "⚠️ أضف حزمة إيموجي أولًا.",
+    "pe_no_hooks": "⚠️ تعذّر تركيب طبقة الحماية، لذلك لا يمكن استخدام هذه الميزة مع هذا الإصدار من المكتبة.",
+    "pe_test_ok": "✅ قبِلها تيليجرام. انظر إلى رسالة الاختبار: إذا لم يكن الإيموجي متحركًا فإن Premium غير مفعّل.",
+    "pe_test_fail": "❌ رفض تيليجرام: {err}",
+    "pe_autooff": "⚠️ تم إيقاف الإيموجي المميز وألوان الأزرار تلقائيًا لأن تيليجرام رفضها:\n<code>{err}</code>",
     "b_shape_round": "▭ حواف مستديرة", "b_shape_sq": "⬛ مربع", "b_shape_circle": "⚪ دائرة", "b_shape_cancel": "❌ إلغاء",
     "stk_text_unsupported": "ℹ️ النص الكردي/العربي غير مدعوم على هذا الخادم، لذلك أُنشئ الملصق بدون نص.",
     "vstk_notext": "ℹ️ النص على الملصقات المتحركة غير مدعوم (للصور فقط).",
@@ -1437,6 +1494,7 @@ async def load_cfg(force: bool = False) -> None:
                      if str(k).isdigit() and isinstance(v, (int, float)) and v > now}
     if isinstance(d.get("cfg"), dict):
         CFG.update(d["cfg"])
+    pe_apply_cfg(d)
 
 
 _SYS_KEYS = {
@@ -1802,9 +1860,9 @@ async def _mark_fav_button(cb: "CB", key: str, on: bool) -> None:
             if b.callback_data == f"fav_{key}":
                 new.append(Btn(cb.t("b_faved" if on else "b_fav"), callback_data=b.callback_data))
             elif b.callback_data:
-                new.append(Btn(b.text, callback_data=b.callback_data))
+                new.append(Btn(b.text, callback_data=b.callback_data, api_kwargs=dict(getattr(b, "api_kwargs", None) or {})))
             else:
-                new.append(Btn(b.text, url=b.url))
+                new.append(Btn(b.text, url=b.url, api_kwargs=dict(getattr(b, "api_kwargs", None) or {})))
         rows.append(new)
     try:
         await cb.q.message.edit_reply_markup(reply_markup=Kb(rows))
@@ -4298,7 +4356,8 @@ async def _relabel_button(cb: "CB", callback_data: str, text: str) -> None:
     except AttributeError:
         return
     rows = [[Btn(text, callback_data=b.callback_data) if b.callback_data == callback_data
-             else (Btn(b.text, callback_data=b.callback_data) if b.callback_data else Btn(b.text, url=b.url))
+             else (Btn(b.text, callback_data=b.callback_data, api_kwargs=dict(getattr(b, "api_kwargs", None) or {}))
+                   if b.callback_data else Btn(b.text, url=b.url, api_kwargs=dict(getattr(b, "api_kwargs", None) or {})))
              for b in row] for row in old]
     try:
         await cb.q.message.edit_reply_markup(reply_markup=Kb(rows))
@@ -4728,6 +4787,320 @@ async def activity_txt(lang: str, tid: int) -> bytes:
     return ("\ufeff" + "\n".join(out) + "\n").encode("utf-8")
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# 9e · PREMIUM EMOJI (Bot API 9.4: custom emoji in texts + button icons) AND COLOURED BUTTONS
+#      Everything here is OFF until the owner switches it on in the panel (💎 ئیمۆجی و ڕەنگی دوگمە).
+#      Premium emoji only work when the bot's owner account has Telegram Premium (Telegram's rule).
+# ══════════════════════════════════════════════════════════════════════════════
+_PE = {"on": False, "map": {}, "rev": {}, "rx": None, "pack": ""}      # premium-emoji state
+_STY = {"on": False}                                                    # coloured buttons
+_HOOKS = {"installed": False, "orig": []}                               # wrapped PTB methods (for tests / undo)
+_RAW = {"v": False}                                                     # True → send without any of the extras
+_FAIL = {"ts": 0.0}
+_PE_CAP = 60                                                            # custom emoji per message (Telegram allows 100 entities)
+_TAG_SPLIT = re.compile(r"(<[^>]*>)")
+_SKIP_OPEN = re.compile(r"<(code|pre|a|tg-emoji)\b", re.I)
+_SKIP_CLOSE = re.compile(r"</(code|pre|a|tg-emoji)\s*>", re.I)
+
+
+def pe_set_map(emoji_map: dict, pack: str = "") -> None:
+    """Install the {emoji → custom_emoji_id} table and compile the matcher (longest emoji first)."""
+    clean = {str(k).replace("\ufe0f", ""): str(v) for k, v in (emoji_map or {}).items() if k and str(v).isdigit()}
+    _PE["map"], _PE["pack"] = clean, pack or ""
+    _PE["rev"] = {v: k for k, v in clean.items()}
+    keys = sorted(clean, key=len, reverse=True)
+    _PE["rx"] = re.compile("(?:" + "|".join(re.escape(k) for k in keys) + ")\ufe0f?") if keys else None
+
+
+def pe_text(text: str) -> str:
+    """HTML text → the same text with mapped emoji wrapped as <tg-emoji>. Skips <code>/<pre>/<a>, idempotent."""
+    if not (_PE["on"] and _PE["rx"]) or not isinstance(text, str) or "<tg-emoji" in text:
+        return text
+    out, skip, n = [], 0, 0
+
+    def swap(m):
+        nonlocal n
+        cid = _PE["map"].get(m.group(0).replace("\ufe0f", ""))
+        if not cid or n >= _PE_CAP:
+            return m.group(0)
+        n += 1
+        return f'<tg-emoji emoji-id="{cid}">{m.group(0)}</tg-emoji>'
+
+    for part in _TAG_SPLIT.split(text):
+        if part.startswith("<") and part.endswith(">"):
+            if _SKIP_OPEN.match(part):
+                skip += 1
+            elif _SKIP_CLOSE.match(part):
+                skip = max(0, skip - 1)
+            out.append(part)
+        else:
+            out.append(part if skip else _PE["rx"].sub(swap, part))
+    return "".join(out)
+
+
+def _pe_icon(label: str) -> tuple:
+    """'📥 Download' → ('Download', custom_emoji_id).  Emoji-only labels stay as they are."""
+    if not (_PE["on"] and _PE["rx"]):
+        return label, None
+    m = _PE["rx"].search(label)
+    if not m:
+        return label, None
+    rest = (label[:m.start()] + label[m.end():]).strip()
+    if not rest:
+        return label, None
+    return " ".join(rest.split()), _PE["map"].get(m.group(0).replace("\ufe0f", ""))
+
+
+_STY_DANGER = ("hist_clr", "ss_x_", "stk_del_", "stk_delyes_", "fwx_", "fwu_")
+_STY_SUCCESS = ("buy_", "stk_new")
+_STY_PRIMARY = ("ss_round_", "ss_sq_", "ss_circle_")
+
+
+def _style_for(cbd: str | None) -> str | None:
+    if not cbd:
+        return None
+    if cbd == "close" or cbd.startswith(_STY_DANGER):
+        return "danger"
+    if cbd.startswith(_STY_SUCCESS):
+        return "success"
+    if cbd in ("ask_link", "show_vip", "show_ref") or cbd.startswith(_STY_PRIMARY):
+        return "primary"
+    return None
+
+
+def Btn(text: str, **kw):
+    """InlineKeyboardButton + (when switched on) a premium-emoji icon and a colour. Plain button otherwise."""
+    extra = dict(kw.pop("api_kwargs", None) or {})
+    icon_id = None
+    if _PE["on"] and "icon_custom_emoji_id" not in extra:
+        text, icon_id = _pe_icon(text)
+    if icon_id:
+        extra["icon_custom_emoji_id"] = icon_id
+    if _STY["on"] and "style" not in extra:
+        st = _style_for(kw.get("callback_data"))
+        if st:
+            extra["style"] = st
+    if extra:
+        kw["api_kwargs"] = extra
+    return InlineKeyboardButton(text, **kw)
+
+
+def _markup_has_extras(rm) -> bool:
+    try:
+        return any(getattr(b, "api_kwargs", None) for row in rm.inline_keyboard for b in row)
+    except AttributeError:
+        return False
+
+
+def _strip_markup(rm):
+    """The same keyboard without icons/colours (the emoji goes back into the label)."""
+    try:
+        rows = []
+        for row in rm.inline_keyboard:
+            new = []
+            for b in row:
+                ex = dict(getattr(b, "api_kwargs", None) or {})
+                text = b.text
+                if ex.get("icon_custom_emoji_id") and _PE["rev"].get(str(ex["icon_custom_emoji_id"])):
+                    text = f"{_PE['rev'][str(ex['icon_custom_emoji_id'])]} {text}"
+                new.append(InlineKeyboardButton(text, callback_data=b.callback_data) if b.callback_data
+                           else InlineKeyboardButton(text, url=b.url))
+            rows.append(new)
+        return Kb(rows)
+    except AttributeError:
+        return rm
+
+
+def _make_wrapper(orig, text_arg: str, text_pos):
+    @functools.wraps(orig)
+    async def wrapper(self, *args, **kwargs):
+        if _RAW["v"] or not (_PE["on"] or _STY["on"]):
+            return await orig(self, *args, **kwargs)
+        a, k, changed = list(args), dict(kwargs), False
+        try:
+            if _PE["on"] and k.get("parse_mode", "HTML") == "HTML" and "entities" not in k:
+                if isinstance(k.get(text_arg), str):
+                    new = pe_text(k[text_arg])
+                    changed, k[text_arg] = changed or new != k[text_arg], new
+                elif text_pos is not None and len(a) > text_pos and isinstance(a[text_pos], str):
+                    new = pe_text(a[text_pos])
+                    changed, a[text_pos] = changed or new != a[text_pos], new
+            changed = changed or _markup_has_extras(k.get("reply_markup"))
+        except Exception as e:                                          # noqa: BLE001 — a bug here must never block a message
+            log.info("premium-emoji transform skipped: %s", e)
+            a, k, changed = list(args), dict(kwargs), False
+        if not changed:
+            return await orig(self, *a, **k)
+        try:
+            return await orig(self, *a, **k)
+        except BadRequest as e:
+            if "not modified" in str(e).lower():
+                raise
+            plain = dict(kwargs)
+            if "reply_markup" in plain:
+                plain["reply_markup"] = _strip_markup(plain["reply_markup"])
+            result = await orig(self, *args, **plain)                   # still failing → the real error propagates
+            await _auto_disable(self, e)
+            return result
+    wrapper._jt = True
+    return wrapper
+
+
+async def _auto_disable(bot, err) -> None:
+    """Telegram refused the extras but accepted the plain message → switch the extras off, tell the owner once an hour."""
+    _PE["on"] = _STY["on"] = False
+    try:
+        await set_cfg(pe_on=False, btn_style=False)
+    except Exception as e:                                              # noqa: BLE001
+        log.info("could not save the auto-disable: %s", e)
+    if time.time() - _FAIL["ts"] > 3600:
+        _FAIL["ts"] = time.time()
+        _RAW["v"] = True
+        try:
+            await bot.send_message(OWNER_ID, tx("ku", "pe_autooff", err=esc(str(err)[:160])))
+        except Exception:                                               # noqa: BLE001
+            pass
+        finally:
+            _RAW["v"] = False
+
+
+def _install_hooks() -> bool:
+    """Wrap PTB's send/edit methods once. False when PTB looks different from what we expect (then nothing is switched on)."""
+    if _HOOKS["installed"]:
+        return True
+    try:
+        import telegram as _tg
+        from telegram.ext import ExtBot
+    except Exception as e:                                              # noqa: BLE001
+        log.info("hooks not installed: %s", e)
+        return False
+    specs = (("send_message", "text", 1), ("edit_message_text", "text", 0), ("send_photo", "caption", None),
+             ("send_video", "caption", None), ("send_audio", "caption", None), ("send_document", "caption", None),
+             ("send_animation", "caption", None), ("edit_message_caption", "caption", None))
+    done = set()
+    for name, arg, pos in specs:
+        target = ExtBot if name in vars(ExtBot) else _tg.Bot            # the class the application's bot really uses
+        orig = getattr(target, name, None)
+        if not callable(orig) or getattr(orig, "_jt", False):
+            continue
+        setattr(target, name, _make_wrapper(orig, arg, pos))
+        _HOOKS["orig"].append((target, name, orig))
+        done.add(name)
+    _HOOKS["installed"] = {"send_message", "edit_message_text"} <= done
+    return _HOOKS["installed"]
+
+
+def pe_apply_cfg(d: dict) -> None:
+    """Called after every config load: map, switches, hooks."""
+    pe = d.get("pemoji")
+    if isinstance(pe, dict) and isinstance(pe.get("map"), dict):
+        if pe["map"] != _PE["map"] and {k.replace("\ufe0f", ""): v for k, v in pe["map"].items()} != _PE["map"]:
+            pe_set_map(pe["map"], str(pe.get("pack") or ""))
+    elif _PE["map"] and not pe:
+        pe_set_map({}, "")
+    want_pe, want_sty = bool(CFG.get("pe_on")) and bool(_PE["map"]), bool(CFG.get("btn_style"))
+    if (want_pe or want_sty) and not _install_hooks():
+        want_pe = want_sty = False
+    _PE["on"], _STY["on"] = want_pe, want_sty
+
+
+async def pe_test(ctx, chat_id: int, kind: str) -> tuple:
+    """Send one test message straight to Telegram (no safety net) → (accepted?, error text)."""
+    _RAW["v"] = True
+    try:
+        if kind == "emoji":
+            emoji, cid = next(iter(_PE["map"].items()))
+            kb = Kb([[InlineKeyboardButton("Premium emoji", callback_data="noop", api_kwargs={"icon_custom_emoji_id": cid})]])
+            await ctx.bot.send_message(chat_id, f'<tg-emoji emoji-id="{cid}">{emoji}</tg-emoji> premium emoji', reply_markup=kb)
+        else:
+            kb = Kb([[InlineKeyboardButton(n, callback_data="noop", api_kwargs={"style": n}) for n in ("primary", "success", "danger")]])
+            await ctx.bot.send_message(chat_id, "🎨 button colours", reply_markup=kb)
+        return True, ""
+    except TelegramError as e:
+        return False, str(e)[:160]
+    finally:
+        _RAW["v"] = False
+
+
+async def pe_import_pack(ctx, raw: str) -> tuple:
+    """A custom-emoji pack link/name → the emoji table (each pack emoji is paired with its normal emoji). → (ok, text key, kwargs)"""
+    raw = (raw or "").strip()
+    m = re.search(r"(?:addemoji|addstickers)/([A-Za-z0-9_]+)", raw) or re.fullmatch(r"([A-Za-z0-9_]{3,64})", raw)
+    if not m:
+        return False, "pe_why_link", {}
+    name = m.group(1)
+    try:
+        st = await ctx.bot.get_sticker_set(name)
+    except TelegramError as e:
+        return False, "pe_why_find", {"err": esc(str(e)[:120])}
+    if str(getattr(st, "sticker_type", "") or "").lower() != "custom_emoji":
+        return False, "pe_why_type", {}
+    table: dict = {}
+    for s in st.stickers:
+        key, cid = (getattr(s, "emoji", "") or "").replace("\ufe0f", ""), getattr(s, "custom_emoji_id", None)
+        if key and cid and key not in table:
+            table[key] = str(cid)
+    if not table:
+        return False, "pe_why_type", {}
+    await db_put("sys/pemoji", {"pack": name, "map": table})
+    pe_set_map(table, name)
+    return True, "pe_pack_ok", {"pack": esc(name), "n": len(table)}
+
+
+async def pe_admin_view(cb: "CB", note: str = "") -> None:
+    pe_on, st_on = bool(CFG.get("pe_on")), bool(CFG.get("btn_style"))
+    text = cb.t("pe_title", pe=status_word(cb.lang, pe_on), st=status_word(cb.lang, st_on),
+                pack=esc(_PE["pack"] or "—"), n=len(_PE["map"]))
+    rows = [[Btn(cb.t("b_pe_emoji", status=status_word(cb.lang, pe_on)), callback_data="sup_pe_emoji")],
+            [Btn(cb.t("b_pe_style", status=status_word(cb.lang, st_on)), callback_data="sup_pe_style")],
+            [Btn(cb.t("b_pe_pack"), callback_data="sup_pe_pack"), Btn(cb.t("b_pe_test"), callback_data="sup_pe_test")]]
+    if _PE["map"]:
+        rows.append([Btn(cb.t("b_pe_del"), callback_data="sup_pe_del")])
+    rows.append(back_row(cb.lang, "panel_unified"))
+    await cb.edit(text + (f"\n\n{note}" if note else ""), Kb(rows))
+
+
+async def route_pe_admin(cb: "CB", data: str) -> None:
+    chat_id = cb.q.message.chat_id
+    if data == "sup_pe":
+        await cb.answer()
+        return await pe_admin_view(cb)
+    if data == "sup_pe_pack":
+        return await ask_input(cb, "pemoji", cb.t("pe_ask_pack"), "sup_pe")
+    if data == "sup_pe_del":
+        await db_del("sys/pemoji")
+        await set_cfg(pe_on=False)
+        pe_set_map({}, "")
+        _PE["on"] = False
+        await cb.answer()
+        return await pe_admin_view(cb)
+    if data in ("sup_pe_emoji", "sup_pe_style"):
+        key, kind = ("pe_on", "emoji") if data == "sup_pe_emoji" else ("btn_style", "style")
+        if CFG.get(key):                                                # switching off needs no checks
+            await set_cfg(**{key: False})
+            (_PE if kind == "emoji" else _STY)["on"] = False
+            await cb.answer()
+            return await pe_admin_view(cb)
+        if kind == "emoji" and not _PE["map"]:
+            return await cb.answer(cb.t("pe_not_ready"), True)
+        if not _install_hooks():
+            return await cb.answer(cb.t("pe_no_hooks"), True)
+        ok, err = await pe_test(cb.ctx, chat_id, kind)
+        if not ok:
+            return await cb.answer(cb.t("pe_test_fail", err=err), True)
+        await set_cfg(**{key: True})
+        (_PE if kind == "emoji" else _STY)["on"] = True
+        await cb.answer()
+        return await pe_admin_view(cb, cb.t("pe_test_ok"))
+    if data == "sup_pe_test":
+        res = []
+        for kind in (("emoji",) if _PE["map"] else ()) + ("style",):
+            ok, err = await pe_test(cb.ctx, chat_id, kind)
+            res.append(f"{'💎' if kind == 'emoji' else '🎨'} " + (cb.t("pe_test_ok") if ok else cb.t("pe_test_fail", err=err)))
+        await cb.answer()
+        return await pe_admin_view(cb, "\n".join(res))
+
+
 def _photo_file(msg) -> tuple[str, int] | None:
     """(file_id, size) of a gallery photo, or of an image sent as a file; None otherwise."""
     if getattr(msg, "photo", None):
@@ -5032,6 +5405,7 @@ async def show_panel(cb: CB):
         rows.append([Btn(cb.t("b_sup_botlang"), callback_data="sup_bot_lang")])
         rows.append([Btn(cb.t("b_sup_users"), callback_data="sup_users_txt"),
                      Btn(cb.t("b_sup_activity"), callback_data="sup_activity")])
+        rows.append([Btn(cb.t("b_sup_pe"), callback_data="sup_pe")])
     if is_owner(uid):
         rows.append([Btn("▬▬▬  👑  ▬▬▬", callback_data="noop")])
         rows.append([Btn(cb.t("b_own_super"), callback_data="own_super_adms"),
@@ -5086,6 +5460,9 @@ async def route_super(cb: CB, data: str):
     if data == "sup_toggle_groups":
         await set_cfg(groups_on=not CFG.get("groups_on", True))
         return await show_panel(cb)
+
+    if data == "sup_pe" or data.startswith("sup_pe_"):                   # 💎 premium emoji + button colours
+        return await route_pe_admin(cb, data)
 
     if data == "sup_activity":                                           # 🕵️ ask for a user ID
         return await ask_input(cb, "activity", cb.t("act_ask", write_id=cb.t("write_id")), "panel_unified")
@@ -5297,7 +5674,7 @@ async def route_owner(cb: CB, data: str):
 _NEEDS = {  # prompt → minimum role
     "broadcast": is_admin, "blk_add": is_admin, "blk_rm": is_admin, "info": is_admin,
     "adm_add": is_super, "vip_add": is_super, "add_ch": is_super,
-    "sup_add": is_owner, "set_welcome": is_owner, "activity": is_super,
+    "sup_add": is_owner, "set_welcome": is_owner, "activity": is_super, "pemoji": is_super,
 }
 
 
@@ -5343,6 +5720,10 @@ async def handle_prompt(update: Update, ctx, state: str, lang: str, started: flo
     if state == "set_welcome":
         await set_cfg(welcome_msg=msg.text_html or "")
         return await msg.reply_text(tx(lang, "welcome_set"))
+
+    if state == "pemoji":                                                # 💎 an emoji pack link
+        ok, key, kw = await pe_import_pack(ctx, txt)
+        return await msg.reply_text(tx(lang, key, **kw) if ok else tx(lang, "pe_pack_bad", why=tx(lang, key, **kw)))
 
     if state == "add_ch":
         ch = txt if txt.startswith("@") else ""
