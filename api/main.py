@@ -56,7 +56,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from telegram import (
     ForceReply,
     InlineKeyboardButton,
-    InlineKeyboardMarkup as Kb,
+    InlineKeyboardMarkup,
     InputFile,
     InputMediaAudio,
     InputMediaPhoto,
@@ -1339,6 +1339,13 @@ def fmt_num(n) -> str:
         if n >= lim:
             return f"{n / lim:.1f}".rstrip("0").rstrip(".") + suf
     return str(n)
+
+
+class Kb(InlineKeyboardMarkup):
+    """InlineKeyboardMarkup that colours every button (see `_paint`) once coloured buttons are switched on."""
+
+    def __init__(self, inline_keyboard, *args, **kwargs):
+        super().__init__(_paint(inline_keyboard) if _STY["on"] else inline_keyboard, *args, **kwargs)
 
 
 def now_str() -> str:
@@ -4852,7 +4859,7 @@ def _pe_icon(label: str) -> tuple:
 
 
 _STY_DANGER = ("hist_clr", "ss_x_", "stk_del_", "stk_delyes_", "fwx_", "fwu_")
-_STY_SUCCESS = ("buy_", "stk_new")
+_STY_SUCCESS = ("buy_", "stk_new", "fw_")
 _STY_PRIMARY = ("ss_round_", "ss_sq_", "ss_circle_")
 
 
@@ -4885,6 +4892,30 @@ def Btn(text: str, **kw):
     return InlineKeyboardButton(text, **kw)
 
 
+def _paint(rows):
+    """Colour for every button that has none yet: in a row with a ✅ the selected one is green and the others blue,
+    otherwise a blue/green checkerboard. Page counters, emoji-only buttons and `noop` stay as they are."""
+    try:
+        out = []
+        for ri, row in enumerate(rows):
+            marked = any(str(getattr(b, "text", "")).startswith("✅") for b in row)
+            new = []
+            for ci, b in enumerate(row):
+                ex = dict(getattr(b, "api_kwargs", None) or {})
+                cbd, text = getattr(b, "callback_data", None), str(getattr(b, "text", ""))
+                if "style" in ex or cbd == "noop" or not any(ch.isalnum() for ch in text):
+                    new.append(b)
+                    continue
+                ex["style"] = ("success" if text.startswith("✅") else "primary") if marked else ("primary" if (ri + ci) % 2 == 0 else "success")
+                new.append(InlineKeyboardButton(text, callback_data=cbd, api_kwargs=ex) if cbd
+                           else InlineKeyboardButton(text, url=b.url, api_kwargs=ex))
+            out.append(new)
+        return out
+    except Exception as e:                                              # noqa: BLE001 — colours are decoration, never an error
+        log.info("paint skipped: %s", e)
+        return rows
+
+
 def _markup_has_extras(rm) -> bool:
     try:
         return any(getattr(b, "api_kwargs", None) for row in rm.inline_keyboard for b in row)
@@ -4906,7 +4937,7 @@ def _strip_markup(rm):
                 new.append(InlineKeyboardButton(text, callback_data=b.callback_data) if b.callback_data
                            else InlineKeyboardButton(text, url=b.url))
             rows.append(new)
-        return Kb(rows)
+        return InlineKeyboardMarkup(rows)
     except AttributeError:
         return rm
 
