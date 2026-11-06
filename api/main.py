@@ -1,18 +1,10 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║   JackTik  ·  TikTok Downloader Bot for Telegram                         ║
-# ║   Version : v16.0 (Pro)         Stack : FastAPI · PTB 21 · Firebase      ║
+# ║   Version : v15.0 (Pro)         Stack : FastAPI · PTB 21 · Firebase      ║
 # ║   Owner   : @j4ck_721s          Deploy: Vercel (Python serverless)       ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 """
-JackTik v16 — TikTok downloader bot (Telegram webhook, Vercel serverless).
-
-What changed in v16 (stage 1)
-  • Download quality per user (Settings): HD · Standard · Audio only.
-  • Instant repeats: Telegram file_ids are cached in Firebase (fc/ + uc/), so a link that
-    was already downloaded is re-sent in about a second — no API call, download or upload.
-  • New buttons under every video: 🎞 GIF · 🧩 Sticker · 💬 Comments (top 50 + .txt file).
-  • Optional packages:  imageio-ffmpeg  (trimmed silent GIF + animated sticker)  and  Pillow
-    (static sticker fallback).  Without them the bot still runs; only those two degrade.
+JackTik v15 — TikTok downloader bot (Telegram webhook, Vercel serverless).
 
 What changed in v15 (short version)
   • Media is DOWNLOADED by the bot and UPLOADED to Telegram (v14 handed the
@@ -28,25 +20,16 @@ What changed in v15 (short version)
 """
 
 import asyncio
-import base64
-import ctypes
-import functools
 import hashlib
 import hmac
 import html
-import importlib.util
 import io
 import json
 import logging
 import os
 import re
-import secrets
-import shutil
-import tempfile
 import time
 import traceback
-import urllib.parse
-import zlib
 from contextvars import ContextVar
 from datetime import datetime, timezone
 
@@ -55,12 +38,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from telegram import (
     ForceReply,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
+    InlineKeyboardButton as Btn,
+    InlineKeyboardMarkup as Kb,
     InputFile,
     InputMediaAudio,
     InputMediaPhoto,
-    LabeledPrice,
     ReplyParameters,
     Update,
 )
@@ -73,9 +55,7 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
     Defaults,
-    ChatMemberHandler,
     MessageHandler,
-    PreCheckoutQueryHandler,
     filters,
 )
 
@@ -93,7 +73,6 @@ TOKEN          = os.getenv("BOT_TOKEN", "").strip()
 DB_URL         = (os.getenv("DB_URL", "") or "").strip().rstrip("/")
 DB_SECRET      = os.getenv("DB_SECRET", "").strip()
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "").strip()      # optional but recommended
-CRON_SECRET    = os.getenv("CRON_SECRET", "").strip()         # protects /cron/follows (🔔 follow alerts)
 
 # ⚠️  Set OWNER_ID in Vercel → Environment Variables to YOUR Telegram numeric ID.
 #     The default below is the original developer's ID and gets full owner rights.
@@ -107,11 +86,18 @@ BOT_USERNAME   = os.getenv("BOT_USERNAME", "TikTok_Downloader_Jack_Robot").lstri
 #   STORY_API_HEADERS = {"x-api-key": "..."}        (JSON, optional)
 STORY_API_URL     = os.getenv("STORY_API_URL", "").strip()
 STORY_API_HEADERS = os.getenv("STORY_API_HEADERS", "").strip()
+# Posts viewer — optional paid/own provider used BEFORE the free tikwm endpoint (which Cloudflare may block
+# for datacenter IPs). Must answer in tikwm's shape: {"code":0,"data":{"videos":[…]}}. Placeholders: {username}, {count}
+#   POSTS_API_URL     = https://your-provider.example/api/user/posts?unique_id=@{username}&count={count}
+#   POSTS_API_HEADERS = {"x-api-key": "..."}        (JSON, optional)
+POSTS_API_URL     = os.getenv("POSTS_API_URL", "").strip()
+POSTS_API_HEADERS = os.getenv("POSTS_API_HEADERS", "").strip()
 STORY_MAX         = 40               # newest stories per request (VIP: STORY_MAX_VIP)
 STORY_MAX_VIP     = 80
 STORY_PAGES       = 8                # max provider pages fetched per username
-LATEST_FREE       = 3                # latest videos per request for everyone
-LATEST_VIP        = 12               # … for VIP
+LATEST_PAGE       = 3                # videos sent per tap (the "more" button sends the next page)
+LATEST_FREE       = 15               # newest posts reachable for everyone
+LATEST_VIP        = 30               # … for VIP
 
 START_TIME     = time.time()
 SESSION_TTL    = 3600                # seconds an audio/"again" session stays valid
@@ -121,12 +107,6 @@ CFG_TTL        = 20                  # seconds between config reloads per instan
 FUNC_BUDGET    = 52                  # seconds we allow ourselves (vercel maxDuration = 60)
 TG_MAX_BYTES   = 49_000_000          # Telegram bot upload limit is 50 MB
 TG_PHOTO_MAX   = 10_000_000          # photo limit for sendPhoto
-COMMENTS_MAX   = 50                  # comments fetched per video
-COMMENTS_SHOW  = 10                  # comments previewed in the chat message
-GIF_SECONDS    = 10                  # longest GIF we make
-STICKER_MAX    = 256_000             # Telegram video-sticker size limit
-STICKER_RADIUS = 0.10                # rounded corners: radius = 10 % of the shorter side (matches the reference)
-QUALITIES      = ("hd", "sd", "audio")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 log = logging.getLogger("jacktik")
@@ -138,7 +118,6 @@ admins_set:       set  = {OWNER_ID}
 channels_list:    list = []
 blocked_set:      set  = set()
 vip_set:          set  = set()
-vip_until:        dict = {}          # uid → epoch: temporary VIP earned through referrals
 last_cfg_load:    float = 0.0
 
 CFG: dict = {
@@ -154,14 +133,6 @@ CFG: dict = {
     "total_users":  0,
     "active_api":   "auto",
     "auto_audio":   False,
-    "ref_on":       True,       # referral system (free VIP for invites)
-    "ref_need":     5,          # invited users needed per reward
-    "ref_days":     3,          # VIP days per reward
-    "groups_on":    True,       # answer TikTok links posted in groups
-    "pe_on":        False,      # premium (custom) emoji in texts and on buttons — needs Telegram Premium on the bot owner's account
-    "btn_style":    False,      # coloured inline buttons (Bot API 9.4)
-    "stars_on":     False,      # sell VIP for Telegram Stars (turn on in the panel after checking prices)
-    "stars_plans":  [[7, 50], [30, 150], [90, 400]],   # [days, Stars]
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -173,17 +144,13 @@ L: dict = {}
 L["ku"] = {
     # ── user-facing ───────────────────────────────────────────────────────────
     "welcome": (
-        "👋🏻 <b>سڵاو، {name}</b> {badge}\n\n"
-        "🤖 بەخێربێیت بۆ <b>پێشکەوتووترین بۆتی دابەزاندنی تیکتۆک</b> 🎬⬇️\n\n"
-        "<blockquote>📥 ڤیدیۆ <b>بێ لۆگۆ</b> بە کوالێتی بەرز 🎬✨\n"
-        "🖼️ هەموو وێنەکان بە <b>HD</b> 📸💎\n"
-        "🎧 گۆرانی <b>MP3</b> 🎵🔥\n"
-        "🧩 هەر وێنە یان ڤیدیۆیەک بکە بە <b>ستیکەر</b> — قوژبن خڕ، چوارگۆشە یان بازنە ✨\n"
-        "🔔 ئاگاداری کاتێک ئەکاونتە دڵخوازەکانت ڤیدیۆی نوێ دادەنێن 📌</blockquote>\n\n"
-        "⚡ خێرایی بەرز 🚀  ·  🏆 کوالێتی بەرز 💯  ·  👍🏻 بەکارهێنانی ئاسان 🎯\n"
-        "🎁 هاوڕێکانت بهێنە و <b>VIPی بەخۆڕایی</b> وەربگرە 💎\n\n"
-        "━━━━━━━━━━━━━━━━━━━\n\n"
-        "👇🏻 تەنیا <b>لینکی تیکتۆکەکە</b> 🔗 بنێرە بۆ دەستپێکردن 🚀"
+        "✨ <b>بەخێربێیت، {name}</b> {badge}\n\n"
+        "بە یەک لینک، ڤیدیۆ و وێنە و گۆرانییەکانی <b>تیکتۆک</b> دابەزێنە — "
+        "<b>بێ لۆگۆ</b> و بە کوالێتی بەرز.\n\n"
+        "<blockquote>🎬  ڤیدیۆی HD بێ واتەرمارک\n"
+        "🖼  هەموو وێنەکانی پۆستەکە\n"
+        "🎵  گۆرانی بە فۆرماتی MP3</blockquote>\n"
+        "👇 <b>لینکی تیکتۆکەکە بنێرە</b> و چەند چرکەیەک چاوەڕێ بکە."
     ),
     "help": (
         "<b>📖 ڕێنمایی بەکارهێنان</b>\n\n"
@@ -195,12 +162,7 @@ L["ku"] = {
         "🎵 گۆرانی — دوگمەی <b>MP3</b> لە ژێر ڤیدیۆکە\n"
         "👤 پرۆفایل — یوزەرنەیمێک بنێرە بۆ کارتی پرۆفایل + وێنەی HD + ستۆری + ڤیدیۆکان\n"
         "🔥 دۆزینەوە — گەڕان لە تیکتۆک و ترێندی وڵاتان\n"
-        "🕵️ ستۆری — دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیمێک بنێرە\n"
-        "🎞 GIF · 🧩 ستیکەر · 💬 کۆمێنت — دوگمەکانی ژێر ڤیدیۆکە\n"
-        "🖼 ستیکەر — وێنە یان ڤیدیۆ بنێرە (ستیکەری جوڵاو)، یان پاکێجی خۆت دروست بکە\n"
-        "📜 مێژوو · ⭐ دڵخواز — ڤیدیۆکانت بە یەک پەنجە دووبارە بنێرە\n"
-        "🎁 بانگهێشت — هاوڕێ بهێنە و VIP وەربگرە\n"
-        "⚙️ کوالێتی — لە ڕێکخستن HD / ئاسایی / تەنیا دەنگ هەڵبژێرە</blockquote>\n"
+        "🕵️ ستۆری — دوگمەی <b>ستۆری نهێنی</b> دابگرە و یوزەرنەیمێک بنێرە</blockquote>\n"
         "💎 <b>VIP</b> — بێ جۆینی ناچاری و وێنەی زیاتر.\n"
         "📩 پەیوەندی: {dev}"
     ),
@@ -226,137 +188,6 @@ L["ku"] = {
     "lang_title": "🌐 <b>زمانی خۆت هەڵبژێرە</b>",
     "lang_current": "🔵 ئێستا: {cur}",
     "lang_saved": "✅ زمانەکە گۆڕدرا",
-    "q_title": "🎞 <b>کوالێتی دابەزاندن</b>",
-    "q_current": "🔵 ئێستا: {cur}",
-    "q_hd": "🎬 HD — باشترین کوالێتی",
-    "q_sd": "📱 ئاسایی — داتای کەمتر",
-    "q_audio": "🎵 تەنیا دەنگ (MP3)",
-    "qb_hd": "🎬 HD", "qb_sd": "📱 ئاسایی", "qb_audio": "🎵 دەنگ",
-    "q_saved": "✅ کوالێتی گۆڕدرا",
-    "b_gif": "🎞 GIF", "b_sticker": "🧩 ستیکەر", "b_comments": "💬 کۆمێنت",
-    "st_gif": "🎞 <b>GIF ئامادە دەکرێت…</b>\n{bar}",
-    "st_stk": "🧩 <b>ستیکەر ئامادە دەکرێت…</b>\n{bar}",
-    "st_cmt": "💬 <b>کۆمێنتەکان دەهێنرێن…</b>\n{bar}",
-    "gif_fail": "❌ نەتوانرا GIF دروست بکرێت. دووبارە هەوڵبدەرەوە.",
-    "stk_fail": "❌ نەتوانرا ستیکەر دروست بکرێت.",
-    "stk_static": "ℹ️ ستیکەری جوڵاو لەم سێرڤەرەدا بەردەست نییە، بۆیە ستیکەری وێنە نێردرا.",
-    "cmt_title": "💬 <b>کۆمێنتەکان</b> · {n}",
-    "cmt_file": "📄 هەموو {n} کۆمێنتەکە",
-    "cmt_none": "💬 ئەم ڤیدیۆیە کۆمێنتی نییە یان نەتوانرا بهێنرێت.",
-    "cmt_fail": "❌ نەتوانرا کۆمێنتەکان بهێنرێت.",
-    "b_mkstk": "🖼 دروستکردنی ستیکەر",
-    "ask_stk_prompt": "🖼 <b>دروستکردنی ستیکەر</b>\n\nوێنەیەک لە گەلەری مۆبایلەکەتەوە بنێرە، منیش دەیکەم بە ستیکەر 🧩\n\n💡 بۆ کوالێتی باشتر، وێنەکە وەک <b>فایل</b> بنێرە.",
-    "st_mkstk": "🖼 <b>ستیکەرەکە ئامادە دەکرێت…</b>",
-    "mkstk_fail": "❌ نەتوانرا ئەم وێنەیە بکرێت بە ستیکەر. وێنەیەکی تر تاقی بکەرەوە.",
-    "mkstk_big": "⚠️ ئەم وێنەیە زۆر گەورەیە (زیاتر لە ٢٠MB).",
-    "b_hist": "📜 مێژوو", "b_favs": "⭐ دڵخوازەکان", "b_ref": "🎁 بانگهێشت",
-    "b_fav": "⭐ دڵخواز", "b_faved": "✅ دڵخوازە", "b_hist_clear": "🗑 پاککردنەوەی مێژوو",
-    "hist_title": "📜 <b>مێژووی دابەزاندن</b> · {n}\n\nهەر یەکێکیان دابگرە بۆ ناردنەوەی 👇",
-    "hist_empty": "📜 هێشتا هیچت دانەبەزاندووە.\nلینکی تیکتۆکێک بنێرە.",
-    "favs_title": "⭐ <b>دڵخوازەکان</b> · {n}\n\nهەر یەکێکیان دابگرە بۆ ناردنەوەی 👇",
-    "favs_empty": "⭐ لیستی دڵخوازەکان بەتاڵە.\nلە ژێر هەر ڤیدیۆیەک دوگمەی ⭐ دابگرە.",
-    "hist_cleared": "🗑 مێژوو پاککرایەوە",
-    "fav_added": "⭐ زیادکرا بۆ دڵخوازەکان",
-    "fav_removed": "🗑 لە دڵخوازەکان لابرا",
-    "fav_full": "⚠️ لیستی دڵخوازەکان پڕە ({n} دانە). یەکێک لابە.",
-    "ref_info": "🎁 <b>هاوڕێکانت بانگهێشت بکە</b>\n\nهەر <b>{need}</b> کەس بە لینکی تۆوە بێن و یەک ڤیدیۆ دابەزێنن، <b>{days} ڕۆژ VIP</b> وەردەگریت 💎\n\n👥 بانگهێشتکراوان: <b>{cnt}</b>\n📊 بۆ خەڵاتی داهاتوو: <b>{left}</b> کەسی تر ماوە\n\n🔗 لینکی تایبەتی تۆ:\n<code>{link}</code>",
-    "ref_vip_until": "💎 VIPەکەت تا <b>{until}</b> چالاکە",
-    "ref_off": "🎁 سیستەمی بانگهێشتکردن ئێستا ناچالاکە.",
-    "b_ref_share": "📤 ناردنی لینک بۆ هاوڕێکان",
-    "ref_share_text": "🎬 باشترین بۆتی دابەزاندنی تیکتۆک، بێ لۆگۆ! لێرەوە دەست پێبکە:",
-    "ref_progress": "👥 یەکێک بە لینکەکەتەوە هات و ڤیدیۆیەکی دابەزاند! ({cnt}/{need})",
-    "ref_reward": "🎉 <b>پیرۆزە!</b> <b>{days} ڕۆژ VIP</b> وەرگرت 💎\nتا <b>{until}</b> چالاکە.",
-    "b_sup_ref": "🎁 بانگهێشتکردن", "b_sup_groups": "👥 گرووپ: {status}",
-    "b_ref_toggle": "🔘 بانگهێشتکردن: {status}",
-    "sup_ref_title": "🎁 <b>ڕێکخستنی بانگهێشتکردن</b>\n\nدۆخ: {status}\n👥 ژمارەی بانگهێشتکراو بۆ خەڵات: <b>{need}</b>\n💎 ماوەی VIP: <b>{days}</b> ڕۆژ",
-    "grp_welcome": "👋 سڵاو! من بۆتی دابەزاندنی تیکتۆکم.\n\nلینکی تیکتۆک لێرە بنێرە، ڤیدیۆکە بێ لۆگۆ دەنێرمەوە 🎬",
-    "stk_menu_nopack": "🖼 <b>دروستکردنی ستیکەر</b>\n\nوێنەیەک لە گەلەریەکەتەوە بنێرە و دەیکەم بە ستیکەر 🧩\n🎞 ڤیدیۆیەکی کورت (تا ٣ چرکە) بنێرە و دەیکەم بە <b>ستیکەری جوڵاو</b>\n\n📦 دەتوانیت <b>پاکێجی ستیکەر</b> دروست بکەیت: هەموو ستیکەرەکانت دەچنە ناو یەک پاکێج و دەتوانیت لە تێلیگرام زیادی بکەیت.\n\n💡 بۆ کوالێتی باشتر، وێنەکە وەک <b>فایل</b> بنێرە.",
-    "stk_menu_pack": "🖼 <b>دروستکردنی ستیکەر</b>\n\n📦 پاکێجی چالاک: <b>{title}</b> ({n}/120)\n\nهەر وێنەیەک بنێریت دەچێتە ناو ئەم پاکێجە 🧩\n🎞 ڤیدیۆ دەبێتە ستیکەری جوڵاو و دەچێتە ناو <b>پاکێجێکی جیاواز</b>، چونکە تێلیگرام ستیکەری وێنە و ڤیدیۆ تێکەڵ ناکات.\n💡 بۆ کوالێتی باشتر، وێنەکە وەک <b>فایل</b> بنێرە.",
-    "stk_menu_pending": "🖼 <b>دروستکردنی ستیکەر</b>\n\n📦 پاکێجی نوێ: <b>{title}</b>\n\nیەکەم <b>وێنە یان ڤیدیۆ</b> بنێرە، پاکێجەکە پێی دروست دەکرێت (وێنە = پاکێجی ئاسایی، ڤیدیۆ = پاکێجی جوڵاو) 👇",
-    "b_stk_new": "📦 پاکێجی نوێ", "b_stk_open": "🔗 کردنەوەی پاکێج", "b_stk_list": "📂 پاکێجەکانم",
-    "stk_ask_title": "📦 <b>ناوی پاکێجەکە بنێرە</b>\n\nنموونە: <code>ستیکەرەکانی من</code>",
-    "stk_title_ok": "✅ پاکێجی <b>{title}</b> ئامادەیە.\n\nئێستا یەکەم وێنە یان ڤیدیۆ بنێرە، پاکێجەکە پێی دروست دەکرێت 🖼",
-    "stk_title_bad": "⚠️ ناوەکە دەبێت لە ١ بۆ ٦٠ پیت بێت. دووبارە بینێرە:",
-    "stk_created": "🎉 <b>پاکێجەکەت دروست کرا!</b>\n📦 {title}\n\nدوگمەی خوارەوە دابگرە بۆ زیادکردنی بۆ تێلیگرام 👇",
-    "stk_full": "⚠️ ئەم پاکێجە پڕە (١٢٠ ستیکەر). پاکێجێکی نوێ دروست بکە.",
-    "stk_gone": "⚠️ ئەم پاکێجە لە تێلیگرام سڕاوەتەوە. پاکێجێکی نوێ دروست بکە.",
-    "stk_list_title": "📂 <b>پاکێجەکانم</b>\n\nپاکێجی چالاک بە ✅ دیاری کراوە، هەر یەکێک دابگرە بۆ گۆڕین:",
-    "stk_switched": "✅ پاکێجی چالاک گۆڕدرا",
-    "stk_del_confirm": "⚠️ <b>دڵنیایت دەتەوێت ئەم پاکێجە بسڕیتەوە؟</b>\n\n📦 {title} ({n} ستیکەر)\n\nئەم کارە <b>ناگەڕێتەوە</b>: پاکێجەکە و هەموو ستیکەرەکانی لە تێلیگرام دەسڕدرێنەوە.",
-    "b_stk_del_yes": "✅ بەڵێ، بیسڕەوە", "b_stk_del_no": "❌ نەخێر، گەڕانەوە",
-    "stk_deleted": "🗑 پاکێجەکە سڕایەوە",
-    "stk_del_fail": "❌ نەتوانرا پاکێجەکە بسڕدرێتەوە. دووبارە هەوڵبدەرەوە.",
-    "stk_menu_vpack": "🎞 پاکێجی ستیکەری جوڵاو: <b>{title}</b> ({n}/120)",
-    "vstk_noffmpeg": "⚠️ ستیکەری جوڵاو لەم سێرڤەرەدا بەردەست نییە (پێویستی بە ffmpeg هەیە).",
-    "vstk_trim": "ℹ️ تێلیگرام تەنیا <b>٣ چرکە</b> بۆ ستیکەری جوڵاو ڕێگە دەدات، بۆیە سێ چرکەی یەکەمی ڤیدیۆکە بڕدرا.",
-    "b_top": "🏆 باشترینەکان", "b_fwlist": "🔔 فۆڵۆکراوەکان",
-    "lb_title": "🏆 <b>باشترین بانگهێشتکەران</b>\n<i>هەر کەسێک زیاتر هاوڕێ بهێنێت، پلەی بەرزتر دەبێت</i>",
-    "lb_empty": "هێشتا کەس بانگهێشتی کەسی نەکردووە. یەکەم کەس بە! 🎁",
-    "lb_you": "📍 پلەی تۆ: <b>#{rank}</b> — {n} بانگهێشتکراو",
-    "lb_hidden": "🙈 ناوی شاراوە",
-    "b_lb_hide": "🙈 ناوم بشارەوە", "b_lb_show": "👁 ناوم نیشان بدە",
-    "lb_toast_hide": "🙈 ناوت شاردرایەوە", "lb_toast_show": "👁 ناوت نیشان دەدرێت",
-    "stars_info": "⭐ <b>بە Telegram Stars بیکڕە</b> — یەکسەر چالاک دەبێت. هەر پلانێک بۆ ماوەیەکی دیاریکراوە و دەچێتە سەر VIPەکەی ئێستات.",
-    "b_buy": "💎 {days} ڕۆژ — {stars} ⭐",
-    "stars_off": "⚠️ کڕین ئێستا چالاک نییە.",
-    "stars_changed": "نرخەکە گۆڕدراوە. تکایە پلانەکە دووبارە هەڵبژێرە.",
-    "stars_thanks": "🎉 <b>سوپاس بۆ کڕینەکەت!</b>\n\n💎 {days} ڕۆژ VIP چالاک کرا\n📅 تا <b>{until}</b>",
-    "inv_title": "💎 VIP — {days} ڕۆژ",
-    "inv_desc": "{days} ڕۆژ VIP بۆ بۆتی دابەزاندنی تیکتۆک: ڤیدیۆی زیاتر و تایبەتمەندی تەواو.",
-    "b_sup_stars": "💎 Stars: {status}", "b_stars_toggle": "🔘 کڕین بە Stars: {status}",
-    "sup_stars_title": "💎 <b>ڕێکخستنی Telegram Stars</b>\n\nدۆخ: {status}\n💰 کۆی داهات: <b>{total}</b> ⭐\n\nنرخی هەر پلانێک بگۆڕە:",
-    "fw_b_off": "🔔 فۆڵۆکردن", "fw_b_on": "✅ فۆڵۆ کراوە",
-    "fw_on": "🔔 فۆڵۆ کرا! کاتێک ڤیدیۆی نوێ دابنێت ئاگادارت دەکەمەوە.",
-    "fw_off": "🔕 فۆڵۆ لابرا",
-    "fw_limit": "⚠️ گەیشتیتە سنووری فۆڵۆکردن ({n} ئەکاونت). VIP تا {vip} ئەکاونتی پێدەدات.",
-    "fw_empty": "🔔 هێشتا هیچ ئەکاونتێکت فۆڵۆ نەکردووە.\nپرۆفایلی تیکتۆکێک بکەرەوە و 🔔 دابگرە.",
-    "fw_list_title": "🔔 <b>فۆڵۆکراوەکانم</b> · {n}/{max}\n\nناوێک دابگرە بۆ دوایین ڤیدیۆکان، یان 🔕 بۆ لابردن:",
-    "fw_new": "🔔 <b>@{user}</b> ڤیدیۆیەکی نوێی دانا!\n\n{title}",
-    "fw_b_dl": "⬇️ دابەزاندن", "fw_b_stop": "🔕 ڕاگرتنی ئاگاداری",
-    "stk_menu_tip": "🎨 دوای ناردنی وێنە یان ڤیدیۆ، شێوەی ستیکەرەکە هەڵدەبژێریت: قوژبن خڕ، چوارگۆشە یان بازنە.\n✍️ بۆ نووسین لەسەر ستیکەر (وێنە و ڤیدیۆ)، نووسینەکە وەک <b>کاپشنی</b> بنێرە، و فۆنت و ڕەنگەکەی هەڵبژێرە.",
-    "ss_ask": "🎨 <b>چ شێوەیەک دەتەوێت بۆ ستیکەرەکە؟</b>\n\n▭ <b>قوژبن خڕ</b> — ڕێژەی ڕەسەنی وێنەکە دەمێنێتەوە\n⬛ <b>چوارگۆشە</b> — ناوەڕاستی وێنەکە دەبڕدرێت بۆ چوارگۆشە\n⚪ <b>بازنە</b> — وەک وێنەی پرۆفایل",
-    "ss_expired": "⌛ ئەم داواکارییە بەسەرچوو. وێنە یان ڤیدیۆکە دووبارە بنێرە.",
-    "b_font_auto": "🔄 خۆکار", "b_font_ku": "🔤 کوردی", "b_font_en": "🔠 ئینگلیزی",
-    "ss_font_hint": "🔤 <b>فۆنت</b> و 🎨 <b>ڕەنگی</b> نووسینەکە هەڵبژێرە، پاشان شێوەکە.",
-    "stk_font_missing": "ℹ️ فۆنتی هەڵبژێردراو هەندێک پیتی ئەم نووسینەی نییە، بۆیە فۆنتی ناوەکیی بۆتەکە بەکارهات.",
-    "plink_label": "کردنەوەی پرۆفایل",
-    "b_sup_users": "📄 لیستی بەکارهێنەران (.txt)",
-    "users_preparing": "⏳ لیستەکە ئامادە دەکرێت…",
-    "users_file_caption": "📄 لیستی بەکارهێنەران — کۆی گشتی: <b>{n}</b>",
-    "ul_header": "📋 لیستی بەکارهێنەرانی بۆت — کۆی گشتی: {n} — {date} UTC",
-    "ul_block": "\n🔔 بەکارهێنەر #{n}\n\n✨ ناو: {name}\n🔗 یوزەر: {user}\n🆔 ئایدی: {id}\n👤 لینک: tg://user?id={id}\n🌐 زمانی ئەپ: {al}\n📅 {date}\n📥 دابەزاندن: {dl}\n🏅 پلە: {rank}\n🚫 بلۆک: {blocked}\n🗣 زمانی بۆت: {botlang}",
-    "b_sup_activity": "🕵️ چالاکی بەکارهێنەر",
-    "act_ask": "🕵️ <b>چالاکی بەکارهێنەر</b>\n\nئایدی بەکارهێنەرەکە بنێرە، پێت دەڵێم چی دابەزاندووە و چی ناردووە بۆ بۆت.\n\n{write_id}",
-    "act_head": "🕵️ <b>چالاکی بەکارهێنەر</b>\n\n✨ ناو: {name}\n🔗 یوزەر: {user}\n🆔 ئایدی: <code>{id}</code>\n👤 لینک: {plink}\n📅 بەشداربوون: {date}\n📥 کۆی دابەزاندن: <b>{dl}</b>",
-    "act_dl_title": "📥 <b>دوایین دابەزاندنەکان</b> ({n})",
-    "act_msg_title": "📨 <b>دوایین ناردنەکانی بۆ بۆت</b> ({n})",
-    "act_none": "— هیچ تۆمارێک نییە —",
-    "act_note": "ℹ️ تۆماری ناردنەکان لە ئێستاوە دەست پێدەکات و تەنیا دوایین ٦٠ دەمێنێتەوە.",
-    "b_act_txt": "📄 هەمووی (.txt)",
-    "act_txt_head": "🕵️ چالاکی بەکارهێنەر {id} — {name} — {date} UTC",
-    "act_txt_dl": "📥 دابەزاندن ({n})",
-    "act_txt_msg": "📨 ناردن بۆ بۆت ({n})",
-    "b_sup_pe": "💎 ئیمۆجی و ڕەنگی دوگمە",
-    "pe_title": "💎 <b>ئیمۆجی پریمیۆم و ڕەنگی دوگمە</b>\n\n💎 ئیمۆجی پریمیۆم: {pe}\n🎨 ڕەنگی دوگمەکان: {st}\n📦 پاکێج: {pack} ({n} ئیمۆجی)\n\nℹ️ ئیمۆجی پریمیۆم تەنیا کار دەکات ئەگەر خاوەنی بۆتەکە (ئەو ئەکاونتەی بە @BotFather بۆتەکەی دروست کردووە) Telegram Premiumی چالاک هەبێت. ڕەنگی دوگمەکان پێویستی بەمە نییە.",
-    "b_pe_emoji": "💎 ئیمۆجی پریمیۆم: {status}",
-    "b_pe_style": "🎨 ڕەنگی دوگمەکان: {status}",
-    "b_pe_pack": "📦 زیادکردنی پاکێجی ئیمۆجی",
-    "b_pe_test": "🧪 تاقیکردنەوە",
-    "b_pe_del": "🗑 سڕینەوەی پاکێج",
-    "pe_ask_pack": "📦 <b>پاکێجی ئیمۆجی</b>\n\nلینکی پاکێجێکی ئیمۆجی بنێرە، وەک <code>t.me/addemoji/...</code>\n\nئیمۆجییەکی پریمیۆم لە تێلیگرام دابگرە، ناوی پاکێجەکەی نیشان دەدات و لینکەکەی دەتوانیت کۆپی بکەیت.",
-    "pe_pack_ok": "✅ پاکێجی <b>{pack}</b> خرایە ناو بۆتەکە ({n} ئیمۆجی). ئێستا «تاقیکردنەوە» دابگرە.",
-    "pe_pack_bad": "❌ {why}",
-    "pe_why_link": "لینکەکە دروست نییە. وەک t.me/addemoji/ناو بینێرە.",
-    "pe_why_type": "ئەمە پاکێجی ئیمۆجی نییە (پاکێجی ستیکەرە)، یان هیچ ئیمۆجییەکی تێدا نییە.",
-    "pe_why_find": "پاکێجەکە نەدۆزرایەوە: {err}",
-    "pe_not_ready": "⚠️ سەرەتا پاکێجی ئیمۆجی زیاد بکە.",
-    "pe_no_hooks": "⚠️ نەتوانرا پارێزەرەکە دابمەزرێت. بەکارهێنانی ئەم تایبەتمەندییە ناکرێت لەسەر ئەم وەشانەی کتێبخانە.",
-    "pe_test_ok": "✅ تێلیگرام قبوڵی کرد. پەیامی تاقیکردنەوەکە ببینە: ئەگەر ئیمۆجییەکە ئەنیمەیتکراو نەبوو، Premium چالاک نییە.",
-    "pe_test_fail": "❌ تێلیگرام ڕەتی کردەوە: {err}",
-    "pe_autooff": "⚠️ ئیمۆجی پریمیۆم و ڕەنگی دوگمەکان خۆکارانە ناچالاک کران، چونکە تێلیگرام ڕەتی کردنەوە:\n<code>{err}</code>",
-    "b_shape_round": "▭ قوژبن خڕ", "b_shape_sq": "⬛ چوارگۆشە", "b_shape_circle": "⚪ بازنە", "b_shape_cancel": "❌ هەڵوەشاندنەوە",
-    "stk_text_unsupported": "ℹ️ نووسینی کوردی لەسەر ئەم سێرڤەرە پشتگیری ناکرێت، بۆیە ستیکەرەکە بێ نووسین دروست کرا.",
-    "vstk_notext": "ℹ️ نووسین لەسەر ستیکەری جوڵاو پشتگیری ناکرێت (تەنیا لەسەر وێنە).",
     "force_join": (
         "🔒 <b>جۆینی ناچاری</b>\n\n"
         "بۆ بەردەوامبوون، سەرەتا ئەم چەناڵانە جۆین بکە، پاشان دوگمەی "
@@ -438,20 +269,21 @@ L["ku"] = {
     # ── profile hub ───────────────────────────────────────────────────────────
     "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "pf_followers": "👥 فۆڵۆوەر", "pf_following": "➕ فۆڵۆو", "pf_likes": "❤️ لایک", "pf_videos": "🎬 ڤیدیۆ",
-    "pf_b_vids": "🎬 دوایین ڤیدیۆکان", "pf_b_file": "📎 وێنە بە HD (فایل)", "pf_b_open": "🔗 پرۆفایل",
-    "st_latest": "🎬 <b>دوایین ڤیدیۆکان دەهێنرێن…</b>\n{bar}",
-    "latest_header": "🎬 <b>دوایین ڤیدیۆکانی @{user}</b>\n<blockquote>📥 {n} ڤیدیۆ دەنێردرێت</blockquote>",
-    "latest_none": "📭 <b>@{user}</b> ڤیدیۆی نییە (یان تەنیا پۆستی وێنەی هەیە).",
-    "latest_unavailable": "⚠️ ناتوانرێت ڤیدیۆکانی ئەم ئەکاونتە بهێنرێت. دواتر دووبارە هەوڵبدەرەوە.",
-    "latest_done": "✅ <b>{n} ڤیدیۆ</b> نێردرا",
-    "latest_partial": "⏱ کاتەکە تەواو بوو — <b>{n}</b> ڤیدیۆ نێردرا، <b>{left}</b> ماوە. دوگمەی خوارەوە دابگرە بۆ بەردەوامبوون.",
-    "latest_vip_hint": "💎 بەکارهێنەری ئاسایی {free} ڤیدیۆ وەردەگرێت — بە <b>VIP</b> تا {vip} ڤیدیۆ.",
+    "pf_b_vids": "📚 بینینی پۆستەکانی", "pf_b_file": "📎 وێنە بە HD (فایل)", "pf_b_open": "🔗 پرۆفایل",
+    "st_latest": "📚 <b>پۆستەکان دەهێنرێن…</b>\n{bar}",
+    "latest_header": "📚 <b>پۆستەکانی @{user}</b>\n<blockquote>📥 {n} پۆست دۆزرایەوە — هەر جارەی {page} دانە دەنێردرێت</blockquote>",
+    "latest_none": "📭 <b>@{user}</b> هیچ پۆستێکی نییە.",
+    "latest_unavailable": "⚠️ ناتوانرێت پۆستەکانی ئەم ئەکاونتە بهێنرێت. دواتر دووبارە هەوڵبدەرەوە.",
+    "latest_done": "✅ <b>{n} پۆست</b> نێردرا — ئەمە دوایین پۆست بوو",
+    "latest_partial": "✅ <b>{n}</b> پۆست نێردرا — <b>{left}</b> ماوە. بۆ بینینی پۆستی زیاتر دوگمەی خوارەوە دابگرە.",
+    "b_latest_more": "➕ بینینی پۆستی زیاتر ({left} ماوە)",
+    "latest_vip_hint": "💎 بەکارهێنەری ئاسایی {free} پۆست وەردەگرێت — بە <b>VIP</b> تا {vip} پۆست.",
     "no_story": "📭 <b>@{user}</b> ئێستا ستۆری چالاکی نییە.\nستۆری تیکتۆک ٢٤ کاتژمێر دەمێنێتەوە.",
     "story_unavailable": "⚠️ ستۆری ئەم ئەکاونتە بەردەست نییە (ڕەنگە تایبەت بێت یان سەرچاوەکە پشتگیری نەکات).",
     "b_story": "🕵️ ستۆری نهێنی", "b_story_again": "🔄 ستۆری کەسێکی تر",
     # ── buttons ───────────────────────────────────────────────────────────────
     "b_dl": "📥 دابەزاندنی نوێ", "b_profile": "👤 پرۆفایل", "b_vip": "💎 VIP", "b_avatar": "🔎 پرۆفایلی تیکتۆک",
-    "b_lang": "⚙️ ڕێکخستن", "b_help": "📖 ڕێنمایی", "b_channel": "📢 کەناڵی بۆت",
+    "b_lang": "🌐 زمان", "b_help": "📖 ڕێنمایی", "b_channel": "📢 کەناڵی بۆت",
     "b_panel": "🛠 پانێڵی کۆنتڕۆڵ", "b_back": "🔙 گەڕانەوە", "b_delete": "🗑 سڕینەوە",
     "b_joined": "✅ جۆینم کرد", "b_audio": "🎵 گۆرانی MP3", "b_orig": "🔗 لینکی ڕەسەن",
     "b_direct": "⬇️ دابەزاندنی ڕاستەوخۆ", "b_cancel": "✖️ هەڵوەشاندنەوە",
@@ -498,8 +330,8 @@ L["ku"] = {
     ),
     "userinfo": (
         "🔎 <b>زانیاری بەکارهێنەر</b>\n\n"
-        "<blockquote>✨ ناو: {name}\n🔗 یوزەر: {user}\n🆔 ئایدی: <code>{id}</code>\n👤 لینک: {plink}\n"
-        "🌐 زمانی ئەپ: {al}\n🏅 پلە: {rank}\n🚫 بلۆک: {blocked}\n🗣 زمانی بۆت: {lang}\n"
+        "<blockquote>✨ ناو: {name}\n🔗 یوزەر: {user}\n🆔 ئایدی: <code>{id}</code>\n"
+        "🏅 پلە: {rank}\n🚫 بلۆک: {blocked}\n🌐 زمان: {lang}\n"
         "📥 دابەزاندن: <b>{dl}</b>\n📅 بەشداربوون: {date}</blockquote>"
     ),
     "yes": "بەڵێ", "no": "نەخێر",
@@ -544,7 +376,7 @@ L["ku"] = {
     "backup_prep": "⏳ ئامادە دەکرێت…",
     "new_user_notify": (
         "🔔 <b>بەکارهێنەری نوێ</b>\n\n"
-        "<blockquote>✨ ناو: {name}\n🔗 یوزەر: {uname}\n🆔 ئایدی: <code>{uid}</code>\n👤 لینک: {plink}\n"
+        "<blockquote>✨ ناو: {name}\n🔗 یوزەر: {uname}\n🆔 ئایدی: <code>{uid}</code>\n"
         "🌐 زمانی ئەپ: {app_lang}\n📅 {date}</blockquote>"
     ),
     "b_notify_block": "🚫 بلۆک", "b_notify_vip": "💎 VIP", "b_notify_admin": "🛡 ئەدمین", "b_notify_info": "🔎 زانیاری",
@@ -552,17 +384,13 @@ L["ku"] = {
 
 L["en"] = {
     "welcome": (
-        "👋🏻 <b>Hello, {name}</b> {badge}\n\n"
-        "🤖 Welcome to the <b>most advanced TikTok downloader bot</b> 🎬⬇️\n\n"
-        "<blockquote>📥 Videos <b>without watermark</b>, in high quality 🎬✨\n"
-        "🖼️ Every photo in <b>HD</b> 📸💎\n"
-        "🎧 <b>MP3</b> music 🎵🔥\n"
-        "🧩 Turn any photo or video into a <b>sticker</b> — rounded, square or circle ✨\n"
-        "🔔 Get alerts when your favourite accounts post a new video 📌</blockquote>\n\n"
-        "⚡ Lightning fast 🚀  ·  🏆 Top quality 💯  ·  👍🏻 Easy to use 🎯\n"
-        "🎁 Invite friends and earn <b>free VIP</b> 💎\n\n"
-        "━━━━━━━━━━━━━━━━━━━\n\n"
-        "👇🏻 Just send a <b>TikTok link</b> 🔗 to get started 🚀"
+        "✨ <b>Welcome, {name}</b> {badge}\n\n"
+        "Download <b>TikTok</b> videos, photos and music with a single link — "
+        "<b>no watermark</b>, high quality.\n\n"
+        "<blockquote>🎬  HD video without watermark\n"
+        "🖼  Every photo of a post\n"
+        "🎵  Music as MP3</blockquote>\n"
+        "👇 <b>Send a TikTok link</b> and wait a few seconds."
     ),
     "help": (
         "<b>📖 How to use</b>\n\n"
@@ -574,12 +402,7 @@ L["en"] = {
         "🎵 Music — tap the <b>MP3</b> button under the video\n"
         "👤 Profile — send a username for a profile card + HD picture + stories + latest videos\n"
         "🔥 Discover — search TikTok or browse trending by country\n"
-        "🕵️ Stories — tap <b>Secret story</b> and send a username\n"
-        "🎞 GIF · 🧩 Sticker · 💬 Comments — buttons under the video\n"
-        "🖼 Sticker — send a photo or a video (animated), or build your own pack\n"
-        "📜 History · ⭐ Favorites — re-send your videos in one tap\n"
-        "🎁 Invite — bring friends and earn VIP\n"
-        "⚙️ Quality — pick HD / Standard / Audio only in Settings</blockquote>\n"
+        "🕵️ Stories — tap <b>Secret story</b> and send a username</blockquote>\n"
         "💎 <b>VIP</b> — no forced join, more photos.\n"
         "📩 Contact: {dev}"
     ),
@@ -605,137 +428,6 @@ L["en"] = {
     "lang_title": "🌐 <b>Choose your language</b>",
     "lang_current": "🔵 Current: {cur}",
     "lang_saved": "✅ Language changed",
-    "q_title": "🎞 <b>Download quality</b>",
-    "q_current": "🔵 Current: {cur}",
-    "q_hd": "🎬 HD — best quality",
-    "q_sd": "📱 Standard — less data",
-    "q_audio": "🎵 Audio only (MP3)",
-    "qb_hd": "🎬 HD", "qb_sd": "📱 Standard", "qb_audio": "🎵 Audio",
-    "q_saved": "✅ Quality changed",
-    "b_gif": "🎞 GIF", "b_sticker": "🧩 Sticker", "b_comments": "💬 Comments",
-    "st_gif": "🎞 <b>Making the GIF…</b>\n{bar}",
-    "st_stk": "🧩 <b>Making the sticker…</b>\n{bar}",
-    "st_cmt": "💬 <b>Fetching comments…</b>\n{bar}",
-    "gif_fail": "❌ Could not make the GIF. Please try again.",
-    "stk_fail": "❌ Could not make the sticker.",
-    "stk_static": "ℹ️ Animated stickers are not available on this server, so a static sticker was sent.",
-    "cmt_title": "💬 <b>Comments</b> · {n}",
-    "cmt_file": "📄 All {n} comments",
-    "cmt_none": "💬 This video has no comments, or they could not be loaded.",
-    "cmt_fail": "❌ Could not fetch the comments.",
-    "b_mkstk": "🖼 Make a sticker",
-    "ask_stk_prompt": "🖼 <b>Make a sticker</b>\n\nSend a photo from your gallery and I'll turn it into a sticker 🧩\n\n💡 For better quality, send the photo as a <b>file</b>.",
-    "st_mkstk": "🖼 <b>Making your sticker…</b>",
-    "mkstk_fail": "❌ Could not turn this image into a sticker. Try another one.",
-    "mkstk_big": "⚠️ This image is too large (over 20 MB).",
-    "b_hist": "📜 History", "b_favs": "⭐ Favorites", "b_ref": "🎁 Invite",
-    "b_fav": "⭐ Favorite", "b_faved": "✅ Saved", "b_hist_clear": "🗑 Clear history",
-    "hist_title": "📜 <b>Download history</b> · {n}\n\nTap one to send it again 👇",
-    "hist_empty": "📜 You haven't downloaded anything yet.\nSend a TikTok link.",
-    "favs_title": "⭐ <b>Favorites</b> · {n}\n\nTap one to send it again 👇",
-    "favs_empty": "⭐ Your favorites list is empty.\nTap ⭐ under any video to add it.",
-    "hist_cleared": "🗑 History cleared",
-    "fav_added": "⭐ Added to favorites",
-    "fav_removed": "🗑 Removed from favorites",
-    "fav_full": "⚠️ Favorites are full ({n} items). Remove one first.",
-    "ref_info": "🎁 <b>Invite your friends</b>\n\nFor every <b>{need}</b> people who join with your link and download a video, you get <b>{days} days of VIP</b> 💎\n\n👥 Invited: <b>{cnt}</b>\n📊 Next reward: <b>{left}</b> more\n\n🔗 Your personal link:\n<code>{link}</code>",
-    "ref_vip_until": "💎 Your VIP is active until <b>{until}</b>",
-    "ref_off": "🎁 The invite system is currently off.",
-    "b_ref_share": "📤 Share your link",
-    "ref_share_text": "🎬 The best TikTok downloader bot — no watermark! Start here:",
-    "ref_progress": "👥 Someone joined with your link and downloaded a video! ({cnt}/{need})",
-    "ref_reward": "🎉 <b>Congratulations!</b> You earned <b>{days} days of VIP</b> 💎\nActive until <b>{until}</b>.",
-    "b_sup_ref": "🎁 Invites", "b_sup_groups": "👥 Groups: {status}",
-    "b_ref_toggle": "🔘 Invites: {status}",
-    "sup_ref_title": "🎁 <b>Invite settings</b>\n\nStatus: {status}\n👥 Invites needed per reward: <b>{need}</b>\n💎 VIP length: <b>{days}</b> days",
-    "grp_welcome": "👋 Hi! I'm a TikTok downloader bot.\n\nSend a TikTok link here and I'll reply with the video, no watermark 🎬",
-    "stk_menu_nopack": "🖼 <b>Make a sticker</b>\n\nSend a photo from your gallery and I'll turn it into a sticker 🧩\n🎞 Send a short video (up to 3 s) and I'll turn it into an <b>animated sticker</b>\n\n📦 You can also create a <b>sticker pack</b>: your stickers go into one pack that you can add to Telegram.\n\n💡 For better quality, send the photo as a <b>file</b>.",
-    "stk_menu_pack": "🖼 <b>Make a sticker</b>\n\n📦 Active pack: <b>{title}</b> ({n}/120)\n\nEvery photo you send is added to this pack 🧩\n🎞 A video becomes an animated sticker in a <b>separate pack</b>, because Telegram doesn't mix photo and video stickers.\n💡 For better quality, send the photo as a <b>file</b>.",
-    "stk_menu_pending": "🖼 <b>Make a sticker</b>\n\n📦 New pack: <b>{title}</b>\n\nSend the first <b>photo or video</b> and the pack will be created with it (photo = normal pack, video = animated pack) 👇",
-    "b_stk_new": "📦 New pack", "b_stk_open": "🔗 Open pack", "b_stk_list": "📂 My packs",
-    "stk_ask_title": "📦 <b>Send a name for your pack</b>\n\nExample: <code>My stickers</code>",
-    "stk_title_ok": "✅ Pack <b>{title}</b> is ready.\n\nNow send the first photo or video and the pack will be created with it 🖼",
-    "stk_title_bad": "⚠️ The name must be 1–60 characters. Send it again:",
-    "stk_created": "🎉 <b>Your pack is ready!</b>\n📦 {title}\n\nTap the button to add it to Telegram 👇",
-    "stk_full": "⚠️ This pack is full (120 stickers). Create a new pack.",
-    "stk_gone": "⚠️ This pack no longer exists on Telegram. Create a new pack.",
-    "stk_list_title": "📂 <b>My packs</b>\n\nThe active pack is marked ✅ — tap one to switch:",
-    "stk_switched": "✅ Active pack changed",
-    "stk_del_confirm": "⚠️ <b>Are you sure you want to delete this pack?</b>\n\n📦 {title} ({n} stickers)\n\nThis <b>cannot be undone</b>: the pack and all its stickers will be deleted from Telegram.",
-    "b_stk_del_yes": "✅ Yes, delete it", "b_stk_del_no": "❌ No, go back",
-    "stk_deleted": "🗑 Pack deleted",
-    "stk_del_fail": "❌ Could not delete the pack. Please try again.",
-    "stk_menu_vpack": "🎞 Animated pack: <b>{title}</b> ({n}/120)",
-    "vstk_noffmpeg": "⚠️ Animated stickers are not available on this server (ffmpeg is missing).",
-    "vstk_trim": "ℹ️ Telegram only allows <b>3 seconds</b> for an animated sticker, so the first 3 seconds of your video were used.",
-    "b_top": "🏆 Top inviters", "b_fwlist": "🔔 Following",
-    "lb_title": "🏆 <b>Top inviters</b>\n<i>The more friends you bring, the higher you climb</i>",
-    "lb_empty": "Nobody has invited anyone yet. Be the first! 🎁",
-    "lb_you": "📍 Your rank: <b>#{rank}</b> — {n} invited",
-    "lb_hidden": "🙈 Hidden name",
-    "b_lb_hide": "🙈 Hide my name", "b_lb_show": "👁 Show my name",
-    "lb_toast_hide": "🙈 Your name is hidden", "lb_toast_show": "👁 Your name is visible",
-    "stars_info": "⭐ <b>Buy with Telegram Stars</b> — active instantly. Each plan lasts a fixed time and is added on top of your current VIP.",
-    "b_buy": "💎 {days} days — {stars} ⭐",
-    "stars_off": "⚠️ Purchases are not available right now.",
-    "stars_changed": "The price has changed. Please pick the plan again.",
-    "stars_thanks": "🎉 <b>Thank you for your purchase!</b>\n\n💎 {days} days of VIP activated\n📅 Until <b>{until}</b>",
-    "inv_title": "💎 VIP — {days} days",
-    "inv_desc": "{days} days of VIP for the TikTok downloader bot: more videos and every feature.",
-    "b_sup_stars": "💎 Stars: {status}", "b_stars_toggle": "🔘 Selling with Stars: {status}",
-    "sup_stars_title": "💎 <b>Telegram Stars settings</b>\n\nStatus: {status}\n💰 Total earned: <b>{total}</b> ⭐\n\nChange the price of each plan:",
-    "fw_b_off": "🔔 Follow", "fw_b_on": "✅ Following",
-    "fw_on": "🔔 Followed! I'll tell you when they post a new video.",
-    "fw_off": "🔕 Unfollowed",
-    "fw_limit": "⚠️ You reached the follow limit ({n} accounts). VIP allows up to {vip}.",
-    "fw_empty": "🔔 You don't follow any account yet.\nOpen a TikTok profile and tap 🔔.",
-    "fw_list_title": "🔔 <b>Following</b> · {n}/{max}\n\nTap a name for the latest videos, or 🔕 to unfollow:",
-    "fw_new": "🔔 <b>@{user}</b> posted a new video!\n\n{title}",
-    "fw_b_dl": "⬇️ Download", "fw_b_stop": "🔕 Stop alerts",
-    "stk_menu_tip": "🎨 After you send a photo or video you choose the shape: rounded, square or circle.\n✍️ To put text on a sticker (photo or video), send it as the <b>caption</b>, then pick its font and colour.",
-    "ss_ask": "🎨 <b>Which shape do you want for the sticker?</b>\n\n▭ <b>Rounded</b> — keeps the photo's proportions\n⬛ <b>Square</b> — centre-cropped to a square\n⚪ <b>Circle</b> — like a profile picture",
-    "ss_expired": "⌛ This request expired. Please send the photo or video again.",
-    "b_font_auto": "🔄 Auto", "b_font_ku": "🔤 Kurdish", "b_font_en": "🔠 English",
-    "ss_font_hint": "🔤 Pick the <b>font</b> and 🎨 <b>colour</b> of your text, then the shape.",
-    "stk_font_missing": "ℹ️ The chosen font doesn't have some letters of this text, so the bot's built-in font was used.",
-    "plink_label": "Open profile",
-    "b_sup_users": "📄 Users list (.txt)",
-    "users_preparing": "⏳ Preparing the list…",
-    "users_file_caption": "📄 Users list — total: <b>{n}</b>",
-    "ul_header": "📋 Bot users — total: {n} — {date} UTC",
-    "ul_block": "\n🔔 User #{n}\n\n✨ Name: {name}\n🔗 User: {user}\n🆔 ID: {id}\n👤 Link: tg://user?id={id}\n🌐 App language: {al}\n📅 {date}\n📥 Downloads: {dl}\n🏅 Rank: {rank}\n🚫 Blocked: {blocked}\n🗣 Bot language: {botlang}",
-    "b_sup_activity": "🕵️ User activity",
-    "act_ask": "🕵️ <b>User activity</b>\n\nSend the user's ID and I'll tell you what they downloaded and what they sent to the bot.\n\n{write_id}",
-    "act_head": "🕵️ <b>User activity</b>\n\n✨ Name: {name}\n🔗 User: {user}\n🆔 ID: <code>{id}</code>\n👤 Link: {plink}\n📅 Joined: {date}\n📥 Total downloads: <b>{dl}</b>",
-    "act_dl_title": "📥 <b>Latest downloads</b> ({n})",
-    "act_msg_title": "📨 <b>Latest things sent to the bot</b> ({n})",
-    "act_none": "— nothing recorded —",
-    "act_note": "ℹ️ Sent-message logging starts now and keeps only the latest 60.",
-    "b_act_txt": "📄 Everything (.txt)",
-    "act_txt_head": "🕵️ User activity {id} — {name} — {date} UTC",
-    "act_txt_dl": "📥 Downloads ({n})",
-    "act_txt_msg": "📨 Sent to the bot ({n})",
-    "b_sup_pe": "💎 Emoji & button colours",
-    "pe_title": "💎 <b>Premium emoji & button colours</b>\n\n💎 Premium emoji: {pe}\n🎨 Button colours: {st}\n📦 Pack: {pack} ({n} emoji)\n\nℹ️ Premium emoji only work when the bot's owner (the account that created it in @BotFather) has an active Telegram Premium. Button colours don't need it.",
-    "b_pe_emoji": "💎 Premium emoji: {status}",
-    "b_pe_style": "🎨 Button colours: {status}",
-    "b_pe_pack": "📦 Add an emoji pack",
-    "b_pe_test": "🧪 Test",
-    "b_pe_del": "🗑 Remove pack",
-    "pe_ask_pack": "📦 <b>Emoji pack</b>\n\nSend the link of an emoji pack, like <code>t.me/addemoji/...</code>\n\nTap a premium emoji in Telegram and it shows its pack — you can copy the pack's link.",
-    "pe_pack_ok": "✅ Pack <b>{pack}</b> added ({n} emoji). Now tap \"Test\".",
-    "pe_pack_bad": "❌ {why}",
-    "pe_why_link": "That link is not valid. Send it like t.me/addemoji/name.",
-    "pe_why_type": "This is not an emoji pack (it is a sticker pack), or it has no emoji.",
-    "pe_why_find": "Pack not found: {err}",
-    "pe_not_ready": "⚠️ Add an emoji pack first.",
-    "pe_no_hooks": "⚠️ The safety layer could not be installed, so this feature can't be used with this library version.",
-    "pe_test_ok": "✅ Telegram accepted it. Look at the test message: if the emoji is not animated, Premium is not active.",
-    "pe_test_fail": "❌ Telegram refused: {err}",
-    "pe_autooff": "⚠️ Premium emoji and button colours were switched off automatically because Telegram refused them:\n<code>{err}</code>",
-    "b_shape_round": "▭ Rounded", "b_shape_sq": "⬛ Square", "b_shape_circle": "⚪ Circle", "b_shape_cancel": "❌ Cancel",
-    "stk_text_unsupported": "ℹ️ Kurdish/Arabic text isn't supported on this server, so the sticker was made without text.",
-    "vstk_notext": "ℹ️ Text on animated stickers is not supported (photos only).",
     "force_join": (
         "🔒 <b>Forced join</b>\n\n"
         "To continue, join the channels below first, then tap <b>“I joined”</b> 👇"
@@ -815,19 +507,20 @@ L["en"] = {
     # ── profile hub ───────────────────────────────────────────────────────────
     "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "pf_followers": "👥 Followers", "pf_following": "➕ Following", "pf_likes": "❤️ Likes", "pf_videos": "🎬 Videos",
-    "pf_b_vids": "🎬 Latest videos", "pf_b_file": "📎 HD picture (file)", "pf_b_open": "🔗 Profile",
-    "st_latest": "🎬 <b>Fetching the latest videos…</b>\n{bar}",
-    "latest_header": "🎬 <b>Latest videos of @{user}</b>\n<blockquote>📥 {n} videos on the way</blockquote>",
-    "latest_none": "📭 <b>@{user}</b> has no videos (or only photo posts).",
-    "latest_unavailable": "⚠️ Couldn't fetch this account's videos. Try again later.",
-    "latest_done": "✅ <b>{n} videos</b> delivered",
-    "latest_partial": "⏱ Time limit reached — <b>{n}</b> videos sent, <b>{left}</b> left. Tap the button below to continue.",
-    "latest_vip_hint": "💎 Free users get {free} videos — <b>VIP</b> gets up to {vip}.",
+    "pf_b_vids": "📚 View posts", "pf_b_file": "📎 HD picture (file)", "pf_b_open": "🔗 Profile",
+    "st_latest": "📚 <b>Fetching the posts…</b>\n{bar}",
+    "latest_header": "📚 <b>Posts of @{user}</b>\n<blockquote>📥 {n} posts found — sent {page} at a time</blockquote>",
+    "latest_none": "📭 <b>@{user}</b> has no posts.",
+    "latest_unavailable": "⚠️ Couldn't fetch this account's posts. Try again later.",
+    "latest_done": "✅ <b>{n} posts</b> sent — that was the last one",
+    "latest_partial": "✅ <b>{n}</b> posts sent — <b>{left}</b> left. Tap the button below to see more posts.",
+    "b_latest_more": "➕ See more posts ({left} left)",
+    "latest_vip_hint": "💎 Free users get {free} posts — <b>VIP</b> gets up to {vip}.",
     "no_story": "📭 <b>@{user}</b> has no active stories right now.\nTikTok stories last 24 hours.",
     "story_unavailable": "⚠️ This account's stories aren't available (it may be private, or the source doesn't support them).",
     "b_story": "🕵️ Secret story", "b_story_again": "🔄 Another story",
     "b_dl": "📥 New download", "b_profile": "👤 Profile", "b_vip": "💎 VIP", "b_avatar": "🔎 TikTok profile",
-    "b_lang": "⚙️ Settings", "b_help": "📖 Help", "b_channel": "📢 Bot channel",
+    "b_lang": "🌐 Language", "b_help": "📖 Help", "b_channel": "📢 Bot channel",
     "b_panel": "🛠 Control panel", "b_back": "🔙 Back", "b_delete": "🗑 Delete",
     "b_joined": "✅ I joined", "b_audio": "🎵 MP3 audio", "b_orig": "🔗 Original link",
     "b_direct": "⬇️ Direct download", "b_cancel": "✖️ Cancel",
@@ -873,8 +566,8 @@ L["en"] = {
     ),
     "userinfo": (
         "🔎 <b>User info</b>\n\n"
-        "<blockquote>✨ Name: {name}\n🔗 User: {user}\n🆔 ID: <code>{id}</code>\n👤 Link: {plink}\n"
-        "🌐 App language: {al}\n🏅 Rank: {rank}\n🚫 Blocked: {blocked}\n🗣 Bot language: {lang}\n"
+        "<blockquote>✨ Name: {name}\n🔗 User: {user}\n🆔 ID: <code>{id}</code>\n"
+        "🏅 Rank: {rank}\n🚫 Blocked: {blocked}\n🌐 Language: {lang}\n"
         "📥 Downloads: <b>{dl}</b>\n📅 Joined: {date}</blockquote>"
     ),
     "yes": "Yes", "no": "No",
@@ -919,7 +612,7 @@ L["en"] = {
     "backup_prep": "⏳ Preparing…",
     "new_user_notify": (
         "🔔 <b>New user</b>\n\n"
-        "<blockquote>✨ Name: {name}\n🔗 User: {uname}\n🆔 ID: <code>{uid}</code>\n👤 Link: {plink}\n"
+        "<blockquote>✨ Name: {name}\n🔗 User: {uname}\n🆔 ID: <code>{uid}</code>\n"
         "🌐 App language: {app_lang}\n📅 {date}</blockquote>"
     ),
     "b_notify_block": "🚫 Block", "b_notify_vip": "💎 VIP", "b_notify_admin": "🛡 Admin", "b_notify_info": "🔎 Info",
@@ -927,17 +620,13 @@ L["en"] = {
 
 L["ar"] = {
     "welcome": (
-        "👋🏻 <b>أهلاً، {name}</b> {badge}\n\n"
-        "🤖 مرحبًا بك في <b>أكثر بوتات تحميل تيك توك تطورًا</b> 🎬⬇️\n\n"
-        "<blockquote>📥 فيديو <b>بدون علامة مائية</b> بجودة عالية 🎬✨\n"
-        "🖼️ كل الصور بجودة <b>HD</b> 📸💎\n"
-        "🎧 موسيقى <b>MP3</b> 🎵🔥\n"
-        "🧩 حوّل أي صورة أو فيديو إلى <b>ملصق</b> — حواف مستديرة أو مربع أو دائرة ✨\n"
-        "🔔 تنبيهات عند نشر حساباتك المفضلة لفيديو جديد 📌</blockquote>\n\n"
-        "⚡ سرعة عالية 🚀  ·  🏆 جودة ممتازة 💯  ·  👍🏻 سهل الاستخدام 🎯\n"
-        "🎁 ادعُ أصدقاءك واحصل على <b>VIP مجانًا</b> 💎\n\n"
-        "━━━━━━━━━━━━━━━━━━━\n\n"
-        "👇🏻 فقط أرسل <b>رابط تيك توك</b> 🔗 للبدء 🚀"
+        "✨ <b>أهلاً بك، {name}</b> {badge}\n\n"
+        "حمّل فيديوهات <b>تيك توك</b> وصورها وموسيقاها برابط واحد — "
+        "<b>بدون علامة مائية</b> وبجودة عالية.\n\n"
+        "<blockquote>🎬  فيديو HD بدون علامة مائية\n"
+        "🖼  جميع صور المنشور\n"
+        "🎵  الموسيقى بصيغة MP3</blockquote>\n"
+        "👇 <b>أرسل رابط تيك توك</b> وانتظر ثوانٍ قليلة."
     ),
     "help": (
         "<b>📖 طريقة الاستخدام</b>\n\n"
@@ -949,12 +638,7 @@ L["ar"] = {
         "🎵 الموسيقى — زر <b>MP3</b> أسفل الفيديو\n"
         "👤 الملف الشخصي — أرسل اسم مستخدم لبطاقة الحساب + صورة HD + القصص + آخر الفيديوهات\n"
         "🔥 اكتشف — ابحث في تيك توك أو تصفّح الرائج حسب البلد\n"
-        "🕵️ القصص — اضغط <b>قصة سرية</b> وأرسل اسم مستخدم\n"
-        "🎞 GIF · 🧩 ملصق · 💬 التعليقات — أزرار أسفل الفيديو\n"
-        "🖼 ملصق — أرسل صورة أو فيديو (متحرك)، أو أنشئ حزمتك الخاصة\n"
-        "📜 السجل · ⭐ المفضلة — أعد إرسال فيديوهاتك بضغطة واحدة\n"
-        "🎁 دعوة — أحضر أصدقاءك واحصل على VIP\n"
-        "⚙️ الجودة — اختر HD / عادية / صوت فقط من الإعدادات</blockquote>\n"
+        "🕵️ القصص — اضغط <b>قصة سرية</b> وأرسل اسم مستخدم</blockquote>\n"
         "💎 <b>VIP</b> — بدون اشتراك إجباري وصور أكثر.\n"
         "📩 للتواصل: {dev}"
     ),
@@ -980,137 +664,6 @@ L["ar"] = {
     "lang_title": "🌐 <b>اختر لغتك</b>",
     "lang_current": "🔵 الحالية: {cur}",
     "lang_saved": "✅ تم تغيير اللغة",
-    "q_title": "🎞 <b>جودة التحميل</b>",
-    "q_current": "🔵 الحالية: {cur}",
-    "q_hd": "🎬 HD — أفضل جودة",
-    "q_sd": "📱 عادية — بيانات أقل",
-    "q_audio": "🎵 الصوت فقط (MP3)",
-    "qb_hd": "🎬 HD", "qb_sd": "📱 عادية", "qb_audio": "🎵 صوت",
-    "q_saved": "✅ تم تغيير الجودة",
-    "b_gif": "🎞 GIF", "b_sticker": "🧩 ملصق", "b_comments": "💬 التعليقات",
-    "st_gif": "🎞 <b>جارٍ تجهيز GIF…</b>\n{bar}",
-    "st_stk": "🧩 <b>جارٍ تجهيز الملصق…</b>\n{bar}",
-    "st_cmt": "💬 <b>جارٍ جلب التعليقات…</b>\n{bar}",
-    "gif_fail": "❌ تعذّر إنشاء GIF. حاول مرة أخرى.",
-    "stk_fail": "❌ تعذّر إنشاء الملصق.",
-    "stk_static": "ℹ️ الملصق المتحرك غير متاح على هذا الخادم، لذلك أُرسل ملصق ثابت.",
-    "cmt_title": "💬 <b>التعليقات</b> · {n}",
-    "cmt_file": "📄 جميع التعليقات ({n})",
-    "cmt_none": "💬 لا توجد تعليقات لهذا الفيديو أو تعذّر جلبها.",
-    "cmt_fail": "❌ تعذّر جلب التعليقات.",
-    "b_mkstk": "🖼 إنشاء ملصق",
-    "ask_stk_prompt": "🖼 <b>إنشاء ملصق</b>\n\nأرسل صورة من معرض هاتفك وسأحوّلها إلى ملصق 🧩\n\n💡 لجودة أفضل، أرسل الصورة كـ<b>ملف</b>.",
-    "st_mkstk": "🖼 <b>جارٍ تجهيز الملصق…</b>",
-    "mkstk_fail": "❌ تعذّر تحويل هذه الصورة إلى ملصق. جرّب صورة أخرى.",
-    "mkstk_big": "⚠️ هذه الصورة كبيرة جدًا (أكثر من 20 ميغابايت).",
-    "b_hist": "📜 السجل", "b_favs": "⭐ المفضلة", "b_ref": "🎁 دعوة",
-    "b_fav": "⭐ مفضلة", "b_faved": "✅ تم الحفظ", "b_hist_clear": "🗑 مسح السجل",
-    "hist_title": "📜 <b>سجل التحميل</b> · {n}\n\nاضغط على أي عنصر لإرساله مجددًا 👇",
-    "hist_empty": "📜 لم تقم بتحميل أي شيء بعد.\nأرسل رابط تيك توك.",
-    "favs_title": "⭐ <b>المفضلة</b> · {n}\n\nاضغط على أي عنصر لإرساله مجددًا 👇",
-    "favs_empty": "⭐ قائمة المفضلة فارغة.\nاضغط ⭐ أسفل أي فيديو لإضافته.",
-    "hist_cleared": "🗑 تم مسح السجل",
-    "fav_added": "⭐ أُضيف إلى المفضلة",
-    "fav_removed": "🗑 أُزيل من المفضلة",
-    "fav_full": "⚠️ قائمة المفضلة ممتلئة ({n} عنصر). احذف عنصرًا أولًا.",
-    "ref_info": "🎁 <b>ادعُ أصدقاءك</b>\n\nلكل <b>{need}</b> أشخاص ينضمون عبر رابطك ويحمّلون فيديو، تحصل على <b>{days} أيام VIP</b> 💎\n\n👥 المدعوون: <b>{cnt}</b>\n📊 للمكافأة التالية: <b>{left}</b> آخرون\n\n🔗 رابطك الخاص:\n<code>{link}</code>",
-    "ref_vip_until": "💎 اشتراك VIP فعّال حتى <b>{until}</b>",
-    "ref_off": "🎁 نظام الدعوات متوقف حاليًا.",
-    "b_ref_share": "📤 مشاركة الرابط",
-    "ref_share_text": "🎬 أفضل بوت لتحميل تيك توك بدون علامة مائية! ابدأ من هنا:",
-    "ref_progress": "👥 انضم شخص عبر رابطك وحمّل فيديو! ({cnt}/{need})",
-    "ref_reward": "🎉 <b>مبروك!</b> حصلت على <b>{days} أيام VIP</b> 💎\nفعّال حتى <b>{until}</b>.",
-    "b_sup_ref": "🎁 الدعوات", "b_sup_groups": "👥 المجموعات: {status}",
-    "b_ref_toggle": "🔘 الدعوات: {status}",
-    "sup_ref_title": "🎁 <b>إعدادات الدعوات</b>\n\nالحالة: {status}\n👥 عدد الدعوات لكل مكافأة: <b>{need}</b>\n💎 مدة VIP: <b>{days}</b> يوم",
-    "grp_welcome": "👋 مرحبًا! أنا بوت تحميل تيك توك.\n\nأرسل رابط تيك توك هنا وسأرد بالفيديو بدون علامة مائية 🎬",
-    "stk_menu_nopack": "🖼 <b>إنشاء ملصق</b>\n\nأرسل صورة من معرض هاتفك وسأحوّلها إلى ملصق 🧩\n🎞 أرسل فيديو قصيرًا (حتى 3 ثوانٍ) وسأحوّله إلى <b>ملصق متحرك</b>\n\n📦 يمكنك أيضًا إنشاء <b>حزمة ملصقات</b>: تذهب ملصقاتك إلى حزمة واحدة يمكنك إضافتها إلى تيليجرام.\n\n💡 لجودة أفضل، أرسل الصورة كـ<b>ملف</b>.",
-    "stk_menu_pack": "🖼 <b>إنشاء ملصق</b>\n\n📦 الحزمة الحالية: <b>{title}</b> ({n}/120)\n\nكل صورة ترسلها تُضاف إلى هذه الحزمة 🧩\n🎞 يتحول الفيديو إلى ملصق متحرك في <b>حزمة منفصلة</b>، لأن تيليجرام لا يخلط ملصقات الصور والفيديو.\n💡 لجودة أفضل، أرسل الصورة كـ<b>ملف</b>.",
-    "stk_menu_pending": "🖼 <b>إنشاء ملصق</b>\n\n📦 حزمة جديدة: <b>{title}</b>\n\nأرسل أول <b>صورة أو فيديو</b> وستُنشأ الحزمة به (صورة = حزمة عادية، فيديو = حزمة متحركة) 👇",
-    "b_stk_new": "📦 حزمة جديدة", "b_stk_open": "🔗 فتح الحزمة", "b_stk_list": "📂 حزمي",
-    "stk_ask_title": "📦 <b>أرسل اسمًا لحزمتك</b>\n\nمثال: <code>ملصقاتي</code>",
-    "stk_title_ok": "✅ الحزمة <b>{title}</b> جاهزة.\n\nأرسل الآن أول صورة أو فيديو وستُنشأ الحزمة به 🖼",
-    "stk_title_bad": "⚠️ يجب أن يكون الاسم من 1 إلى 60 حرفًا. أرسله مرة أخرى:",
-    "stk_created": "🎉 <b>تم إنشاء حزمتك!</b>\n📦 {title}\n\nاضغط الزر لإضافتها إلى تيليجرام 👇",
-    "stk_full": "⚠️ هذه الحزمة ممتلئة (120 ملصقًا). أنشئ حزمة جديدة.",
-    "stk_gone": "⚠️ هذه الحزمة لم تعد موجودة في تيليجرام. أنشئ حزمة جديدة.",
-    "stk_list_title": "📂 <b>حزمي</b>\n\nالحزمة الحالية معلّمة بـ ✅ — اضغط على أي حزمة للتبديل:",
-    "stk_switched": "✅ تم تغيير الحزمة الحالية",
-    "stk_del_confirm": "⚠️ <b>هل أنت متأكد أنك تريد حذف هذه الحزمة؟</b>\n\n📦 {title} ({n} ملصقًا)\n\nلا يمكن التراجع عن هذا: ستُحذف الحزمة وكل ملصقاتها من تيليجرام.",
-    "b_stk_del_yes": "✅ نعم، احذفها", "b_stk_del_no": "❌ لا، رجوع",
-    "stk_deleted": "🗑 تم حذف الحزمة",
-    "stk_del_fail": "❌ تعذّر حذف الحزمة. حاول مرة أخرى.",
-    "stk_menu_vpack": "🎞 الحزمة المتحركة: <b>{title}</b> ({n}/120)",
-    "vstk_noffmpeg": "⚠️ الملصقات المتحركة غير متاحة على هذا الخادم (ffmpeg غير موجود).",
-    "vstk_trim": "ℹ️ يسمح تيليجرام بـ<b>3 ثوانٍ</b> فقط للملصق المتحرك، لذلك استُخدمت أول 3 ثوانٍ من الفيديو.",
-    "b_top": "🏆 الأفضل", "b_fwlist": "🔔 المتابَعون",
-    "lb_title": "🏆 <b>أفضل الداعين</b>\n<i>كلما أحضرت أصدقاء أكثر ارتفع ترتيبك</i>",
-    "lb_empty": "لم يدعُ أحد أحدًا بعد. كن الأول! 🎁",
-    "lb_you": "📍 ترتيبك: <b>#{rank}</b> — {n} مدعو",
-    "lb_hidden": "🙈 اسم مخفي",
-    "b_lb_hide": "🙈 أخفِ اسمي", "b_lb_show": "👁 أظهر اسمي",
-    "lb_toast_hide": "🙈 تم إخفاء اسمك", "lb_toast_show": "👁 اسمك ظاهر الآن",
-    "stars_info": "⭐ <b>اشترِ بنجوم تيليجرام</b> — يتفعل فورًا. كل خطة لمدة محددة وتُضاف إلى VIP الحالي.",
-    "b_buy": "💎 {days} أيام — {stars} ⭐",
-    "stars_off": "⚠️ الشراء غير متاح حاليًا.",
-    "stars_changed": "تغيّر السعر. يرجى اختيار الخطة مرة أخرى.",
-    "stars_thanks": "🎉 <b>شكرًا على الشراء!</b>\n\n💎 تم تفعيل {days} أيام VIP\n📅 حتى <b>{until}</b>",
-    "inv_title": "💎 VIP — {days} أيام",
-    "inv_desc": "{days} أيام VIP لبوت تحميل تيك توك: فيديوهات أكثر وكل المزايا.",
-    "b_sup_stars": "💎 النجوم: {status}", "b_stars_toggle": "🔘 البيع بالنجوم: {status}",
-    "sup_stars_title": "💎 <b>إعدادات نجوم تيليجرام</b>\n\nالحالة: {status}\n💰 إجمالي الأرباح: <b>{total}</b> ⭐\n\nعدّل سعر كل خطة:",
-    "fw_b_off": "🔔 متابعة", "fw_b_on": "✅ تتم المتابعة",
-    "fw_on": "🔔 تمت المتابعة! سأخبرك عندما ينشر فيديو جديدًا.",
-    "fw_off": "🔕 تم إلغاء المتابعة",
-    "fw_limit": "⚠️ وصلت إلى حد المتابعة ({n} حسابات). VIP يتيح حتى {vip}.",
-    "fw_empty": "🔔 لا تتابع أي حساب بعد.\nافتح ملف تيك توك واضغط 🔔.",
-    "fw_list_title": "🔔 <b>المتابَعون</b> · {n}/{max}\n\nاضغط على اسم لأحدث الفيديوهات، أو 🔕 لإلغاء المتابعة:",
-    "fw_new": "🔔 <b>@{user}</b> نشر فيديو جديدًا!\n\n{title}",
-    "fw_b_dl": "⬇️ تحميل", "fw_b_stop": "🔕 إيقاف التنبيهات",
-    "stk_menu_tip": "🎨 بعد إرسال صورة أو فيديو تختار الشكل: حواف مستديرة أو مربع أو دائرة.\n✍️ لكتابة نص على الملصق (صورة أو فيديو)، أرسله كـ<b>تعليق</b> ثم اختر خطه ولونه.",
-    "ss_ask": "🎨 <b>ما الشكل الذي تريده للملصق؟</b>\n\n▭ <b>حواف مستديرة</b> — تبقى نسبة الصورة كما هي\n⬛ <b>مربع</b> — قص من الوسط إلى مربع\n⚪ <b>دائرة</b> — مثل صورة الملف الشخصي",
-    "ss_expired": "⌛ انتهت صلاحية هذا الطلب. أرسل الصورة أو الفيديو مرة أخرى.",
-    "b_font_auto": "🔄 تلقائي", "b_font_ku": "🔤 كردي", "b_font_en": "🔠 إنجليزي",
-    "ss_font_hint": "🔤 اختر <b>خط</b> النص و🎨 <b>لونه</b>، ثم الشكل.",
-    "stk_font_missing": "ℹ️ الخط المختار لا يحتوي بعض أحرف هذا النص، لذلك استُخدم الخط المدمج في البوت.",
-    "plink_label": "فتح الملف الشخصي",
-    "b_sup_users": "📄 قائمة المستخدمين (.txt)",
-    "users_preparing": "⏳ جارٍ تجهيز القائمة…",
-    "users_file_caption": "📄 قائمة المستخدمين — الإجمالي: <b>{n}</b>",
-    "ul_header": "📋 مستخدمو البوت — الإجمالي: {n} — {date} UTC",
-    "ul_block": "\n🔔 مستخدم #{n}\n\n✨ الاسم: {name}\n🔗 المستخدم: {user}\n🆔 المعرّف: {id}\n👤 الرابط: tg://user?id={id}\n🌐 لغة التطبيق: {al}\n📅 {date}\n📥 التحميلات: {dl}\n🏅 الرتبة: {rank}\n🚫 محظور: {blocked}\n🗣 لغة البوت: {botlang}",
-    "b_sup_activity": "🕵️ نشاط المستخدم",
-    "act_ask": "🕵️ <b>نشاط المستخدم</b>\n\nأرسل معرّف المستخدم وسأخبرك بما حمّله وما أرسله إلى البوت.\n\n{write_id}",
-    "act_head": "🕵️ <b>نشاط المستخدم</b>\n\n✨ الاسم: {name}\n🔗 المستخدم: {user}\n🆔 المعرّف: <code>{id}</code>\n👤 الرابط: {plink}\n📅 الانضمام: {date}\n📥 إجمالي التحميلات: <b>{dl}</b>",
-    "act_dl_title": "📥 <b>آخر التحميلات</b> ({n})",
-    "act_msg_title": "📨 <b>آخر ما أرسله إلى البوت</b> ({n})",
-    "act_none": "— لا يوجد تسجيل —",
-    "act_note": "ℹ️ تسجيل الرسائل المرسلة يبدأ الآن ويحتفظ بآخر 60 فقط.",
-    "b_act_txt": "📄 الكل (.txt)",
-    "act_txt_head": "🕵️ نشاط المستخدم {id} — {name} — {date} UTC",
-    "act_txt_dl": "📥 التحميلات ({n})",
-    "act_txt_msg": "📨 المرسل إلى البوت ({n})",
-    "b_sup_pe": "💎 الإيموجي وألوان الأزرار",
-    "pe_title": "💎 <b>الإيموجي المميز وألوان الأزرار</b>\n\n💎 الإيموجي المميز: {pe}\n🎨 ألوان الأزرار: {st}\n📦 الحزمة: {pack} ({n} إيموجي)\n\nℹ️ الإيموجي المميز يعمل فقط إذا كان لدى مالك البوت (الحساب الذي أنشأه في @BotFather) اشتراك Telegram Premium فعّال. ألوان الأزرار لا تحتاج إلى ذلك.",
-    "b_pe_emoji": "💎 الإيموجي المميز: {status}",
-    "b_pe_style": "🎨 ألوان الأزرار: {status}",
-    "b_pe_pack": "📦 إضافة حزمة إيموجي",
-    "b_pe_test": "🧪 اختبار",
-    "b_pe_del": "🗑 حذف الحزمة",
-    "pe_ask_pack": "📦 <b>حزمة الإيموجي</b>\n\nأرسل رابط حزمة إيموجي، مثل <code>t.me/addemoji/...</code>\n\nاضغط على إيموجي مميز في تيليجرام ليظهر اسم حزمته ويمكنك نسخ رابطها.",
-    "pe_pack_ok": "✅ أُضيفت الحزمة <b>{pack}</b> ({n} إيموجي). الآن اضغط «اختبار».",
-    "pe_pack_bad": "❌ {why}",
-    "pe_why_link": "الرابط غير صالح. أرسله بهذا الشكل t.me/addemoji/name.",
-    "pe_why_type": "هذه ليست حزمة إيموجي (إنها حزمة ملصقات)، أو لا تحتوي على إيموجي.",
-    "pe_why_find": "لم يتم العثور على الحزمة: {err}",
-    "pe_not_ready": "⚠️ أضف حزمة إيموجي أولًا.",
-    "pe_no_hooks": "⚠️ تعذّر تركيب طبقة الحماية، لذلك لا يمكن استخدام هذه الميزة مع هذا الإصدار من المكتبة.",
-    "pe_test_ok": "✅ قبِلها تيليجرام. انظر إلى رسالة الاختبار: إذا لم يكن الإيموجي متحركًا فإن Premium غير مفعّل.",
-    "pe_test_fail": "❌ رفض تيليجرام: {err}",
-    "pe_autooff": "⚠️ تم إيقاف الإيموجي المميز وألوان الأزرار تلقائيًا لأن تيليجرام رفضها:\n<code>{err}</code>",
-    "b_shape_round": "▭ حواف مستديرة", "b_shape_sq": "⬛ مربع", "b_shape_circle": "⚪ دائرة", "b_shape_cancel": "❌ إلغاء",
-    "stk_text_unsupported": "ℹ️ النص الكردي/العربي غير مدعوم على هذا الخادم، لذلك أُنشئ الملصق بدون نص.",
-    "vstk_notext": "ℹ️ النص على الملصقات المتحركة غير مدعوم (للصور فقط).",
     "force_join": (
         "🔒 <b>الاشتراك الإجباري</b>\n\n"
         "للمتابعة اشترك في القنوات التالية أولاً ثم اضغط <b>«اشتركت»</b> 👇"
@@ -1190,19 +743,20 @@ L["ar"] = {
     # ── profile hub ───────────────────────────────────────────────────────────
     "profile_card": "👤 <b>{name}</b> {badge}\n<code>@{user}</code>{stats}{bio}\n\n⚡ <a href=\"https://t.me/{bot}\">@{bot}</a>",
     "pf_followers": "👥 المتابعون", "pf_following": "➕ يتابع", "pf_likes": "❤️ الإعجابات", "pf_videos": "🎬 الفيديوهات",
-    "pf_b_vids": "🎬 آخر الفيديوهات", "pf_b_file": "📎 صورة HD (ملف)", "pf_b_open": "🔗 الحساب",
-    "st_latest": "🎬 <b>جارٍ جلب آخر الفيديوهات…</b>\n{bar}",
-    "latest_header": "🎬 <b>آخر فيديوهات @{user}</b>\n<blockquote>📥 {n} فيديو قيد الإرسال</blockquote>",
-    "latest_none": "📭 <b>@{user}</b> ليس لديه فيديوهات (أو منشورات صور فقط).",
-    "latest_unavailable": "⚠️ تعذّر جلب فيديوهات هذا الحساب. حاول لاحقاً.",
-    "latest_done": "✅ تم إرسال <b>{n} فيديو</b>",
-    "latest_partial": "⏱ انتهى الوقت — أُرسل <b>{n}</b> فيديو وتبقّى <b>{left}</b>. اضغط الزر أدناه للمتابعة.",
-    "latest_vip_hint": "💎 المستخدم العادي يحصل على {free} فيديو — و<b>VIP</b> حتى {vip}.",
+    "pf_b_vids": "📚 عرض المنشورات", "pf_b_file": "📎 صورة HD (ملف)", "pf_b_open": "🔗 الحساب",
+    "st_latest": "📚 <b>جارٍ جلب المنشورات…</b>\n{bar}",
+    "latest_header": "📚 <b>منشورات @{user}</b>\n<blockquote>📥 تم العثور على {n} منشور — يُرسل {page} في كل مرة</blockquote>",
+    "latest_none": "📭 <b>@{user}</b> ليس لديه منشورات.",
+    "latest_unavailable": "⚠️ تعذّر جلب منشورات هذا الحساب. حاول لاحقاً.",
+    "latest_done": "✅ تم إرسال <b>{n} منشور</b> — كان هذا آخر منشور",
+    "latest_partial": "✅ أُرسل <b>{n}</b> منشور — تبقّى <b>{left}</b>. اضغط الزر أدناه لعرض المزيد.",
+    "b_latest_more": "➕ عرض المزيد ({left} متبقٍ)",
+    "latest_vip_hint": "💎 المستخدم العادي يحصل على {free} منشور — و<b>VIP</b> حتى {vip}.",
     "no_story": "📭 <b>@{user}</b> لا يملك قصصاً نشطة حالياً.\nقصص تيك توك تبقى 24 ساعة.",
     "story_unavailable": "⚠️ قصص هذا الحساب غير متاحة (ربما الحساب خاص أو المصدر لا يدعمها).",
     "b_story": "🕵️ قصة سرية", "b_story_again": "🔄 قصة أخرى",
     "b_dl": "📥 تحميل جديد", "b_profile": "👤 الملف الشخصي", "b_vip": "💎 VIP", "b_avatar": "🔎 حساب تيك توك",
-    "b_lang": "⚙️ الإعدادات", "b_help": "📖 المساعدة", "b_channel": "📢 قناة البوت",
+    "b_lang": "🌐 اللغة", "b_help": "📖 المساعدة", "b_channel": "📢 قناة البوت",
     "b_panel": "🛠 لوحة التحكم", "b_back": "🔙 رجوع", "b_delete": "🗑 حذف",
     "b_joined": "✅ اشتركت", "b_audio": "🎵 صوت MP3", "b_orig": "🔗 الرابط الأصلي",
     "b_direct": "⬇️ تحميل مباشر", "b_cancel": "✖️ إلغاء",
@@ -1248,8 +802,8 @@ L["ar"] = {
     ),
     "userinfo": (
         "🔎 <b>معلومات المستخدم</b>\n\n"
-        "<blockquote>✨ الاسم: {name}\n🔗 المستخدم: {user}\n🆔 المعرّف: <code>{id}</code>\n👤 الرابط: {plink}\n"
-        "🌐 لغة التطبيق: {al}\n🏅 الرتبة: {rank}\n🚫 محظور: {blocked}\n🗣 لغة البوت: {lang}\n"
+        "<blockquote>✨ الاسم: {name}\n🔗 المستخدم: {user}\n🆔 المعرّف: <code>{id}</code>\n"
+        "🏅 الرتبة: {rank}\n🚫 محظور: {blocked}\n🌐 اللغة: {lang}\n"
         "📥 التحميلات: <b>{dl}</b>\n📅 الانضمام: {date}</blockquote>"
     ),
     "yes": "نعم", "no": "لا",
@@ -1294,7 +848,7 @@ L["ar"] = {
     "backup_prep": "⏳ جارٍ التجهيز…",
     "new_user_notify": (
         "🔔 <b>مستخدم جديد</b>\n\n"
-        "<blockquote>✨ الاسم: {name}\n🔗 المستخدم: {uname}\n🆔 المعرّف: <code>{uid}</code>\n👤 الرابط: {plink}\n"
+        "<blockquote>✨ الاسم: {name}\n🔗 المستخدم: {uname}\n🆔 المعرّف: <code>{uid}</code>\n"
         "🌐 لغة التطبيق: {app_lang}\n📅 {date}</blockquote>"
     ),
     "b_notify_block": "🚫 حظر", "b_notify_vip": "💎 VIP", "b_notify_admin": "🛡 مشرف", "b_notify_info": "🔎 معلومات",
@@ -1303,7 +857,7 @@ L["ar"] = {
 LANG_NAMES = {"ku": "🔴🔆🟢 کوردی", "en": "🇺🇸 English", "ar": "🇸🇦 العربية"}
 
 
-def tx(lang: str, key: str, /, **kw) -> str:
+def tx(lang: str, key: str, **kw) -> str:
     """Translate `key` into `lang` (falls back to Kurdish, then to the key)."""
     text = L.get(lang, L["ku"]).get(key) or L["ku"].get(key) or key
     try:
@@ -1341,13 +895,6 @@ def fmt_num(n) -> str:
     return str(n)
 
 
-class Kb(InlineKeyboardMarkup):
-    """InlineKeyboardMarkup that colours every button (see `_paint`) once coloured buttons are switched on."""
-
-    def __init__(self, inline_keyboard, *args, **kwargs):
-        super().__init__(_paint(inline_keyboard) if _STY["on"] else inline_keyboard, *args, **kwargs)
-
-
 def now_str() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
 
@@ -1369,7 +916,7 @@ def as_list(v) -> list:
 def is_owner(uid) -> bool:   return uid == OWNER_ID
 def is_super(uid) -> bool:   return uid in super_admins_set or is_owner(uid)
 def is_admin(uid) -> bool:   return uid in admins_set or is_super(uid)
-def is_vip(uid) -> bool:     return uid in vip_set or is_super(uid) or vip_until.get(uid, 0) > time.time()
+def is_vip(uid) -> bool:     return uid in vip_set or is_super(uid)
 def is_blocked(uid) -> bool: return uid in blocked_set and not is_owner(uid)
 
 
@@ -1480,7 +1027,7 @@ async def db_incr(path: str, n: int = 1) -> bool:
 
 # ── shared configuration ──────────────────────────────────────────────────────
 async def load_cfg(force: bool = False) -> None:
-    global super_admins_set, admins_set, channels_list, blocked_set, vip_set, vip_until, last_cfg_load
+    global super_admins_set, admins_set, channels_list, blocked_set, vip_set, last_cfg_load
     if not DB_URL:
         return
     if not force and time.time() - last_cfg_load < CFG_TTL:
@@ -1494,14 +1041,8 @@ async def load_cfg(force: bool = False) -> None:
     channels_list    = [str(x) for x in as_list(d.get("channels"))]
     blocked_set      = {int(x) for x in as_list(d.get("blocked"))}
     vip_set          = {int(x) for x in as_list(d.get("vips"))}
-    vu = d.get("vip_until")
-    if isinstance(vu, dict):
-        now = time.time()
-        vip_until = {int(k): int(v) for k, v in vu.items()
-                     if str(k).isdigit() and isinstance(v, (int, float)) and v > now}
     if isinstance(d.get("cfg"), dict):
         CFG.update(d["cfg"])
-    pe_apply_cfg(d)
 
 
 _SYS_KEYS = {
@@ -1541,24 +1082,13 @@ async def ensure_user(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> tuple[d
     ud = await db_get(f"users/{u.id}")
     if not isinstance(ud, dict):
         ud = {
-            "name": u.first_name or "", "user": u.username or "", "al": u.language_code or "", "date": now_str(),
-            "vip": False, "dl": 0, "lang": "",                    # "" = not chosen yet → follows the bot's default language
+            "name": u.first_name or "", "user": u.username or "", "date": now_str(),
+            "vip": False, "dl": 0, "lang": CFG.get("default_lang", "ku"),
         }
         await db_put(f"users/{u.id}", ud)
         await db_incr("sys/cfg/total_users")
         await notify_new_user(ctx, u)
-        ud["_new"] = True                                         # in-memory only: first contact (not saved)
-    else:                                                          # keep the record complete (name, @username, app language)
-        fresh = {"name": u.first_name or "", "user": u.username or "", "al": u.language_code or ""}
-        changes = {k: v for k, v in fresh.items() if (v or k == "user") and ud.get(k, "") != v}
-        if changes:
-            ud.update(changes)
-            await db_patch(f"users/{u.id}", changes)
     return ud, user_lang(ud)
-
-
-def profile_link(lang: str, uid: int) -> str:
-    return f'<a href="tg://user?id={int(uid)}">{tx(lang, "plink_label")}</a>'
 
 
 async def notify_new_user(ctx, u) -> None:
@@ -1572,7 +1102,7 @@ async def notify_new_user(ctx, u) -> None:
         await ctx.bot.send_message(
             OWNER_ID,
             tx("ku", "new_user_notify", name=esc(u.first_name), uname=f"@{u.username}" if u.username else "—",
-               uid=u.id, app_lang=esc(u.language_code or "—"), date=now_str(), plink=profile_link("ku", u.id)),
+               uid=u.id, app_lang=esc(u.language_code or "—"), date=now_str()),
             reply_markup=kb,
         )
     except TelegramError as e:
@@ -1614,368 +1144,6 @@ async def acquire_lock(uid: int) -> bool:
 
 async def release_lock(uid: int) -> None:
     await db_del(f"locks/{uid}")
-
-
-# ── media cache (Telegram file_ids) + per-user quality ───────────────────────
-_KEY_RE = re.compile(r"[A-Za-z0-9]{1,24}")
-
-
-def safe_key(k) -> bool:
-    """Media keys are digits (TikTok id) or a short hex hash — nothing else may reach a DB path."""
-    return isinstance(k, str) and _KEY_RE.fullmatch(k) is not None
-
-
-def _url_hash(url: str) -> str:
-    return hashlib.md5(url.strip().encode()).hexdigest()[:20]
-
-
-def bot_tag() -> str:
-    return f"⚡ <a href=\"https://t.me/{BOT_USERNAME}\">@{esc(BOT_USERNAME)}</a>"
-
-
-async def user_quality(uid: int) -> str:
-    q = await db_get(f"users/{uid}/q")
-    return q if q in QUALITIES else "hd"
-
-
-async def cache_get(key: str) -> dict | None:
-    if not safe_key(key):
-        return None
-    d = await db_get(f"fc/{key}")
-    return d if isinstance(d, dict) and d.get("src") else None
-
-
-async def remember_media(media: dict, url: str) -> None:
-    """Store the (small) metadata of a result + a link→key map, so a repeated link is instant."""
-    key = media.get("key")
-    if not safe_key(key):
-        return
-    await db_patch(f"fc/{key}", {
-        "key": key, "src": media.get("src") or url,
-        "creator": clip(media.get("creator") or "", 80), "title": clip(media.get("title") or "", 300),
-        "duration": _to_int(media.get("duration")),
-        "views": _to_int(media.get("views")), "likes": _to_int(media.get("likes")),
-        "comments": _to_int(media.get("comments")), "shares": _to_int(media.get("shares")),
-        "hv": 1 if media.get("videos") else 0, "ha": 1 if media.get("audio") else 0,
-        "ts": int(time.time()),
-    })
-    await db_put(f"uc/{_url_hash(url)}", key)
-
-
-async def save_fid(key: str, field: str, sent, attr: str) -> None:
-    """Remember the file_id Telegram gave us (video / audio / animation) → next time: no upload."""
-    try:
-        fid = getattr(getattr(sent, attr, None), "file_id", None)
-        if fid and safe_key(key):
-            await db_put(f"fc/{key}/{field}", fid)
-    except Exception as e:                                   # noqa: BLE001 — caching is best effort
-        log.info("save_fid failed: %s", e)
-
-
-def media_from_cache(hit: dict) -> dict:
-    return {
-        "key": hit.get("key") or "", "src": hit.get("src") or "",
-        "creator": hit.get("creator") or "TikTok", "title": hit.get("title") or "", "cover": "",
-        "duration": _to_int(hit.get("duration")),
-        "videos": [("cache", 0)] if hit.get("hv") else [],          # marker only: "this post has a video"
-        "audio": "cache" if hit.get("ha") else "", "a_title": "", "a_author": "", "images": [],
-        "views": _to_int(hit.get("views")), "likes": _to_int(hit.get("likes")),
-        "comments": _to_int(hit.get("comments")), "shares": _to_int(hit.get("shares")),
-    }
-
-
-async def send_from_cache(ctx, chat_id: int, lang: str, url: str, quality: str) -> dict | None:
-    """Repeated link → send by file_id (≈1 s, no API call, no download, no upload). None → do it the normal way."""
-    key = await db_get(f"uc/{_url_hash(url)}")
-    if not safe_key(key):
-        return None
-    hit = await cache_get(key)
-    if not hit:
-        return None
-    m = media_from_cache(hit)
-    auto = bool(CFG.get("auto_audio"))
-    try:
-        if quality == "audio" and hit.get("fid_a"):
-            await ctx.bot.send_audio(chat_id, hit["fid_a"], caption=f"🎵 {bot_tag()}",
-                                     reply_markup=audio_kb(lang), **_UP)
-            return m
-        if quality == "audio":
-            return None
-        fid = hit.get("fid_hd" if quality == "hd" else "fid_sd")          # exactly the quality the user chose
-        if not fid or (auto and m["audio"] and not hit.get("fid_a")):
-            return None
-        await ctx.bot.send_video(chat_id, fid, caption=build_caption(m),
-                                 reply_markup=result_kb(lang, m, with_audio=not auto), **_UP)
-        if auto and hit.get("fid_a"):
-            await ctx.bot.send_audio(chat_id, hit["fid_a"], caption=f"🎵 {bot_tag()}",
-                                     reply_markup=audio_kb(lang), **_UP)
-        return m
-    except TelegramError as e:
-        log.info("cache send failed (%s) → normal path", e)
-        return None
-
-
-async def count_download(uid: int, ctx=None) -> None:
-    await db_incr("sys/cfg/total_dl")
-    await db_incr(f"users/{uid}/dl")
-    if ctx is not None and CFG.get("ref_on", True):                 # an invited user's first download pays the inviter
-        try:
-            await credit_referral(ctx, uid)
-        except Exception as e:                                       # noqa: BLE001 — never block a download
-            log.info("referral credit failed: %s", e)
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# 9c · REFERRAL (free VIP) · HISTORY · FAVORITES · GROUPS
-# ══════════════════════════════════════════════════════════════════════════════
-HIST_MAX, FAV_MAX, LIST_PAGE = 40, 60, 8
-
-
-def ref_link(uid: int) -> str:
-    return f"https://t.me/{BOT_USERNAME}?start=ref_{uid}"
-
-
-def fmt_ts(ts: int) -> str:
-    return time.strftime("%Y-%m-%d", time.gmtime(ts))
-
-
-async def grant_temp_vip(uid: int, days: float) -> int:
-    """Add `days` of VIP on top of what the user still has. → new expiry (epoch seconds)."""
-    until = max(vip_until.get(uid, 0), int(time.time())) + int(days * 86400)
-    vip_until[uid] = until
-    await db_put(f"sys/vip_until/{uid}", until)
-    return until
-
-
-async def register_referral(new_uid: int, raw: str) -> None:
-    """/start ref_<inviter> by a brand-new user → remembered; it counts after the first download."""
-    if not CFG.get("ref_on", True) or not raw.isdigit():
-        return
-    inviter = int(raw)
-    if inviter == new_uid or not await user_exists(inviter):
-        return
-    await db_put(f"users/{new_uid}/ref_by", inviter)
-
-
-async def credit_referral(ctx, uid: int) -> None:
-    """The invited user finished a first download → progress (or reward) for the inviter."""
-    inviter = await db_get(f"users/{uid}/ref_by")
-    if not isinstance(inviter, int):
-        return
-    await db_del(f"users/{uid}/ref_by")                        # one-shot: each invited user counts once
-    await db_incr(f"users/{inviter}/ref_cnt")
-    cnt = int(await db_get(f"users/{inviter}/ref_cnt", 0) or 0)
-    done = int(await db_get(f"users/{inviter}/ref_done", 0) or 0)
-    need = max(1, int(CFG.get("ref_need", 5)))
-    days = max(1, int(CFG.get("ref_days", 3)))
-    iud = await db_get(f"users/{inviter}") or {}
-    lang = user_lang(iud)
-    await db_put(f"lb/{inviter}", {"n": cnt, "name": clip(iud.get("name") or "", 20), "h": 1 if iud.get("hide_lb") else 0})
-    if cnt // need > done:
-        n = cnt // need - done
-        until = await grant_temp_vip(inviter, days * n)
-        await db_put(f"users/{inviter}/ref_done", cnt // need)
-        text = tx(lang, "ref_reward", days=days * n, until=fmt_ts(until))
-    else:
-        text = tx(lang, "ref_progress", cnt=cnt % need, need=need)
-    try:
-        await ctx.bot.send_message(inviter, text)
-    except TelegramError as e:
-        log.info("referral notice failed: %s", e)
-
-
-async def ref_view(uid: int, lang: str) -> tuple[str, Kb]:
-    if not CFG.get("ref_on", True):
-        return tx(lang, "ref_off"), Kb([back_row(lang)])
-    ud = await db_get(f"users/{uid}")
-    cnt = int((ud or {}).get("ref_cnt", 0) or 0)
-    need = max(1, int(CFG.get("ref_need", 5)))
-    days = max(1, int(CFG.get("ref_days", 3)))
-    link = ref_link(uid)
-    text = tx(lang, "ref_info", need=need, days=days, cnt=cnt, left=need - cnt % need, link=link)
-    until = vip_until.get(uid, 0)
-    if until > time.time():
-        text += "\n\n" + tx(lang, "ref_vip_until", until=fmt_ts(until))
-    share = (f"https://t.me/share/url?url={urllib.parse.quote(link)}"
-             f"&text={urllib.parse.quote(tx(lang, 'ref_share_text'))}")
-    return text, Kb([[Btn(tx(lang, "b_ref_share"), url=share)], back_row(lang)])
-
-
-# ── history / favorites ──────────────────────────────────────────────────────
-async def hist_add(uid: int, media: dict) -> None:
-    key = media.get("key")
-    if not safe_key(key):
-        return
-    try:
-        await db_put(f"hist/{uid}/{key}", {"c": clip(media.get("creator") or "", 30),
-                                           "t": clip(media.get("title") or "", 60),
-                                           "ts": int(time.time()), "i": 1 if media.get("images") else 0})
-    except Exception as e:                                           # noqa: BLE001 — history is best effort
-        log.info("hist_add failed: %s", e)
-
-
-async def _load_items(path: str, cap: int) -> list:
-    d = await db_get(path)
-    if not isinstance(d, dict):
-        return []
-    items = [(k, v) for k, v in d.items() if safe_key(k) and isinstance(v, dict)]
-    items.sort(key=lambda kv: kv[1].get("ts", 0), reverse=True)
-    for k, _ in items[cap:]:                                         # keep the list tidy
-        await db_del(f"{path}/{k}")
-    return items[:cap]
-
-
-def _item_label(it: dict) -> str:
-    text = f"{'🖼' if it.get('i') else '🎬'} {it.get('c') or 'TikTok'}"
-    if it.get("t"):
-        text += f" · {it['t']}"
-    return clip(text, 40)
-
-
-async def list_view(uid: int, lang: str, kind: str, page: int) -> tuple[str, Kb]:
-    """kind: "hist" (download history) | "fav" (favorites)."""
-    hist = kind == "hist"
-    items = await _load_items(f"{'hist' if hist else 'fav'}/{uid}", HIST_MAX if hist else FAV_MAX)
-    if not items:
-        return tx(lang, "hist_empty" if hist else "favs_empty"), Kb([back_row(lang)])
-    pages = -(-len(items) // LIST_PAGE)
-    page = max(0, min(page, pages - 1))
-    rows = [[Btn(_item_label(v), callback_data=f"rs_{k}")] for k, v in items[page * LIST_PAGE:(page + 1) * LIST_PAGE]]
-    if pages > 1:
-        nav = []
-        if page > 0:
-            nav.append(Btn("◀️", callback_data=f"my_{kind}_{page - 1}"))
-        nav.append(Btn(f"{page + 1}/{pages}", callback_data="noop"))
-        if page < pages - 1:
-            nav.append(Btn("▶️", callback_data=f"my_{kind}_{page + 1}"))
-        rows.append(nav)
-    if hist:
-        rows.append([Btn(tx(lang, "b_hist_clear"), callback_data="hist_clr")])
-    rows.append(back_row(lang))
-    return tx(lang, "hist_title" if hist else "favs_title", n=len(items)), Kb(rows)
-
-
-async def _mark_fav_button(cb: "CB", key: str, on: bool) -> None:
-    try:
-        old = cb.q.message.reply_markup.inline_keyboard
-    except AttributeError:
-        return
-    rows = []
-    for row in old:
-        new = []
-        for b in row:
-            if b.callback_data == f"fav_{key}":
-                new.append(Btn(cb.t("b_faved" if on else "b_fav"), callback_data=b.callback_data))
-            elif b.callback_data:
-                new.append(Btn(b.text, callback_data=b.callback_data, api_kwargs=dict(getattr(b, "api_kwargs", None) or {})))
-            else:
-                new.append(Btn(b.text, url=b.url, api_kwargs=dict(getattr(b, "api_kwargs", None) or {})))
-        rows.append(new)
-    try:
-        await cb.q.message.edit_reply_markup(reply_markup=Kb(rows))
-    except TelegramError:
-        pass
-
-
-async def toggle_fav(cb: "CB", key: str) -> None:
-    if not safe_key(key):
-        return await cb.answer()
-    uid = cb.uid
-    if await db_get(f"fav/{uid}/{key}") is not None:
-        await db_del(f"fav/{uid}/{key}")
-        await cb.answer(cb.t("fav_removed"))
-        return await _mark_fav_button(cb, key, False)
-    if len((await db_get(f"fav/{uid}")) or {}) >= FAV_MAX:
-        return await cb.answer(cb.t("fav_full", n=FAV_MAX), True)
-    hit = await cache_get(key) or {}
-    await db_put(f"fav/{uid}/{key}", {"c": clip(hit.get("creator") or "TikTok", 30),
-                                      "t": clip(hit.get("title") or "", 60), "ts": int(time.time()), "i": 0})
-    await cb.answer(cb.t("fav_added"))
-    await _mark_fav_button(cb, key, True)
-
-
-# ── admin: referral settings ─────────────────────────────────────────────────
-async def ref_admin_view(cb: "CB") -> None:
-    need, days = int(CFG.get("ref_need", 5)), int(CFG.get("ref_days", 3))
-    on = CFG.get("ref_on", True)
-    rows = [
-        [Btn(cb.t("b_ref_toggle", status=status_word(cb.lang, on)), callback_data="sup_ref_t")],
-        [Btn("➖", callback_data="sup_ref_n-1"), Btn(f"👥 {need}", callback_data="noop"),
-         Btn("➕", callback_data="sup_ref_n+1")],
-        [Btn("-7", callback_data="sup_ref_d-7"), Btn("-1", callback_data="sup_ref_d-1"),
-         Btn(f"💎 {days}d", callback_data="noop"),
-         Btn("+1", callback_data="sup_ref_d+1"), Btn("+7", callback_data="sup_ref_d+7")],
-        back_row(cb.lang, "panel_unified"),
-    ]
-    await cb.edit(cb.t("sup_ref_title", status=status_word(cb.lang, on), need=need, days=days), Kb(rows))
-
-
-async def route_ref_admin(cb: "CB", data: str) -> None:
-    if data == "sup_ref_t":
-        await set_cfg(ref_on=not CFG.get("ref_on", True))
-    elif data.startswith(("sup_ref_n", "sup_ref_d")):
-        try:
-            delta = int(data[len("sup_ref_n"):])
-        except ValueError:
-            return await cb.answer()
-        if data.startswith("sup_ref_n"):
-            await set_cfg(ref_need=max(1, min(100, int(CFG.get("ref_need", 5)) + delta)))
-        else:
-            await set_cfg(ref_days=max(1, min(365, int(CFG.get("ref_days", 3)) + delta)))
-    await cb.answer()
-    await ref_admin_view(cb)
-
-
-# ── groups ───────────────────────────────────────────────────────────────────
-class _ReplyBot:
-    """In a group, every send to that chat becomes a reply to the user's link message."""
-    _WRAP = {"send_video", "send_audio", "send_photo", "send_document", "send_animation",
-             "send_media_group", "send_message"}
-
-    def __init__(self, bot, chat_id: int, mid: int):
-        self._bot, self._chat, self._mid = bot, chat_id, mid
-
-    def __getattr__(self, name):
-        fn = getattr(self._bot, name)
-        if name not in self._WRAP:
-            return fn
-
-        async def call(*a, **k):
-            target = a[0] if a else k.get("chat_id")
-            if target == self._chat:
-                k.setdefault("reply_parameters",
-                             ReplyParameters(message_id=self._mid, allow_sending_without_reply=True))
-            return await fn(*a, **k)
-        return call
-
-
-class _ReplyCtx:
-    def __init__(self, ctx, chat_id: int, mid: int):
-        self._ctx = ctx
-        self.bot = _ReplyBot(ctx.bot, chat_id, mid)
-
-    def __getattr__(self, name):
-        return getattr(self._ctx, name)
-
-
-async def on_my_chat_member(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """The bot was added to / removed from a group."""
-    ev = update.my_chat_member
-    if not ev or ev.chat.type not in ("group", "supergroup"):
-        return
-    old, new = ev.old_chat_member.status, ev.new_chat_member.status
-    gone = (ChatMemberStatus.LEFT, ChatMemberStatus.BANNED)
-    if new in gone:
-        await db_del(f"groups/{ev.chat.id}")
-        return
-    if old in gone and new in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR):
-        await db_put(f"groups/{ev.chat.id}", {"title": clip(ev.chat.title or "", 60), "ts": int(time.time())})
-        if CFG.get("groups_on", True):
-            lang = CFG.get("default_lang", "ku")
-            try:
-                await ctx.bot.send_message(ev.chat.id, tx(lang if lang in L else "ku", "grp_welcome"))
-            except TelegramError:
-                pass
 
 
 async def display_name(uid: int) -> str:
@@ -2028,16 +1196,11 @@ def _media_key(vid: str, url: str) -> str:
 
 def parse_tikwm(d: dict, src: str) -> dict:
     base = "https://www.tikwm.com"
-    def _cands(order: tuple) -> list:
-        out: list = []
-        for key, skey in order:
-            u = abs_url(d.get(key), base)
-            if u and u not in [c[0] for c in out]:
-                out.append((u, _to_int(d.get(skey))))
-        return out
-
-    cands    = _cands((("hdplay", "hd_size"), ("play", "size"), ("wmplay", "wm_size")))    # HD first
-    cands_sd = _cands((("play", "size"), ("hdplay", "hd_size"), ("wmplay", "wm_size")))    # standard first
+    cands: list = []
+    for key, skey in (("hdplay", "hd_size"), ("play", "size"), ("wmplay", "wm_size")):
+        u = abs_url(d.get(key), base)
+        if u and u not in [c[0] for c in cands]:
+            cands.append((u, _to_int(d.get(skey))))
     mi = d.get("music_info") if isinstance(d.get("music_info"), dict) else {}
     au = d.get("author") if isinstance(d.get("author"), dict) else {}
     return {
@@ -2048,7 +1211,6 @@ def parse_tikwm(d: dict, src: str) -> dict:
         "cover":    abs_url(d.get("cover"), base),
         "duration": _to_int(d.get("duration")),
         "videos":   cands,
-        "videos_sd": cands_sd,
         "audio":    abs_url(d.get("music") or mi.get("play"), base),
         "a_title":  mi.get("title") or "",
         "a_author": mi.get("author") or au.get("nickname") or "TikTok",
@@ -2251,30 +1413,74 @@ def profile_card(lang: str, p: dict) -> str:
               bot=esc(BOT_USERNAME))
 
 
-def profile_kb(lang: str, user: str, followed: bool = False) -> Kb:
+def profile_kb(lang: str, user: str) -> Kb:
     rows = []
     if user.isascii() and len(user) <= 24:            # callback_data is limited to 64 bytes
-        rows.append([Btn(tx(lang, "b_story"), callback_data=f"pf_s_{user}"),
-                     Btn(tx(lang, "pf_b_vids"), callback_data=f"pf_v_{user}")])
+        first = [Btn(tx(lang, "b_story"), callback_data=f"pf_s_{user}")]
+        if POSTS_API_URL:                                # the posts list needs a provider the server IP can reach
+            first.append(Btn(tx(lang, "pf_b_vids"), callback_data=f"pf_v_{user}"))
+        rows.append(first)
         rows.append([Btn(tx(lang, "pf_b_file"), callback_data=f"pf_f_{user}"),
                      Btn(tx(lang, "pf_b_open"), url=f"https://www.tiktok.com/@{user}")])
-        if _USER_RE.fullmatch(user):
-            rows.append([Btn(tx(lang, "fw_b_on" if followed else "fw_b_off"), callback_data=f"fw_{user}")])
     rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
     return Kb(rows)
 
 
 async def fetch_latest(username: str, n: int) -> list | None:
     """Newest `n` VIDEO posts as normalised media dicts · [] = none · None = provider failure."""
-    t = min(int(CFG.get("api_timeout", 40)), 20)
-    try:
-        r = await http().get("https://www.tikwm.com/api/user/posts",
-                             params={"unique_id": f"@{username}", "count": 30, "cursor": 0}, timeout=t)
-        j = r.json()
-    except Exception as e:
-        log.info("tikwm posts failed: %s", e)
-        return None
-    if j.get("code") != 0 or not isinstance(j.get("data"), dict):
+    t = 10
+    pw = {"unique_id": f"@{username}", "count": 20, "cursor": 0, "web": 1, "hd": 1}
+    variants = [("post", {"data": pw}),                                  # the tikwm web app itself uses POST
+                ("get", {"params": {"unique_id": f"@{username}", "count": 20, "cursor": 0}}),
+                ("post", {"data": {"unique_id": username, "count": 12, "cursor": 0}}),
+                ("get", {"params": {"unique_id": username, "count": 12, "cursor": 0}})]
+    j, tries, blocked = None, 0, False
+    if POSTS_API_URL:                                   # own / paid provider first
+        try:
+            hdr = json.loads(POSTS_API_HEADERS) if POSTS_API_HEADERS else {}
+            r = await http().get(POSTS_API_URL.replace("{username}", username).replace("{count}", "20"),
+                                 headers=hdr, timeout=t)
+            jj = r.json()
+            if isinstance(jj, dict) and jj.get("code") == 0 and isinstance(jj.get("data"), dict) and jj["data"].get("videos"):
+                j = jj
+                variants = []
+        except Exception as e:
+            log.info("custom posts provider failed: %s", e)
+    for meth, kw in variants:
+        for retry in range(3):                          # the free API answers "limit 1 request/second" when busy
+            tries += 1
+            try:
+                r = await getattr(http(), meth)("https://www.tikwm.com/api/user/posts", timeout=t, **kw)
+                j = r.json()
+            except Exception as e:
+                log.info("tikwm posts %s failed: %s", meth, e)
+                st = getattr(locals().get("r"), "status_code", "?")
+                if st == 403 and "just a moment" in (getattr(locals().get("r"), "text", "") or "").lower():
+                    blocked = True                      # Cloudflare challenge: every variant gets the same wall
+                body = (getattr(locals().get("r"), "text", "") or "")[:50].replace("\n", " ")
+                _DISC_ERR["msg"] = f"posts {meth}: {type(e).__name__} http={st} body={body!r}"
+                j = None
+                break
+            if isinstance(j, dict) and j.get("code") != 0 and "limit" in str(j.get("msg") or "").lower():
+                await asyncio.sleep(1.4)
+                continue
+            break
+        ok = isinstance(j, dict) and j.get("code") == 0 and isinstance(j.get("data"), dict) \
+            and bool(j["data"].get("videos"))
+        if ok:
+            break
+        if isinstance(j, dict):
+            _DISC_ERR["msg"] = f"posts: code={j.get('code')} msg={str(j.get('msg'))[:100]}"
+            log.info("tikwm posts @%s → %s", username, _DISC_ERR["msg"])
+            if j.get("code") == 0 and isinstance(j.get("data"), dict):
+                return []                              # reachable, account simply has no posts
+        if blocked:
+            _DISC_ERR["msg"] = "posts: 403 Cloudflare challenge — tikwm blocks this server IP. Set POSTS_API_URL (own/paid provider)."
+            break
+        if tries >= 8:
+            break
+        await asyncio.sleep(1.2)
+    if not isinstance(j, dict) or j.get("code") != 0 or not isinstance(j.get("data"), dict):
         return None
     vids = [d for d in (j["data"].get("videos") or []) if isinstance(d, dict)]
     vids.sort(key=lambda d: _to_int(d.get("create_time") or d.get("createTime")), reverse=True)  # pinned posts lead otherwise
@@ -2282,10 +1488,9 @@ async def fetch_latest(username: str, n: int) -> list | None:
     for d in vids:
         d = dict(d)
         d.setdefault("id", d.get("video_id"))
-        if d.get("images"):
-            continue                                   # photo post: its `play` link is only the music
-        m = parse_tikwm(d, f"https://www.tiktok.com/@{username}/video/{d.get('id')}")
-        if m["videos"]:
+        is_photo = bool(d.get("images"))
+        m = parse_tikwm(d, f"https://www.tiktok.com/@{username}/{'photo' if is_photo else 'video'}/{d.get('id')}")
+        if m["images"] or m["videos"]:
             out.append(m)
         if len(out) >= n:
             break
@@ -2804,12 +2009,10 @@ async def download_bytes(url: str, max_bytes: int = TG_MAX_BYTES, timeout: float
         return None
 
 
-async def fetch_video(media: dict, quality: str = "hd") -> tuple[bytes | None, str | None]:
-    """Try every candidate URL (HD first, or standard first when quality == "sd").
-    → (bytes | None, direct_url_if_too_big | None)"""
+async def fetch_video(media: dict) -> tuple[bytes | None, str | None]:
+    """Try every candidate URL (HD first). → (bytes | None, direct_url_if_too_big | None)"""
     big = None
-    cands = (media.get("videos_sd") or media["videos"]) if quality == "sd" else media["videos"]
-    for url, size in cands:
+    for url, size in media["videos"]:
         if size and size > TG_MAX_BYTES:
             big = big or url
             continue
@@ -2876,8 +2079,8 @@ def safe_name(s: str, default: str = "tiktok") -> str:
 
 def build_caption(m: dict) -> str:
     title = esc(clip(m["title"], 200)) or "TikTok"
-    stats = (f"👁 {fmt_num(m['views'])}\n❤️ {fmt_num(m['likes'])}\n"
-             f"💬 {fmt_num(m['comments'])}\n🔁 {fmt_num(m['shares'])}")
+    stats = (f"👁 {fmt_num(m['views'])}   ❤️ {fmt_num(m['likes'])}   "
+             f"💬 {fmt_num(m['comments'])}   🔁 {fmt_num(m['shares'])}")
     return (f"🎬 <b>{title}</b>\n👤 {esc(clip(m['creator'], 60))}\n\n"
             f"<blockquote>{stats}</blockquote>\n"
             f"⚡ <a href=\"https://t.me/{BOT_USERNAME}\">@{esc(BOT_USERNAME)}</a>")
@@ -2898,19 +2101,7 @@ def result_kb(lang: str, m: dict, with_audio: bool, direct: str | None = None) -
         rows.append(top)
     if direct and _valid_button_url(direct):
         rows.append([Btn(tx(lang, "b_direct"), url=direct)])
-    extra = []
-    key = str(m.get("key") or "")
-    if safe_key(key) and _valid_button_url(m.get("src", "")):
-        if m.get("videos"):
-            extra += [Btn(tx(lang, "b_gif"), callback_data=f"dl_gif_{key}"),
-                      Btn(tx(lang, "b_sticker"), callback_data=f"dl_stk_{key}")]
-        extra.append(Btn(tx(lang, "b_comments"), callback_data=f"dl_cmt_{key}"))
-    if extra:
-        rows.append(extra)
-    last = [Btn(tx(lang, "b_delete"), callback_data="close")]
-    if safe_key(key):
-        last.insert(0, Btn(tx(lang, "b_fav"), callback_data=f"fav_{key}"))
-    rows.append(last)
+    rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
     return Kb(rows)
 
 
@@ -2918,18 +2109,17 @@ def result_kb(lang: str, m: dict, with_audio: bool, direct: str | None = None) -
 _UP = dict(read_timeout=120, write_timeout=120, connect_timeout=20, pool_timeout=20)
 
 
-async def send_video_file(ctx, chat_id: int, m: dict, data: bytes, kb: Kb):
-    """Upload a video; returns the sent Message (its file_id is cached by the caller)."""
+async def send_video_file(ctx, chat_id: int, m: dict, data: bytes, kb: Kb) -> None:
     name = f"{safe_name(m['creator'])}_{m['key']}.mp4"
     try:
-        return await ctx.bot.send_video(
+        await ctx.bot.send_video(
             chat_id, InputFile(data, filename=name), caption=build_caption(m),
             duration=m.get("duration") or None, supports_streaming=True, reply_markup=kb, **_UP,
         )
     except BadRequest as e:                       # e.g. codec/format rejected → send as a file
         log.info("send_video rejected (%s) → document fallback", e)
-        return await ctx.bot.send_document(chat_id, InputFile(data, filename=name),
-                                           caption=build_caption(m), reply_markup=kb, **_UP)
+        await ctx.bot.send_document(chat_id, InputFile(data, filename=name),
+                                    caption=build_caption(m), reply_markup=kb, **_UP)
 
 
 async def send_photo_album(ctx, chat_id: int, m: dict, files: list) -> int:
@@ -2981,16 +2171,17 @@ def aedit_menu_kb(lang: str) -> Kb:
                [Btn(tx(lang, "b_aedit_back"), callback_data="aedit_x")]])
 
 
-async def send_audio_file(ctx, chat_id: int, s: dict, data: bytes, ctype: str, kb: Kb | None = None):
+async def send_audio_file(ctx, chat_id: int, s: dict, data: bytes, ctype: str, kb: Kb | None = None) -> None:
     ext = _ext(ctype, "mp3")
     title = clip(s.get("a_title") or s.get("title") or "TikTok", 60)
     fn = f"{safe_name(title, 'audio')}.{ext}"
     performer = clip(s.get("a_author") or s.get("creator") or "TikTok", 60)
     try:
-        return await ctx.bot.send_audio(chat_id, InputFile(data, filename=fn), title=title, performer=performer,
-                                        caption=f"🎵 {bot_tag()}", reply_markup=kb, **_UP)
+        await ctx.bot.send_audio(chat_id, InputFile(data, filename=fn), title=title, performer=performer,
+                                 caption=f"🎵 <a href=\"https://t.me/{BOT_USERNAME}\">@{esc(BOT_USERNAME)}</a>",
+                                 reply_markup=kb, **_UP)
     except BadRequest:
-        return await ctx.bot.send_document(chat_id, InputFile(data, filename=fn), reply_markup=kb, **_UP)
+        await ctx.bot.send_document(chat_id, InputFile(data, filename=fn), reply_markup=kb, **_UP)
 
 
 async def send_avatar_photo(ctx, chat_id: int, lang: str, username: str, data: bytes, ctype: str,
@@ -3041,12 +2232,6 @@ def menu_view(uid: int, lang: str, name: str) -> tuple[str, Kb]:
          Btn(tx(lang, "b_avatar"), callback_data="ask_avatar")],
         [Btn(tx(lang, "b_story"), callback_data="ask_story"),
          Btn(tx(lang, "b_disc"), callback_data="ask_disc")],
-        [Btn(tx(lang, "b_mkstk"), callback_data="ask_sticker"),
-         Btn(tx(lang, "b_ref"), callback_data="show_ref")],
-        [Btn(tx(lang, "b_hist"), callback_data="my_hist_0"),
-         Btn(tx(lang, "b_favs"), callback_data="my_fav_0")],
-        [Btn(tx(lang, "b_fwlist"), callback_data="fw_list"),
-         Btn(tx(lang, "b_top"), callback_data="show_top")],
         [Btn(tx(lang, "b_profile"), callback_data="show_profile"),
          Btn(tx(lang, "b_vip"), callback_data="show_vip")],
         [Btn(tx(lang, "b_lang"), callback_data="show_settings"),
@@ -3056,15 +2241,6 @@ def menu_view(uid: int, lang: str, name: str) -> tuple[str, Kb]:
     if is_admin(uid):
         rows.append([Btn(tx(lang, "b_panel"), callback_data="panel_unified")])
     return text, Kb(rows)
-
-
-async def settings_view(uid: int, lang: str) -> tuple[str, Kb]:
-    """Language + download quality."""
-    q = await user_quality(uid)
-    text = (f"{tx(lang, 'lang_title')}\n\n{tx(lang, 'lang_current', cur=LANG_NAMES.get(lang, '?'))}\n\n"
-            f"{tx(lang, 'q_title')}\n{tx(lang, 'q_current', cur=tx(lang, 'q_' + q))}")
-    qrow = [Btn(("✅ " if q == c else "") + tx(lang, "qb_" + c), callback_data=f"set_q_{c}") for c in QUALITIES]
-    return text, Kb(lang_buttons("set_lang_") + [qrow, back_row(lang)])
 
 
 def lang_buttons(prefix: str) -> list:
@@ -3111,6 +2287,16 @@ async def gate_message(update: Update, ctx, uid: int, lang: str) -> bool:
 
 async def safe_edit(message, text: str, kb: Kb | None = None) -> None:
     try:
+        if getattr(message, "photo", None):                 # picture message → the text is its caption
+            if len(plain(text)) <= 1000:
+                await message.edit_caption(caption=text, reply_markup=kb)
+            else:                                           # too long for a caption → replace by a text message
+                await message.get_bot().send_message(message.chat_id, text, reply_markup=kb)
+                try:
+                    await message.delete()
+                except TelegramError:
+                    pass
+            return
         await message.edit_text(text, reply_markup=kb)
     except BadRequest as e:
         if "not modified" not in str(e).lower():
@@ -3154,16 +2340,45 @@ async def chat_action(ctx, chat_id: int, action: str) -> None:
 # ══════════════════════════════════════════════════════════════════════════════
 # 8 · COMMANDS
 # ══════════════════════════════════════════════════════════════════════════════
+WELCOME_IMG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "welcome.jpg")
+_welcome_fid: dict = {"id": None}
+
+
+async def send_menu(ctx, chat_id: int, uid: int, lang: str, name: str) -> None:
+    """Main menu = the welcome picture with the text as caption and the menu buttons under it
+    (falls back to a plain text menu if the picture is missing or the caption is too long)."""
+    text, kb = menu_view(uid, lang, name)
+    if len(plain(text)) <= 1000 and (os.path.exists(WELCOME_IMG) or _welcome_fid["id"] or DB_URL):
+        try:
+            fid = _welcome_fid["id"] or (await db_get("sys/welcome_fid") if DB_URL else None)
+            if isinstance(fid, str) and fid:
+                try:
+                    await ctx.bot.send_photo(chat_id, fid, caption=text, reply_markup=kb)
+                    _welcome_fid["id"] = fid
+                    return
+                except TelegramError as e:
+                    log.info("welcome file_id rejected: %s", e)
+                    _welcome_fid["id"] = None
+            if os.path.exists(WELCOME_IMG):
+                with open(WELCOME_IMG, "rb") as f:
+                    m = await ctx.bot.send_photo(chat_id, InputFile(f.read(), filename="welcome.jpg"),
+                                                 caption=text, reply_markup=kb)
+                if m.photo:
+                    _welcome_fid["id"] = m.photo[-1].file_id
+                    if DB_URL:
+                        await db_put("sys/welcome_fid", m.photo[-1].file_id)
+                return
+        except TelegramError as e:
+            log.info("send_menu photo failed: %s", e)
+    await ctx.bot.send_message(chat_id, text, reply_markup=kb)
+
+
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     ud, lang = await ensure_user(update, ctx)
-    arg = (ctx.args[0] if getattr(ctx, "args", None) else "") or ""
-    if arg.startswith("ref_") and ud.get("_new"):                    # came through someone's invite link
-        await register_referral(uid, arg[4:])
     if not await gate_message(update, ctx, uid, lang):
         return
-    text, kb = menu_view(uid, lang, update.effective_user.first_name or "")
-    await update.effective_message.reply_text(text, reply_markup=kb)
+    await send_menu(ctx, update.effective_chat.id, uid, lang, update.effective_user.first_name or "")
 
 
 async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -3253,9 +2468,8 @@ async def route(cb: CB, data: str):
         if action == "adm":
             admins_set.add(tid); await save_sys("admins")
             return await cb.answer(cb.t("act_adm_added", id=tid), True)
-        if action == "inf":                                        # a real message: an alert is cut at 190 chars and can't hold a link
-            await cb.answer()
-            return await cb.ctx.bot.send_message(cb.q.message.chat_id, await userinfo_text(cb.lang, tid))
+        if action == "inf":
+            return await cb.answer(await userinfo_text(cb.lang, tid), True)
         return
 
     # ── user area ────────────────────────────────────────────────────────────
@@ -3263,8 +2477,15 @@ async def route(cb: CB, data: str):
         ok, _ = await check_join(uid, cb.ctx)
         if not ok and not bypass_join(uid):
             return await cb.answer(cb.t("not_joined"), True)
-        text, kb = menu_view(uid, lang, cb.name)
-        return await cb.edit(text, kb)
+        if cb.q.message.photo:
+            text, kb = menu_view(uid, lang, cb.name)
+            return await cb.edit(text, kb)
+        try:                                                # coming back from a text page → picture menu again
+            await cb.q.message.delete()
+        except TelegramError:
+            pass
+        await cb.answer()
+        return await send_menu(cb.ctx, cb.q.message.chat_id, uid, lang, cb.name)
 
     if data == "close":
         try:
@@ -3276,68 +2497,6 @@ async def route(cb: CB, data: str):
     if data == "ask_link":
         await cb.answer()
         return await cb.q.message.reply_text(cb.t("ask_link_prompt"), reply_markup=ForceReply(selective=True))
-
-    if data == "ask_sticker":
-        await cb.answer()
-        text, kb = await stk_menu_view(uid, lang)
-        return await cb.edit(text, kb)
-
-    if data == "stk_new":
-        await cb.answer()
-        return await cb.q.message.reply_text(cb.t("stk_ask_title"), reply_markup=ForceReply(selective=True))
-
-    if data == "stk_list":
-        await cb.answer()
-        text, kb = await stk_list_view(uid, lang)
-        return await cb.edit(text, kb)
-
-    if data.startswith("stk_use_"):
-        hx = data[len("stk_use_"):]
-        packs = await stk_packs(uid)
-        if _HEX_RE.fullmatch(hx) and hx in packs:
-            await db_put(f"stk/{uid}/{_active_key(packs[hx])}", hx)
-            await db_del(f"stk/{uid}/pending")
-            await cb.answer(cb.t("stk_switched"))
-        else:
-            await cb.answer()
-        text, kb = await stk_list_view(uid, lang)
-        return await cb.edit(text, kb)
-
-    if data.startswith("stk_del_"):                                      # step 1: ask "are you sure?"
-        hx = data[len("stk_del_"):]
-        p = (await stk_packs(uid)).get(hx) if _HEX_RE.fullmatch(hx) else None
-        await cb.answer()
-        if not p:
-            text, kb = await stk_list_view(uid, lang)
-            return await cb.edit(text, kb)
-        return await cb.edit(cb.t("stk_del_confirm", title=esc(p["title"]), n=int(p.get("n", 0))),
-                             Kb([[Btn(cb.t("b_stk_del_yes"), callback_data=f"stk_delyes_{hx}")],
-                                 [Btn(cb.t("b_stk_del_no"), callback_data="stk_list")]]))
-
-    if data.startswith("stk_delyes_"):                                   # step 2: really delete
-        hx = data[len("stk_delyes_"):]
-        packs = await stk_packs(uid)
-        p = packs.get(hx) if _HEX_RE.fullmatch(hx) else None             # only the user's own packs
-        if p:
-            try:
-                await cb.ctx.bot.delete_sticker_set(p["name"])
-            except TelegramError as e:
-                if not any(w in str(e).lower() for w in ("stickerset_invalid", "invalid", "not found")):
-                    await report_error(cb.ctx, e, "stk_delete")
-                    return await cb.answer(cb.t("stk_del_fail"), True)    # (already gone in Telegram → just clean up)
-            await db_del(f"stkpacks/{uid}/{hx}")
-            akey = _active_key(p)
-            if (await stk_state(uid)).get(akey) == hx:
-                rest = {k: v for k, v in packs.items() if k != hx and _fmt_of(v) == _fmt_of(p)}
-                if rest:
-                    await db_put(f"stk/{uid}/{akey}", max(rest, key=lambda k: rest[k].get("ts", 0)))
-                else:
-                    await db_del(f"stk/{uid}/{akey}")
-            await cb.answer(cb.t("stk_deleted"))
-        else:
-            await cb.answer()
-        text, kb = await stk_list_view(uid, lang)
-        return await cb.edit(text, kb)
 
     if data == "ask_avatar":
         await cb.answer()
@@ -3482,101 +2641,30 @@ async def route(cb: CB, data: str):
         return await cb.edit(text, Kb([back_row(lang)]))
 
     if data == "show_vip":
-        text, kb = await vip_view(uid, lang)
-        return await cb.edit(text, kb)
-
-    if data.startswith("buy_"):                                          # 💎 pay with Telegram Stars
-        tail = data[len("buy_"):]
-        return await send_stars_invoice(cb, int(tail) if tail.isdigit() else -1)
-
-    if data == "show_top":                                               # 🏆 best inviters
-        text, kb = await lb_view(uid, lang)
-        return await cb.edit(text, kb)
-
-    if data == "lb_hide":
-        hide = await lb_toggle_hide(uid)
-        await cb.answer(cb.t("lb_toast_hide" if hide else "lb_toast_show"))
-        text, kb = await lb_view(uid, lang)
-        return await cb.edit(text, kb)
-
-    if data == "fw_list":                                                # 🔔 followed accounts
-        await cb.answer()
-        text, kb = await follow_list_view(uid, lang)
-        return await cb.edit(text, kb)
-
-    if data.startswith(("fwx_", "fwu_")):
-        user = data[len("fwx_"):]
-        if _USER_RE.fullmatch(user):
-            await follow_remove(uid, user)
-        await cb.answer(cb.t("fw_off"))
-        if data.startswith("fwx_"):
-            text, kb = await follow_list_view(uid, lang)
-            return await cb.edit(text, kb)
-        return
-
-    if data.startswith("fw_"):
-        return await toggle_follow(cb, data[len("fw_"):])
-
-    if data.startswith("ss_"):                                           # 🎨 sticker shape chosen
-        return await choose_shape(cb, data)
-
-    if data == "show_ref":
-        text, kb = await ref_view(uid, lang)
-        return await cb.edit(text, kb)
-
-    if data.startswith(("my_hist_", "my_fav_")):
-        tail = data.rsplit("_", 1)[1]
-        text, kb = await list_view(uid, lang, "hist" if data.startswith("my_hist_") else "fav",
-                                   int(tail) if tail.isdigit() else 0)
-        return await cb.edit(text, kb)
-
-    if data == "hist_clr":
-        await db_del(f"hist/{uid}")
-        await cb.answer(cb.t("hist_cleared"))
-        text, kb = await list_view(uid, lang, "hist", 0)
-        return await cb.edit(text, kb)
-
-    if data.startswith("fav_"):
-        return await toggle_fav(cb, data[len("fav_"):])
-
-    if data.startswith("rs_"):                                       # send a history / favorite item again
-        hit = await cache_get(data[len("rs_"):])
-        if not hit or not hit.get("src"):
-            return await cb.answer(cb.t("session_expired"), True)
-        await cb.answer()
-        return await process_link(cb.update, cb.ctx, hit["src"], lang, time.monotonic())
+        return await cb.edit(cb.t("vip_info", dev=esc(DEV)), Kb([back_row(lang)]))
 
     if data == "show_help":
         return await cb.edit(cb.t("help", dev=esc(DEV)), Kb([back_row(lang)]))
 
     if data == "show_settings":
-        text, kb = await settings_view(uid, lang)
-        return await cb.edit(text, kb)
-
-    if data.startswith("set_q_"):
-        q = data[len("set_q_"):]
-        if q in QUALITIES:
-            await db_put(f"users/{uid}/q", q)
-            await cb.answer(cb.t("q_saved"))
-            text, kb = await settings_view(uid, lang)
-            return await cb.edit(text, kb)
-        return
+        return await cb.edit(f"{cb.t('lang_title')}\n\n{cb.t('lang_current', cur=LANG_NAMES.get(lang, '?'))}",
+                             Kb(lang_buttons("set_lang_") + [back_row(lang)]))
 
     if data.startswith("set_lang_"):
         chosen = data[len("set_lang_"):]
         if chosen in L:
             await db_put(f"users/{uid}/lang", chosen)
             cb.lang = chosen
-            text, kb = menu_view(uid, chosen, cb.name)
             await cb.answer(tx(chosen, "lang_saved"))
-            return await cb.edit(text, kb)
+            try:
+                await cb.q.message.delete()
+            except TelegramError:
+                pass
+            return await send_menu(cb.ctx, cb.q.message.chat_id, uid, chosen, cb.name)
         return
 
     if data.startswith("dl_audio_"):
         return await send_audio_from_session(cb, data[len("dl_audio_"):])
-
-    if data.startswith(("dl_gif_", "dl_stk_", "dl_cmt_")):
-        return await send_extra(cb, data)
 
     # ── staff areas ──────────────────────────────────────────────────────────
     if is_admin(uid) and data != "noop":
@@ -3589,1754 +2677,14 @@ async def route(cb: CB, data: str):
         return await route_owner(cb, data) if is_owner(uid) else await cb.answer(cb.t("no_perm"), True)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 9b · EXTRAS under a result:  GIF · sticker · comments   (+ ffmpeg helpers)
-# ══════════════════════════════════════════════════════════════════════════════
-_FF_UNSET = object()
-_ff_path = _FF_UNSET
-
-
-def ffmpeg_path() -> str | None:
-    """System ffmpeg, or the one bundled by the optional `imageio-ffmpeg` package."""
-    global _ff_path
-    if _ff_path is _FF_UNSET:
-        p = shutil.which("ffmpeg")
-        if not p:
-            try:
-                import imageio_ffmpeg                                   # type: ignore
-                p = imageio_ffmpeg.get_ffmpeg_exe()
-            except Exception:                                           # noqa: BLE001
-                p = None
-        _ff_path = p
-    return _ff_path
-
-
-async def run_ffmpeg(args: list, data: bytes, out_ext: str, timeout: float = 30.0, extra: list | None = None) -> bytes | None:
-    exe = ffmpeg_path()
-    if not exe:
-        return None
-    with tempfile.TemporaryDirectory() as d:
-        src, dst = os.path.join(d, "in.mp4"), os.path.join(d, f"out.{out_ext}")
-        with open(src, "wb") as f:
-            f.write(data)
-        more: list = []
-        for n, (pre, blob) in enumerate(extra or []):                    # e.g. a looped PNG mask as input #1
-            path = os.path.join(d, f"extra{n}.png")
-            with open(path, "wb") as f:
-                f.write(blob)
-            more += [*pre, "-i", path]
-        proc = await asyncio.create_subprocess_exec(
-            exe, "-y", "-v", "error", "-i", src, *more, *args, dst,
-            stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
-        try:
-            _, err = await asyncio.wait_for(proc.communicate(), timeout)
-        except asyncio.TimeoutError:
-            proc.kill()
-            log.info("ffmpeg timed out")
-            return None
-        if proc.returncode != 0 or not os.path.exists(dst):
-            log.info("ffmpeg failed: %s", (err or b"")[-300:])
-            return None
-        with open(dst, "rb") as f:
-            return f.read()
-
-
-async def to_gif_mp4(data: bytes) -> bytes | None:
-    """Telegram 'GIF' = silent looping MP4. Trim + shrink it (needs ffmpeg)."""
-    out = await run_ffmpeg(
-        ["-t", str(GIF_SECONDS), "-an", "-vf", "scale='min(480,iw)':-2,fps=24",
-         "-c:v", "libx264", "-preset", "veryfast", "-crf", "28", "-pix_fmt", "yuv420p",
-         "-movflags", "+faststart"], data, "mp4", 35)
-    return out if out and len(out) <= TG_MAX_BYTES else None
-
-
-async def ffmpeg_probe(data: bytes) -> dict:
-    """{"w","h","dur"} of the video as it is DISPLAYED (rotation applied) — read from `ffmpeg -i` (no ffprobe needed)."""
-    exe = ffmpeg_path()
-    if not exe:
-        return {}
-    with tempfile.TemporaryDirectory() as d:
-        src = os.path.join(d, "in.mp4")
-        with open(src, "wb") as f:
-            f.write(data)
-        proc = await asyncio.create_subprocess_exec(exe, "-hide_banner", "-i", src,
-                                                    stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
-        try:
-            _, err = await asyncio.wait_for(proc.communicate(), 15)
-        except asyncio.TimeoutError:
-            proc.kill()
-            return {}
-    return _parse_probe((err or b"").decode("utf-8", "ignore"))
-
-
-def _parse_probe(text: str) -> dict:
-    out: dict = {}
-    m = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", text)
-    if m:
-        out["dur"] = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
-    m = re.search(r"Video:[^\n]*?[,\s](\d{2,5})x(\d{2,5})[\s,\[]", text)
-    if m:
-        w, h = int(m.group(1)), int(m.group(2))
-        r = re.search(r"rotation of (-?\d+(?:\.\d+)?) degrees", text)
-        if r and int(abs(float(r.group(1)))) % 180 == 90:               # phone videos are often stored sideways
-            w, h = h, w
-        out.update(w=w, h=h)
-    return out
-
-
-def _fit_size(w: int, h: int) -> tuple:
-    """Even width/height with the longer side exactly 512 (what a Telegram video sticker needs)."""
-    f = 512 / max(w, h)
-    return max(2, int(round(w * f / 2)) * 2), max(2, int(round(h * f / 2)) * 2)
-
-
-def _caption_png(size: tuple, text: str, shape: str, font_choice: str, color: str) -> bytes | None:
-    layer = _caption_layer(size, text, shape, font_choice, color)
-    if layer is None:
-        return None
-    buf = io.BytesIO()
-    layer.save(buf, "PNG")
-    return buf.getvalue()
-
-
-async def to_sticker_webm(data: bytes, shape: str = "round", text: str = "", font_choice: str = "auto",
-                          color: str = "w") -> bytes | None:
-    """Telegram video sticker: WEBM/VP9, ≤3 s, one side exactly 512 px, ≤256 KB, no audio (needs ffmpeg).
-    shape: round · sq · circle.  text: optional caption drawn over the video (needs Pillow)."""
-    info = await ffmpeg_probe(data)
-    lim = f"{min(2.9, float(info.get('dur') or 2.9)) + 0.1:.2f}"          # looped helper images must not outlive the video
-    sq = shape in ("sq", "circle")
-    pre = "crop='min(iw,ih)':'min(iw,ih)'," if sq else ""                # centre square crop
-    overlay, size = None, (512, 512)
-    if text and text_supported(text) and (sq or (info.get("w") and info.get("h"))):
-        size = (512, 512) if sq else _fit_size(info["w"], info["h"])
-        try:
-            overlay = await asyncio.to_thread(_caption_png, size, text, shape, font_choice, color)
-        except Exception as e:                                          # noqa: BLE001 — never lose the sticker over its text
-            log.info("video caption failed: %s", e)
-    alpha = {"round": _round_alpha_expr, "circle": _circle_alpha_expr}.get(shape)
-    geq = f"geq=lum='p(X,Y)':cb='p(X,Y)':cr='p(X,Y)':a='{alpha()}'" if alpha else ""     # square → no mask
-    mask = _circle_mask_png() if shape == "circle" else None
-    for crf, fps in ((34, 30), (42, 24), (50, 20), (58, 15)):
-        scale = f"scale={size[0]}:{size[1]},fps={fps}" if overlay else f"scale=512:512:force_original_aspect_ratio=decrease,fps={fps}"
-        parts, extra, last, idx = [f"[0:v]{pre}{scale},format=yuva420p[b0]"], [], "b0", 1
-        if overlay:                                                      # caption PNG, same size as the picture
-            extra.append((["-loop", "1", "-t", lim], overlay))
-            parts.append(f"[{idx}:v]format=rgba[t];[{last}][t]overlay=0:0:format=auto,format=yuva420p[b1]")
-            last, idx = "b1", idx + 1
-        if mask:                                                         # circle: alphamerge with a looped mask image
-            extra.append((["-loop", "1", "-t", lim], mask))
-            parts.append(f"[{last}]format=yuv420p[bv];[{idx}:v]format=gray[m];[bv][m]alphamerge[out]")
-        else:
-            parts.append(f"[{last}]{geq or 'null'}[out]")
-        out = await run_ffmpeg(
-            ["-t", "2.9", "-an", "-filter_complex", ";".join(parts), "-map", "[out]",
-             "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "0", "-crf", str(crf),
-             "-deadline", "realtime", "-cpu-used", "5", "-row-mt", "1", "-auto-alt-ref", "0"],
-            data, "webm", 25, extra or None)
-        if out and len(out) <= STICKER_MAX:
-            return out
-    return None
-
-
-_CIRCLE_MASK = None
-
-
-def _circle_mask_png(size: int = 512) -> bytes | None:
-    """512×512 anti-aliased circle (white inside) — fed to ffmpeg's alphamerge. None when Pillow is missing."""
-    global _CIRCLE_MASK
-    if _CIRCLE_MASK is None:
-        try:
-            from PIL import Image, ImageDraw                            # type: ignore
-            k = 4
-            m = Image.new("L", (size * k, size * k), 0)
-            ImageDraw.Draw(m).ellipse((0, 0, size * k - 1, size * k - 1), fill=255)
-            buf = io.BytesIO()
-            m.resize((size, size), Image.LANCZOS).save(buf, "PNG")
-            _CIRCLE_MASK = buf.getvalue()
-        except Exception as e:                                          # noqa: BLE001
-            log.info("circle mask failed: %s", e)
-            _CIRCLE_MASK = b""
-    return _CIRCLE_MASK or None
-
-
-def _circle_alpha_expr() -> str:
-    """ffmpeg geq expression → alpha 0 outside the inscribed circle (anti-aliased edge)."""
-    r = "(min(W,H)/2)"
-    return f"clip(255*({r}+0.5-hypot(X+0.5-W/2,Y+0.5-H/2)),0,255)"
-
-
-def _round_alpha_expr() -> str:
-    """ffmpeg geq expression → alpha 0 outside a rounded rectangle (anti-aliased edge)."""
-    r = f"{STICKER_RADIUS}*min(W,H)"
-    return (f"st(0,abs(X+0.5-W/2)-(W/2-{r}));st(1,abs(Y+0.5-H/2)-(H/2-{r}));"
-            f"if(gt(ld(0),0)*gt(ld(1),0),clip(255*({r}+0.5-hypot(ld(0),ld(1))),0,255),255)")
-
-
-def _static_sticker(img: bytes, shape: str = "round", text: str = "", font_choice: str = "auto", color: str = "w") -> bytes | None:
-    """Fallback when ffmpeg is missing: the video cover as a static 512 px WEBP sticker (needs Pillow)."""
-    try:
-        from PIL import Image, ImageChops, ImageDraw, ImageOps          # type: ignore
-        src = Image.open(io.BytesIO(img))
-        try:
-            src.draft("RGB", (1024, 1024))                              # JPEG: decode small → low memory
-        except Exception:                                               # noqa: BLE001
-            pass
-        base = ImageOps.exif_transpose(src).convert("RGBA")
-        im = (ImageOps.fit(base, (512, 512), Image.LANCZOS) if shape in ("sq", "circle")
-              else ImageOps.contain(base, (512, 512)))
-        layer = _caption_layer(im.size, text, shape, font_choice, color) if text else None
-        if layer is not None:                                           # caption text under the rounded mask
-            im = Image.alpha_composite(im, layer)
-        w, h = im.size
-        if shape != "sq":                                               # a plain square keeps its sharp corners
-            k = 4                                                       # supersample → smooth edge
-            mask = Image.new("L", (w * k, h * k), 0)
-            if shape == "circle":
-                ImageDraw.Draw(mask).ellipse((0, 0, w * k - 1, h * k - 1), fill=255)
-            else:
-                ImageDraw.Draw(mask).rounded_rectangle((0, 0, w * k - 1, h * k - 1),
-                                                       radius=int(min(w, h) * STICKER_RADIUS * k), fill=255)
-            mask = mask.resize((w, h), Image.LANCZOS)
-            im.putalpha(ImageChops.multiply(im.getchannel("A"), mask))
-        for q in (90, 75, 60, 45):                                      # sticker limit: 512 KB
-            buf = io.BytesIO()
-            im.save(buf, "WEBP", quality=q, method=4)
-            if len(buf.getvalue()) <= 512_000:
-                return buf.getvalue()
-        return None
-    except Exception as e:                                              # noqa: BLE001
-        log.info("static sticker failed: %s", e)
-        return None
-
-
-async def fetch_comments(src: str, limit: int = COMMENTS_MAX) -> list | None:
-    """Top comments of a video (TikWM). → list (maybe empty) · None on failure."""
-    t = min(int(CFG.get("api_timeout", 40)), 20)
-    for attempt in range(3):
-        try:
-            r = await http().post("https://www.tikwm.com/api/comment/list/",
-                                  data={"url": src, "count": limit, "cursor": 0}, timeout=t)
-            j = r.json()
-        except Exception as e:                                          # noqa: BLE001
-            log.warning("comments attempt %s failed: %s", attempt + 1, e)
-            await asyncio.sleep(0.8)
-            continue
-        if j.get("code") == 0 and isinstance(j.get("data"), dict):
-            out = []
-            for c in j["data"].get("comments") or []:
-                if not isinstance(c, dict):
-                    continue
-                text = (c.get("text") or "").strip()
-                if not text:
-                    continue
-                u = c.get("user") if isinstance(c.get("user"), dict) else {}
-                out.append({"user": u.get("nickname") or u.get("unique_id") or "—",
-                            "handle": u.get("unique_id") or "", "text": text,
-                            "likes": _to_int(c.get("digg_count")), "replies": _to_int(c.get("reply_total"))})
-            return out
-        msg = str(j.get("msg", "")).lower()
-        if "limit" in msg or "second" in msg:
-            await asyncio.sleep(1.3)
-            continue
-        log.info("comments rejected: %s", msg)
-        return None
-    return None
-
-
-def comments_preview(lang: str, items: list) -> str:
-    text = tx(lang, "cmt_title", n=len(items))
-    for i, c in enumerate(items[:COMMENTS_SHOW], 1):
-        likes = f" · ❤️ {fmt_num(c['likes'])}" if c["likes"] else ""
-        block = f"\n\n<b>{i}. {esc(clip(c['user'], 30))}</b>{likes}\n{esc(clip(c['text'], 260))}"
-        if len(text) + len(block) > 3700:
-            break
-        text += block
-    return text
-
-
-def comments_txt(items: list) -> str:
-    out = []
-    for i, c in enumerate(items, 1):
-        who = c["user"] + (f" (@{c['handle']})" if c["handle"] else "")
-        out.append(f"#{i}  {who}  ·  ❤ {c['likes']}  ·  ↩ {c['replies']}\n{c['text']}\n")
-    return "\n".join(out)
-
-
-_TT_HOST = re.compile(r"^https?://([\w-]+\.)*tiktok\.com/", re.I)
-
-
-def _src_from_markup(message) -> str | None:
-    """The 'original link' button of the result message IS the TikTok link → no storage needed."""
-    try:
-        for row in message.reply_markup.inline_keyboard:
-            for b in row:
-                if b.url and _TT_HOST.match(b.url):
-                    return b.url
-    except AttributeError:
-        pass
-    return None
-
-
-async def _src_for(cb: "CB", key: str) -> str | None:
-    src = _src_from_markup(cb.q.message)
-    if src:
-        return src
-    hit = await cache_get(key)
-    if hit:
-        return hit.get("src")
-    s = await session_get(key)
-    return s.get("src") if s else None
-
-
-def _close_kb(lang: str) -> Kb:
-    return Kb([[Btn(tx(lang, "b_delete"), callback_data="close")]])
-
-
-async def _extra_gif(ctx, chat_id: int, lang: str, key: str, src: str) -> None:
-    fid = await db_get(f"fc/{key}/fid_gif")
-    if isinstance(fid, str) and fid:                                    # sent before → instant
-        try:
-            await ctx.bot.send_animation(chat_id, fid, caption=bot_tag(), reply_markup=_close_kb(lang), **_UP)
-            return
-        except TelegramError as e:
-            log.info("cached gif failed (%s) → rebuild", e)
-    await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
-    m = await fetch_tiktok(src)
-    if not m or not m["videos"]:
-        raise RuntimeError("no video for gif")
-    data, _ = await fetch_video(m, "sd")                                # smaller file is plenty for a GIF
-    if not data:
-        raise RuntimeError("gif download failed")
-    data = await to_gif_mp4(data) or data                               # silent + trimmed when ffmpeg exists
-    sent = await ctx.bot.send_animation(chat_id, InputFile(data, filename=f"{key}.mp4"),
-                                        caption=bot_tag(), reply_markup=_close_kb(lang), **_UP)
-    await save_fid(key, "fid_gif", sent, "animation")
-
-
-async def _extra_sticker(ctx, chat_id: int, lang: str, key: str, src: str, uid: int = 0) -> None:
-    await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
-    m = await fetch_tiktok(src)
-    if not m:
-        raise RuntimeError("sticker: no media")
-    if m["videos"] and ffmpeg_path():
-        data, _ = await fetch_video(m, "sd")
-        webm = await to_sticker_webm(data) if data else None
-        if webm:
-            if uid:
-                return await deliver_sticker(ctx, uid, chat_id, lang, webm, "video")
-            await ctx.bot.send_sticker(chat_id, InputFile(webm, filename="sticker.webm"),
-                                       reply_markup=_close_kb(lang), **_UP)
-            return
-    cover = None
-    for u in [m.get("cover")] + list(m.get("images") or [])[:1]:         # static fallback: cover / first photo
-        if u:
-            try:
-                cover = await download_bytes(u, max_bytes=20_000_000, timeout=20)
-            except TooBig:
-                cover = None
-            if cover:
-                break
-    webp = await asyncio.to_thread(_static_sticker, cover[0]) if cover else None
-    if not webp:
-        raise RuntimeError("sticker needs `imageio-ffmpeg` (animated) or `Pillow` (static) in requirements.txt")
-    await ctx.bot.send_sticker(chat_id, InputFile(webp, filename="sticker.webp"),
-                               reply_markup=_close_kb(lang), **_UP)
-    await ctx.bot.send_message(chat_id, tx(lang, "stk_static"))
-
-
-async def _extra_comments(ctx, chat_id: int, lang: str, key: str, src: str) -> None:
-    await chat_action(ctx, chat_id, ChatAction.TYPING)
-    items = await fetch_comments(src)
-    if items is None:
-        raise RuntimeError("comments failed")
-    if not items:
-        await ctx.bot.send_message(chat_id, tx(lang, "cmt_none"), reply_markup=_close_kb(lang))
-        return
-    await ctx.bot.send_message(chat_id, comments_preview(lang, items), reply_markup=_close_kb(lang))
-    await ctx.bot.send_document(chat_id, InputFile(comments_txt(items).encode("utf-8"), filename=f"comments_{key}.txt"),
-                                caption=tx(lang, "cmt_file", n=len(items)), **_UP)
-
-
-# ── sticker packs (the "Make a sticker" section) ─────────────────────────────
-_HEX_RE = re.compile(r"[0-9a-f]{6}")
-PACK_MAX = 120                                  # static packs hold up to 120 stickers
-STK_EMOJI = "🤎"
-
-
-def pack_url(name: str) -> str:
-    return f"https://t.me/addstickers/{name}"
-
-
-async def stk_state(uid: int) -> dict:
-    d = await db_get(f"stk/{uid}")
-    return d if isinstance(d, dict) else {}
-
-
-async def stk_packs(uid: int) -> dict:
-    d = await db_get(f"stkpacks/{uid}")
-    return {k: v for k, v in d.items() if _HEX_RE.fullmatch(k) and isinstance(v, dict) and v.get("name")} \
-        if isinstance(d, dict) else {}
-
-
-def _fmt_of(p: dict) -> str:
-    return "video" if p.get("f") == "video" else "static"
-
-
-def _active_key(fmt_or_pack) -> str:
-    """Telegram never mixes photo and video stickers in one pack → each format has its own active pack."""
-    fmt = fmt_or_pack if isinstance(fmt_or_pack, str) else _fmt_of(fmt_or_pack)
-    return "vactive" if fmt == "video" else "active"
-
-
-async def stk_menu_view(uid: int, lang: str) -> tuple[str, Kb]:
-    st, packs = await stk_state(uid), await stk_packs(uid)
-    act, vact = packs.get(st.get("active", "")), packs.get(st.get("vactive", ""))
-    rows = []
-    if st.get("pending"):
-        text = tx(lang, "stk_menu_pending", title=esc(st["pending"]))
-    else:
-        text = (tx(lang, "stk_menu_pack", title=esc(act["title"]), n=int(act.get("n", 0)))
-                if act else tx(lang, "stk_menu_nopack"))
-        if vact:
-            text += "\n\n" + tx(lang, "stk_menu_vpack", title=esc(vact["title"]), n=int(vact.get("n", 0)))
-        text += "\n\n" + tx(lang, "stk_menu_tip")
-        for p in (act, vact):
-            if p:
-                rows.append([Btn(clip(f"{'🎞' if _fmt_of(p) == 'video' else '🖼'} {p['title']}", 30),
-                                 url=pack_url(p["name"]))])
-    new_row = [Btn(tx(lang, "b_stk_new"), callback_data="stk_new")]
-    if packs:
-        new_row.append(Btn(tx(lang, "b_stk_list"), callback_data="stk_list"))
-    rows += [new_row, back_row(lang)]
-    return text, Kb(rows)
-
-
-async def stk_list_view(uid: int, lang: str) -> tuple[str, Kb]:
-    st, packs = await stk_state(uid), await stk_packs(uid)
-    if not packs:
-        return await stk_menu_view(uid, lang)
-    rows = []
-    for hx, p in sorted(packs.items(), key=lambda kv: kv[1].get("ts", 0), reverse=True)[:8]:
-        mark = "✅" if st.get(_active_key(p)) == hx else "⚪"
-        icon = "🎞" if _fmt_of(p) == "video" else "🖼"
-        rows.append([Btn(clip(f"{mark}{icon} {p.get('title', '')} ({int(p.get('n', 0))})", 28), callback_data=f"stk_use_{hx}"),
-                     Btn("🔗", url=pack_url(p["name"])),
-                     Btn("🗑", callback_data=f"stk_del_{hx}")])
-    rows += [[Btn(tx(lang, "b_stk_new"), callback_data="stk_new")], back_row(lang, "ask_sticker")]
-    return tx(lang, "stk_list_title"), Kb(rows)
-
-
-def _input_sticker(data: bytes, fmt: str = "static"):
-    """InputSticker across PTB versions (Bot API ≥ 7.2 wants the `format`)."""
-    from telegram import InputSticker                                   # type: ignore
-    # A *named file-like object*: PTB attaches it to the request. (A ready-made InputFile is passed through
-    # un-attached → Telegram answers "field sticker must be of type string".)
-    f = io.BytesIO(data)
-    f.name = "sticker.webm" if fmt == "video" else "sticker.webp"
-    try:
-        return InputSticker(sticker=f, emoji_list=[STK_EMOJI], format=fmt)
-    except TypeError:
-        return InputSticker(sticker=f, emoji_list=[STK_EMOJI])
-
-
-async def _pack_create(ctx, uid: int, name: str, title: str, data: bytes, fmt: str = "static") -> None:
-    try:
-        await ctx.bot.create_new_sticker_set(user_id=uid, name=name, title=title,
-                                             stickers=[_input_sticker(data, fmt)])
-    except TypeError:                                                   # older PTB: separate sticker_format
-        await ctx.bot.create_new_sticker_set(user_id=uid, name=name, title=title,
-                                             stickers=[_input_sticker(data, fmt)], sticker_format=fmt)
-
-
-async def _pack_add(ctx, uid: int, name: str, data: bytes, fmt: str = "static") -> None:
-    await ctx.bot.add_sticker_to_set(user_id=uid, name=name, sticker=_input_sticker(data, fmt))
-
-
-def _pack_kb(lang: str, name: str | None, extra: list | None = None) -> Kb:
-    rows = []
-    if name:
-        rows.append([Btn(tx(lang, "b_stk_open"), url=pack_url(name))])
-    rows += (extra or []) + [[Btn(tx(lang, "b_delete"), callback_data="close")]]
-    return Kb(rows)
-
-
-async def deliver_sticker(ctx, uid: int, chat_id: int, lang: str, data: bytes, fmt: str = "static") -> None:
-    """Send the sticker (photo → WEBP "static", video → WEBM "video") and put it into the user's pack of that
-    format — creating the pack with the first sticker when the user has just named a new one."""
-    ext, akey = ("webm" if fmt == "video" else "webp"), _active_key(fmt)
-    st, packs = await stk_state(uid), await stk_packs(uid)
-    new_btn = [[Btn(tx(lang, "b_stk_new"), callback_data="stk_new")]]
-    f = lambda: InputFile(data, filename=f"sticker.{ext}")              # noqa: E731 — fresh upload object per send
-
-    if st.get("pending"):                                               # first sticker → create the pack
-        hx = secrets.token_hex(3)
-        name, title = f"s{uid}_{hx}_by_{BOT_USERNAME}", st["pending"]
-        await _pack_create(ctx, uid, name, title, data, fmt)
-        await db_put(f"stkpacks/{uid}/{hx}", {"name": name, "title": title, "n": 1, "ts": int(time.time()), "f": fmt})
-        await db_put(f"stk/{uid}/{akey}", hx)
-        await db_del(f"stk/{uid}/pending")
-        await ctx.bot.send_sticker(chat_id, f(), reply_markup=_pack_kb(lang, name), **_UP)
-        await ctx.bot.send_message(chat_id, tx(lang, "stk_created", title=esc(title)),
-                                   reply_markup=Kb([[Btn(tx(lang, "b_stk_open"), url=pack_url(name))]]))
-        return
-
-    hx = st.get(akey, "")
-    act = packs.get(hx)
-    if act and _fmt_of(act) == fmt:
-        if int(act.get("n", 0)) >= PACK_MAX:
-            return await ctx.bot.send_message(chat_id, tx(lang, "stk_full"), reply_markup=Kb(new_btn))
-        try:
-            await _pack_add(ctx, uid, act["name"], data, fmt)
-        except BadRequest as e:
-            msg = str(e).lower()
-            if "too_much" in msg or "too much" in msg:
-                await db_put(f"stkpacks/{uid}/{hx}/n", PACK_MAX)
-                return await ctx.bot.send_message(chat_id, tx(lang, "stk_full"), reply_markup=Kb(new_btn))
-            if "stickerset_invalid" in msg or "invalid" in msg or "not found" in msg:   # deleted inside Telegram
-                await db_del(f"stkpacks/{uid}/{hx}")
-                await db_del(f"stk/{uid}/{akey}")
-                return await ctx.bot.send_message(chat_id, tx(lang, "stk_gone"), reply_markup=Kb(new_btn))
-            raise
-        await db_incr(f"stkpacks/{uid}/{hx}/n")
-        return await ctx.bot.send_sticker(chat_id, f(), reply_markup=_pack_kb(lang, act["name"]), **_UP)
-
-    await ctx.bot.send_sticker(chat_id, f(), reply_markup=_pack_kb(lang, None, new_btn), **_UP)   # single sticker, no pack
-
-
-def _video_file(msg) -> tuple[str, int, int] | None:
-    """(file_id, size, seconds) of a gallery video / GIF / round video / video sent as a file."""
-    for attr in ("video", "animation", "video_note"):
-        o = getattr(msg, attr, None)
-        if o:
-            d = getattr(o, "duration", 0) or 0
-            return o.file_id, o.file_size or 0, int(d.total_seconds()) if hasattr(d, "total_seconds") else int(d)
-    d = getattr(msg, "document", None)
-    if d and (getattr(d, "mime_type", None) or "").lower().startswith("video/"):
-        return d.file_id, d.file_size or 0, 0
-    return None
-
-
-def _is_stk_title_reply(msg) -> bool:
-    """True when the user is answering the 'send a name for your pack' prompt."""
-    r = getattr(msg, "reply_to_message", None)
-    if not r or not r.from_user or not r.from_user.is_bot or not r.text:
-        return False
-    heads = {plain(tx(l, "stk_ask_title")).split("\n")[0] for l in L}
-    return r.text.split("\n")[0].strip() in heads
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# 9d · LEADERBOARD · STARS (paid VIP) · FOLLOW ACCOUNTS · STICKER OPTIONS (crop + caption text)
-# ══════════════════════════════════════════════════════════════════════════════
-MEDALS = ("🥇", "🥈", "🥉")
-COLORS = {"w": ((255, 255, 255), (0, 0, 0)), "k": ((0, 0, 0), (255, 255, 255)), "y": ((255, 214, 0), (0, 0, 0)),
-          "r": ((255, 59, 48), (0, 0, 0)), "g": ((52, 199, 89), (0, 0, 0)), "b": ((10, 132, 255), (0, 0, 0)),
-          "p": ((255, 45, 146), (0, 0, 0))}               # code → (text colour, outline colour)
-COLOR_DOTS = {"w": "⚪", "k": "⚫", "y": "🟡", "r": "🔴", "g": "🟢", "b": "🔵", "p": "🟣"}
-FOLLOW_MAX, FOLLOW_MAX_VIP = 5, 20
-_USER_RE = re.compile(r"[A-Za-z0-9_.]{1,24}")
-
-
-# ── 🏆 leaderboard of the best inviters ──────────────────────────────────────
-async def lb_view(uid: int, lang: str) -> tuple[str, Kb]:
-    d = await db_get("lb")
-    ranked = sorted(((int(k), v) for k, v in d.items() if str(k).isdigit() and isinstance(v, dict)),
-                    key=lambda kv: -int(kv[1].get("n", 0))) if isinstance(d, dict) else []
-    lines = []
-    for i, (u, v) in enumerate(ranked[:10], 1):
-        name = tx(lang, "lb_hidden") if v.get("h") else esc(clip(v.get("name") or "—", 20))
-        lines.append(f"{MEDALS[i - 1] if i <= 3 else f'{i}.'} {name} — <b>{int(v.get('n', 0))}</b>{' ⬅️' if u == uid else ''}")
-    text = tx(lang, "lb_title") + "\n\n" + ("\n".join(lines) if lines else tx(lang, "lb_empty"))
-    mine = next(((i, v) for i, (u, v) in enumerate(ranked, 1) if u == uid), None)
-    if mine and mine[0] > 10:
-        text += "\n\n" + tx(lang, "lb_you", rank=mine[0], n=int(mine[1].get("n", 0)))
-    hidden = bool(await db_get(f"users/{uid}/hide_lb"))
-    return text, Kb([[Btn(tx(lang, "b_ref"), callback_data="show_ref")],
-                     [Btn(tx(lang, "b_lb_show" if hidden else "b_lb_hide"), callback_data="lb_hide")],
-                     back_row(lang)])
-
-
-async def lb_toggle_hide(uid: int) -> bool:
-    hide = not bool(await db_get(f"users/{uid}/hide_lb"))
-    await db_put(f"users/{uid}/hide_lb", 1 if hide else 0)
-    if await db_get(f"lb/{uid}") is not None:
-        await db_put(f"lb/{uid}/h", 1 if hide else 0)
-    return hide
-
-
-# ── 💎 paid VIP with Telegram Stars (currency "XTR") ─────────────────────────
-def stars_plans() -> list:
-    """[(days, stars), …] from the admin config (validated)."""
-    raw = CFG.get("stars_plans")
-    out = []
-    for p in (raw.values() if isinstance(raw, dict) else raw) or []:
-        if isinstance(p, dict):
-            p = [p.get("0"), p.get("1")]
-        try:
-            days, price = int(p[0]), int(p[1])
-        except (TypeError, ValueError, IndexError):
-            continue
-        if days >= 1 and 1 <= price <= 2500:
-            out.append((days, price))
-    return out[:4] or [(7, 50), (30, 150), (90, 400)]
-
-
-async def vip_view(uid: int, lang: str) -> tuple[str, Kb]:
-    text = tx(lang, "vip_info", dev=esc(DEV))
-    until = vip_until.get(uid, 0)
-    if until > time.time():
-        text += "\n\n" + tx(lang, "ref_vip_until", until=fmt_ts(until))
-    rows = []
-    if CFG.get("stars_on", False):
-        text += "\n\n" + tx(lang, "stars_info")
-        rows += [[Btn(tx(lang, "b_buy", days=d, stars=s), callback_data=f"buy_{i}")] for i, (d, s) in enumerate(stars_plans())]
-    rows.append(back_row(lang))
-    return text, Kb(rows)
-
-
-async def send_stars_invoice(cb: "CB", idx: int) -> None:
-    plans = stars_plans()
-    if not CFG.get("stars_on", False) or not 0 <= idx < len(plans):
-        return await cb.answer(cb.t("stars_off"), True)
-    days, stars = plans[idx]
-    await cb.answer()
-    title = cb.t("inv_title", days=days)
-    await cb.ctx.bot.send_invoice(chat_id=cb.q.message.chat_id, title=title,
-                                  description=cb.t("inv_desc", days=days), payload=f"vip_{days}_{stars}",
-                                  provider_token="", currency="XTR",                       # Stars: no provider token
-                                  prices=[LabeledPrice(label=title, amount=stars)])
-
-
-async def on_pre_checkout(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Telegram asks 'may I charge?' — answer within 10 s, no database work."""
-    q = update.pre_checkout_query
-    ok = False
-    try:
-        kind, days, stars = q.invoice_payload.split("_")
-        ok = (kind == "vip" and bool(CFG.get("stars_on", False)) and q.currency == "XTR"
-              and (int(days), int(stars)) in stars_plans() and int(q.total_amount) == int(stars))
-    except (ValueError, AttributeError):
-        ok = False
-    lang = CFG.get("default_lang", "ku")
-    await q.answer(ok=ok, error_message=None if ok else tx(lang if lang in L else "ku", "stars_changed"))
-
-
-async def on_paid(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Stars arrived → VIP days on top of whatever the user still has. Idempotent per charge id."""
-    msg, uid = update.effective_message, update.effective_user.id
-    sp = msg.successful_payment
-    charge = str(sp.telegram_payment_charge_id)
-    ck = hashlib.md5(charge.encode()).hexdigest()[:20]
-    if await db_get(f"pay/{ck}") is not None:
-        return
-    try:
-        days = int(sp.invoice_payload.split("_")[1])
-    except (ValueError, IndexError):
-        days = 0
-    stars = int(sp.total_amount)
-    await db_put(f"pay/{ck}", {"c": charge, "u": uid, "d": days, "s": stars, "ts": int(time.time())})   # record first
-    until = await grant_temp_vip(uid, days) if days > 0 else 0
-    await db_incr("sys/cfg/stars_total", stars)
-    await db_incr(f"users/{uid}/stars", stars)
-    lang = user_lang(await db_get(f"users/{uid}"))
-    await msg.reply_text(tx(lang, "stars_thanks", days=days, until=fmt_ts(until) if until else "—"))
-    try:
-        await ctx.bot.send_message(OWNER_ID, f"💰 <b>+{stars} ⭐</b> · VIP {days}d\nuser: <code>{uid}</code>\n"
-                                             f"charge: <code>{esc(charge)}</code>")
-    except TelegramError:
-        pass
-
-
-async def cmd_refund(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """/refund <charge_id> — owner only. Needs python-telegram-bot ≥ 21.4 (refund_star_payment)."""
-    uid = update.effective_user.id
-    if not is_super(uid):
-        return
-    args = getattr(ctx, "args", None) or []
-    if len(args) != 1:
-        return await update.effective_message.reply_text("Usage: <code>/refund CHARGE_ID</code>")
-    rec = await db_get(f"pay/{hashlib.md5(args[0].encode()).hexdigest()[:20]}")
-    if not isinstance(rec, dict):
-        return await update.effective_message.reply_text("❌ Payment not found.")
-    if not hasattr(ctx.bot, "refund_star_payment"):
-        return await update.effective_message.reply_text("⚠️ Refunds need <code>python-telegram-bot&gt;=21.4</code> in requirements.txt.")
-    await ctx.bot.refund_star_payment(user_id=int(rec["u"]), telegram_payment_charge_id=rec["c"])
-    u = int(rec["u"])
-    left = max(int(time.time()), vip_until.get(u, 0) - int(rec.get("d", 0)) * 86400)       # take the VIP days back
-    vip_until[u] = left
-    await db_put(f"sys/vip_until/{u}", left)
-    await db_del(f"pay/{hashlib.md5(args[0].encode()).hexdigest()[:20]}")
-    await db_incr("sys/cfg/stars_total", -int(rec.get("s", 0)))
-    await update.effective_message.reply_text(f"✅ Refunded {int(rec.get('s', 0))} ⭐ to <code>{u}</code>.")
-
-
-async def stars_admin_view(cb: "CB") -> None:
-    plans, on = stars_plans(), CFG.get("stars_on", False)
-    total = int(await db_get("sys/cfg/stars_total", 0) or 0)
-    rows = [[Btn(cb.t("b_stars_toggle", status=status_word(cb.lang, on)), callback_data="sup_stars_t")]]
-    for i, (days, price) in enumerate(plans):
-        rows.append([Btn("-50", callback_data=f"sup_stars_p{i}-50"), Btn("-10", callback_data=f"sup_stars_p{i}-10"),
-                     Btn(f"{days}d · {price}⭐", callback_data="noop"),
-                     Btn("+10", callback_data=f"sup_stars_p{i}+10"), Btn("+50", callback_data=f"sup_stars_p{i}+50")])
-    rows.append(back_row(cb.lang, "panel_unified"))
-    await cb.edit(cb.t("sup_stars_title", status=status_word(cb.lang, on), total=total), Kb(rows))
-
-
-async def route_stars_admin(cb: "CB", data: str) -> None:
-    if data == "sup_stars_t":
-        await set_cfg(stars_on=not CFG.get("stars_on", False))
-    elif data.startswith("sup_stars_p"):
-        rest = data[len("sup_stars_p"):]
-        try:
-            i, delta = int(rest[0]), int(rest[1:])
-        except (ValueError, IndexError):
-            return await cb.answer()
-        plans = stars_plans()
-        if 0 <= i < len(plans):
-            plans[i] = (plans[i][0], max(1, min(2500, plans[i][1] + delta)))
-            await set_cfg(stars_plans=[[d, s] for d, s in plans])
-    await cb.answer()
-    await stars_admin_view(cb)
-
-
-# ── 🔔 follow TikTok accounts → a notice when they post ──────────────────────
-def _ukey(user: str) -> str:
-    return user.lower().replace(".", "~")                      # Firebase keys cannot contain "."
-
-
-async def is_following(uid: int, user: str) -> bool:
-    return await db_get(f"follow/{uid}/{_ukey(user)}") is not None
-
-
-async def follow_add(uid: int, user: str) -> str:
-    """→ "ok" | "exists" | "limit" """
-    mine = await db_get(f"follow/{uid}")
-    mine = mine if isinstance(mine, dict) else {}
-    uk = _ukey(user)
-    if uk in mine:
-        return "exists"
-    if len(mine) >= (FOLLOW_MAX_VIP if is_vip(uid) else FOLLOW_MAX):
-        return "limit"
-    await db_put(f"follow/{uid}/{uk}", int(time.time()))
-    await db_put(f"fsub/{uk}/{uid}", 1)
-    if await db_get(f"fmeta/{uk}") is None:                       # baseline NOW → only later videos are announced
-        items = await fetch_latest(user, 1)
-        last = max((int(m["key"]) for m in items or [] if str(m["key"]).isdigit()), default=0)
-        await db_put(f"fmeta/{uk}", {"last": last, "chk": int(time.time()), "u": user})
-    return "ok"
-
-
-async def follow_remove(uid: int, user: str) -> None:
-    uk = _ukey(user)
-    await db_del(f"follow/{uid}/{uk}")
-    await db_del(f"fsub/{uk}/{uid}")
-    if not await db_get(f"fsub/{uk}"):
-        await db_del(f"fmeta/{uk}")
-
-
-async def drop_user_follows(uid: int) -> None:
-    """The user blocked the bot → stop watching for them."""
-    mine = await db_get(f"follow/{uid}")
-    for uk in (mine if isinstance(mine, dict) else {}):
-        await db_del(f"fsub/{uk}/{uid}")
-        if not await db_get(f"fsub/{uk}"):
-            await db_del(f"fmeta/{uk}")
-    await db_del(f"follow/{uid}")
-
-
-async def follow_list_view(uid: int, lang: str) -> tuple[str, Kb]:
-    mine = await db_get(f"follow/{uid}")
-    if not isinstance(mine, dict) or not mine:
-        return tx(lang, "fw_empty"), Kb([back_row(lang)])
-    rows = []
-    for uk, ts in sorted(mine.items(), key=lambda kv: -int(kv[1] or 0)):
-        user = uk.replace("~", ".")
-        rows.append([Btn(clip(f"@{user}", 28), callback_data=f"pf_v_{user}"), Btn("🔕", callback_data=f"fwx_{user}")])
-    rows.append(back_row(lang))
-    return tx(lang, "fw_list_title", n=len(mine), max=FOLLOW_MAX_VIP if is_vip(uid) else FOLLOW_MAX), Kb(rows)
-
-
-async def _relabel_button(cb: "CB", callback_data: str, text: str) -> None:
-    try:
-        old = cb.q.message.reply_markup.inline_keyboard
-    except AttributeError:
-        return
-    rows = [[Btn(text, callback_data=b.callback_data) if b.callback_data == callback_data
-             else (Btn(b.text, callback_data=b.callback_data, api_kwargs=dict(getattr(b, "api_kwargs", None) or {}))
-                   if b.callback_data else Btn(b.text, url=b.url, api_kwargs=dict(getattr(b, "api_kwargs", None) or {})))
-             for b in row] for row in old]
-    try:
-        await cb.q.message.edit_reply_markup(reply_markup=Kb(rows))
-    except TelegramError:
-        pass
-
-
-async def toggle_follow(cb: "CB", user: str) -> None:
-    if not _USER_RE.fullmatch(user):
-        return await cb.answer()
-    if await is_following(cb.uid, user):
-        await follow_remove(cb.uid, user)
-        await cb.answer(cb.t("fw_off"))
-        return await _relabel_button(cb, f"fw_{user}", cb.t("fw_b_off"))
-    res = await follow_add(cb.uid, user)
-    if res == "limit":
-        return await cb.answer(cb.t("fw_limit", n=FOLLOW_MAX, vip=FOLLOW_MAX_VIP), True)
-    await cb.answer(cb.t("fw_on"))
-    await _relabel_button(cb, f"fw_{user}", cb.t("fw_b_on"))
-
-
-async def notify_follow(ctx, uid: int, lang: str, user: str, m: dict) -> bool:
-    """One 'new video' notice. False when the user blocked the bot."""
-    text = tx(lang, "fw_new", user=esc(user), title=esc(clip(m.get("title") or "", 150)))
-    kb = Kb([[Btn(tx(lang, "fw_b_dl"), callback_data=f"rs_{m['key']}"), Btn(tx(lang, "pf_b_open"), url=m["src"])],
-             [Btn(tx(lang, "fw_b_stop"), callback_data=f"fwu_{user}")]])
-    try:
-        if m.get("cover"):
-            try:
-                await ctx.bot.send_photo(uid, m["cover"], caption=text, reply_markup=kb)
-                return True
-            except Forbidden:
-                raise
-            except TelegramError:                                  # cover link refused → plain message
-                pass
-        await ctx.bot.send_message(uid, text, reply_markup=kb)
-        return True
-    except Forbidden:
-        return False
-    except TelegramError as e:
-        log.info("follow notice failed for %s: %s", uid, e)
-        return True
-
-
-async def run_follow_checks(ctx, budget: float = 40.0) -> dict:
-    """Called by the cron endpoint: look at the accounts that were checked longest ago, announce new videos."""
-    t0 = time.monotonic()
-    stats = {"accounts": 0, "new_videos": 0, "notices": 0}
-    meta = await db_get("fmeta")
-    if not isinstance(meta, dict):
-        return stats
-    langs: dict = {}
-    for uk, mt in sorted(meta.items(), key=lambda kv: int((kv[1] or {}).get("chk", 0) or 0)):
-        if time.monotonic() - t0 > budget - 8:
-            break
-        subs = await db_get(f"fsub/{uk}")
-        if not isinstance(subs, dict) or not subs:
-            await db_del(f"fmeta/{uk}")
-            continue
-        user = (mt or {}).get("u") or uk.replace("~", ".")
-        items = await fetch_latest(user, 5)
-        await db_put(f"fmeta/{uk}/chk", int(time.time()))
-        await asyncio.sleep(1.1)                                   # TikWM: about one request per second
-        stats["accounts"] += 1
-        ids = {int(m["key"]): m for m in items or [] if str(m["key"]).isdigit()}
-        if not ids:
-            continue
-        last = int((mt or {}).get("last", 0) or 0)
-        newest = max(ids)
-        if last == 0:                                              # first look → remember, announce nothing
-            await db_put(f"fmeta/{uk}/last", newest)
-            continue
-        fresh = [ids[i] for i in sorted(ids) if i > last][-3:]     # oldest first, at most 3 per account per run
-        if not fresh:
-            continue
-        await db_put(f"fmeta/{uk}/last", newest)
-        for m in fresh:
-            await remember_media(m, m["src"])                      # so the ⬇️ button can find the link later
-            stats["new_videos"] += 1
-            for s in list(subs):
-                s = int(s)
-                if s not in langs:
-                    langs[s] = user_lang(await db_get(f"users/{s}"))
-                if await notify_follow(ctx, s, langs[s], user, m):
-                    stats["notices"] += 1
-                else:
-                    await drop_user_follows(s)
-                    subs.pop(str(s), None)
-                await asyncio.sleep(0.05)
-    return stats
-
-
-# ── ✂️ sticker options: square crop + caption text ───────────────────────────
-_FONT_RAW = None
-_TXT_ENGINE = None
-_RTL_RE = re.compile(r"[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]")
-
-
-def text_engine() -> str:
-    """How Kurdish/Arabic text can be drawn here: 'raqm' (Pillow + libraqm) · 'reshape' (arabic-reshaper + python-bidi) · 'plain'."""
-    global _TXT_ENGINE
-    if _TXT_ENGINE is None:
-        _TXT_ENGINE = "plain"
-        try:
-            from PIL import features                               # type: ignore
-            if features.check("raqm"):
-                _TXT_ENGINE = "raqm"
-        except Exception:                                          # noqa: BLE001
-            pass
-        if _TXT_ENGINE == "plain":
-            try:
-                import arabic_reshaper                             # type: ignore  # noqa: F401
-                import bidi                                        # type: ignore  # noqa: F401
-                _TXT_ENGINE = "reshape"
-            except Exception:                                      # noqa: BLE001
-                pass
-    return _TXT_ENGINE
-
-
-def _asset_dirs() -> list:
-    """Where uploaded files are searched: next to this file, /fonts, the repo root, the working dir, Vercel's /var/task."""
-    here = os.path.dirname(os.path.abspath(__file__))
-    return [here, os.path.join(here, "fonts"), os.path.dirname(here), os.path.join(os.path.dirname(here), "fonts"),
-            os.getcwd(), os.path.join(os.getcwd(), "fonts"), os.path.join(os.getcwd(), "api"),
-            "/var/task", "/var/task/api", "/var/task/fonts"]
-
-
-_FRIBIDI = {"path": None, "loaded": False}
-
-
-def _preload_fribidi() -> None:
-    """Kurdish/Arabic shaping in Pillow (Raqm/HarfBuzz) needs libfribidi.so.0, which Vercel's Linux does not have.
-    If a copy of it is uploaded next to this file, load it BEFORE Pillow first looks for it (done once, at import)."""
-    for d in _asset_dirs():
-        try:
-            for fn in sorted(os.listdir(d)):
-                if fn.lower().startswith("libfribidi") and ".so" in fn.lower():
-                    path = os.path.join(d, fn)
-                    ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)      # Pillow's dlopen("libfribidi.so.0") now finds it
-                    _FRIBIDI.update(path=path, loaded=True)
-                    return
-        except OSError:
-            continue
-        except Exception as e:                                       # noqa: BLE001 — wrong CPU / corrupt file: keep going
-            log.info("libfribidi at %s could not be loaded: %s", d, e)
-
-
-_preload_fribidi()
-
-_CUSTOM_FONTS: dict = {}                                           # "kurdish" / "english" → (bytes | None, path | None)
-
-
-def _custom_font(kind: str) -> tuple:
-    """kurdish.ttf / english.ttf uploaded next to this file (or in /fonts, the repo root, …). Name case is ignored."""
-    if kind not in _CUSTOM_FONTS:
-        found = (None, None)
-        for d in _asset_dirs():
-            try:
-                for fn in os.listdir(d):
-                    if fn.lower() in (f"{kind}.ttf", f"{kind}.otf"):
-                        path = os.path.join(d, fn)
-                        with open(path, "rb") as f:
-                            found = (f.read(), path)
-                        break
-            except OSError:
-                continue
-            if found[0]:
-                break
-        _CUSTOM_FONTS[kind] = found
-    return _CUSTOM_FONTS[kind]
-
-
-def fonts_status() -> str:
-    parts = []
-    for kind in ("kurdish", "english"):
-        data, path = _custom_font(kind)
-        parts.append(f"{kind} ✓ {os.path.basename(path)}" if data else f"{kind} ✗ (built-in)")
-    return " · ".join(parts)
-
-
-def _builtin_font() -> bytes:
-    global _FONT_RAW
-    if _FONT_RAW is None:
-        _FONT_RAW = zlib.decompress(base64.b64decode(_FONT_Z))
-    return _FONT_RAW
-
-
-def _covers(raw: bytes, text: str) -> bool:
-    return not _missing_chars(raw, text)
-
-
-def _missing_chars(raw: bytes, text: str) -> list:
-    """Characters this font cannot draw (a missing glyph draws a box or nothing)."""
-    from PIL import Image, ImageDraw, ImageFont                    # type: ignore
-    f = ImageFont.truetype(io.BytesIO(raw), 48, layout_engine=ImageFont.Layout.BASIC)
-
-    def draw(ch: str):
-        im = Image.new("L", (110, 110), 0)
-        ImageDraw.Draw(im).text((20, 10), ch, font=f, fill=255)
-        return im.getbbox(), im.tobytes()
-
-    notdef = draw("\uffff")[1]
-    missing = []
-    for c in sorted(set(text)):
-        if c.isspace() or c in "\u200c\u200d\u200e\u200f":
-            continue
-        box, data = draw(c)
-        if box is None or data == notdef:
-            missing.append(c)
-    return missing
-
-
-def _font_kind(rtl: bool, choice: str = "auto") -> str:
-    """choice: "auto" (by script) · "ku" (always kurdish.ttf) · "en" (always english.ttf)"""
-    return {"ku": "kurdish", "en": "english"}.get(choice) or ("kurdish" if rtl else "english")
-
-
-def font_fallback(text: str, choice: str = "auto") -> bool:
-    """True when the user's font for this choice exists but cannot draw every letter (the built-in font is used instead)."""
-    text = " ".join(text.split())[:80]
-    raw = _custom_font(_font_kind(bool(_RTL_RE.search(text)), choice))[0]
-    if not raw or not text:
-        return False
-    try:
-        return not _covers(raw, _shape(text, text_engine())[0])
-    except Exception:                                              # noqa: BLE001
-        return True
-
-
-def font_diag(text: str, choice: str = "auto") -> str:
-    """One technical line for the owner: engine, font file and the code points the font lacks."""
-    text = " ".join(text.split())[:80]
-    engine = text_engine()
-    kind = _font_kind(bool(_RTL_RE.search(text)), choice)
-    raw = _custom_font(kind)[0]
-    try:
-        miss = _missing_chars(raw, _shape(text, engine)[0]) if raw else []
-    except Exception as e:                                         # noqa: BLE001
-        return f"🛠 {engine} · {kind}.ttf · {type(e).__name__}"
-    return f"🛠 {engine} · {kind}.ttf · missing: " + (" ".join(f"U+{ord(c):04X}" for c in miss[:12]) or "—")
-
-
-def _font_source(text: str, engine: str, rtl: bool, choice: str = "auto") -> bytes:
-    """The user's font for this caption when it covers every letter, else the built-in one."""
-    raw = _custom_font(_font_kind(rtl, choice))[0]
-    if raw:
-        try:
-            if _covers(raw, _shape(text, engine)[0]):
-                return raw
-            log.info("custom %s font lacks glyphs for this caption → built-in font", _font_kind(rtl, choice))
-        except Exception as e:                                      # noqa: BLE001 — a broken font file must not break stickers
-            log.info("custom font unusable: %s", e)
-    return _builtin_font()
-
-
-def _font(size: int, engine: str, raw: bytes | None = None):
-    from PIL import ImageFont                                      # type: ignore
-    layout = ImageFont.Layout.RAQM if engine == "raqm" else ImageFont.Layout.BASIC
-    return ImageFont.truetype(io.BytesIO(raw or _builtin_font()), size, layout_engine=layout)
-
-
-def _shape(line: str, engine: str) -> tuple:
-    rtl = bool(_RTL_RE.search(line))
-    if engine == "raqm":
-        return line, ({"direction": "rtl", "language": "ckb"} if rtl else {})
-    if engine == "reshape" and rtl:
-        import arabic_reshaper                                     # type: ignore
-        try:
-            from bidi.algorithm import get_display                 # type: ignore
-        except ImportError:
-            from bidi import get_display                           # type: ignore
-        return get_display(arabic_reshaper.reshape(line)), {}
-    return line, {}
-
-
-def text_supported(text: str) -> bool:
-    return not (text and _RTL_RE.search(text) and text_engine() == "plain")
-
-
-def _caption_layer(size: tuple, text: str, shape: str = "round", font_choice: str = "auto", color: str = "w"):
-    """Transparent RGBA layer with the caption at the bottom: white text, black outline, ≤ 3 lines."""
-    from PIL import Image, ImageDraw                               # type: ignore
-    text = " ".join(text.split())[:80]
-    if not text or not text_supported(text):
-        return None
-    engine = text_engine()
-    w, h = size
-    layer = Image.new("RGBA", size, (0, 0, 0, 0))
-    d = ImageDraw.Draw(layer)
-    lines: list = []
-    fill, stroke = COLORS.get(color, COLORS["w"])
-    raw = _font_source(text, engine, bool(_RTL_RE.search(text)), font_choice)
-    for fs in range(max(28, w // 7), 23, -4):
-        font, sw = _font(fs, engine, raw), max(2, fs // 12)
-        maxw = int(w * 0.66) if shape == "circle" else w - 2 * (sw + 14)     # a circle is narrow near the bottom
-        lines, cur = [], ""
-        for word in text.split():
-            trial = (cur + " " + word).strip()
-            s, kw = _shape(trial, engine)
-            if cur and d.textlength(s, font=font, **kw) > maxw:
-                lines.append(cur)
-                cur = word
-            else:
-                cur = trial
-        if cur:
-            lines.append(cur)
-        widest = max(d.textlength(_shape(l, engine)[0], font=font, **_shape(l, engine)[1]) for l in lines)
-        if len(lines) <= 3 and widest <= maxw:
-            break
-    lh = int(fs * 1.3)
-    y = h - (int(h * 0.17) if shape == "circle" else 18) - lh * len(lines)
-    for i, line in enumerate(lines):
-        s, kw = _shape(line, engine)
-        d.text((w / 2, y + i * lh), s, font=font, fill=fill + (255,), stroke_width=sw,
-               stroke_fill=stroke + (255,), anchor="ma", **kw)
-    return layer
-
-
-
-# ── 🕵️ what a user did: downloads (from the history) + what they sent to the bot (owner only) ──────────────
-ACT_KEEP = 60
-ACT_ICONS = {"l": "🔗", "t": "✉️", "p": "🖼", "v": "🎞", "s": "🧩", "a": "🎙", "d": "📎", "c": "⌨️", "o": "❔"}
-ACT_WORDS = {"l": "link", "t": "text", "p": "photo", "v": "video", "s": "sticker", "a": "audio", "d": "file", "c": "command", "o": "other"}
-
-
-def _msg_kind(msg, text: str, url) -> str:
-    if url:
-        return "l"
-    if getattr(msg, "photo", None):
-        return "p"
-    if any(getattr(msg, a, None) for a in ("video", "animation", "video_note")):
-        return "v"
-    if getattr(msg, "sticker", None):
-        return "s"
-    if any(getattr(msg, a, None) for a in ("voice", "audio")):
-        return "a"
-    if getattr(msg, "document", None):
-        return "d"
-    if text:
-        return "c" if text.startswith("/") else "t"
-    return "o"
-
-
-async def act_log(uid: int, msg, text: str, url) -> None:
-    """Remember one incoming message (kind + text/caption). Best effort — never blocks the real work."""
-    try:
-        kind = _msg_kind(msg, text, url)
-        shown = text or ""
-        if not shown and kind == "d":
-            shown = getattr(getattr(msg, "document", None), "file_name", None) or ""
-        now = time.time()
-        await db_put(f"act/{uid}/{int(now * 1000)}", {"k": kind, "x": clip(shown, 200), "ts": int(now)})
-        if secrets.randbelow(25) == 0:                                  # keep each user's log short
-            d = await db_get(f"act/{uid}")
-            if isinstance(d, dict) and len(d) > ACT_KEEP:
-                for k in sorted(d)[:len(d) - ACT_KEEP]:
-                    await db_del(f"act/{uid}/{k}")
-    except Exception as e:                                              # noqa: BLE001
-        log.info("act_log failed: %s", e)
-
-
-async def _act_events(tid: int) -> list:
-    d = await db_get(f"act/{tid}")
-    items = sorted(((k, v) for k, v in d.items() if isinstance(v, dict)), key=lambda kv: kv[0], reverse=True) if isinstance(d, dict) else []
-    return [(int(v.get("ts") or int(k) // 1000), v) for k, v in items if str(k).isdigit()]
-
-
-async def _act_downloads(tid: int) -> list:
-    d = await db_get(f"hist/{tid}")
-    items = [(k, v) for k, v in d.items() if safe_key(k) and isinstance(v, dict)] if isinstance(d, dict) else []
-    return sorted(items, key=lambda kv: -int(kv[1].get("ts", 0) or 0))
-
-
-def _when(ts, full: bool = False) -> str:
-    return time.strftime("%Y-%m-%d %H:%M" if full else "%m-%d %H:%M", time.gmtime(int(ts or 0)))
-
-
-async def activity_report(lang: str, tid: int) -> str:
-    ud = await db_get(f"users/{tid}")
-    ud = ud if isinstance(ud, dict) else {}
-    dls, evs = await _act_downloads(tid), await _act_events(tid)
-    head = tx(lang, "act_head", name=esc(" ".join(str(ud.get("name") or "—").split())),
-              user=f"@{esc(ud['user'])}" if ud.get("user") else "—", id=tid, plink=profile_link(lang, tid),
-              date=esc(ud.get("date") or "—"), dl=fmt_num(ud.get("dl", 0)))
-    srcs = {}
-    for key, _ in dls[:10]:
-        meta = await cache_get(key)
-        srcs[key] = (meta or {}).get("src")
-
-    def build(n: int) -> str:
-        d_lines = []
-        for key, it in dls[:n]:
-            link = f' <a href="{html.escape(srcs[key], quote=True)}">🔗</a>' if srcs.get(key) else ""
-            title = f" — {esc(clip(it['t'], 50))}" if it.get("t") else ""
-            d_lines.append(f"• <code>{_when(it.get('ts'))}</code> {'🖼' if it.get('i') else '🎬'} {esc(clip(it.get('c') or 'TikTok', 24))}{title}{link}")
-        e_lines = [f"• <code>{_when(ts)}</code> {ACT_ICONS.get(ev.get('k'), '❔')} {esc(clip(ev.get('x') or '—', 90))}"
-                   for ts, ev in evs[:n + 2]]
-        return (head + "\n\n" + tx(lang, "act_dl_title", n=len(dls)) + "\n" + ("\n".join(d_lines) or tx(lang, "act_none"))
-                + "\n\n" + tx(lang, "act_msg_title", n=len(evs)) + "\n" + ("\n".join(e_lines) or tx(lang, "act_none"))
-                + "\n\n" + tx(lang, "act_note"))
-    for n in (10, 8, 6, 4, 2, 1):                                       # a message may hold 4096 characters
-        text = build(n)
-        if len(text) <= 3900:
-            return text
-    return text
-
-
-async def activity_view(lang: str, tid: int) -> tuple:
-    return await activity_report(lang, tid), Kb([
-        [Btn(tx(lang, "b_act_txt"), callback_data=f"sup_actt_{tid}"), Btn(tx(lang, "b_refresh"), callback_data=f"sup_act_{tid}")],
-        back_row(lang, "panel_unified")])
-
-
-async def activity_txt(lang: str, tid: int) -> bytes:
-    ud = await db_get(f"users/{tid}")
-    ud = ud if isinstance(ud, dict) else {}
-    dls, evs = await _act_downloads(tid), await _act_events(tid)
-    one = lambda v: " ".join(str(v).split()) or "—"                     # noqa: E731
-    out = [tx(lang, "act_txt_head", id=tid, name=one(ud.get("name") or ""), date=now_str()), "=" * 34, "",
-           tx(lang, "act_txt_dl", n=len(dls)), ""]
-    for key, it in dls:
-        src = ((await cache_get(key)) or {}).get("src") or "—"
-        out.append(f"[{_when(it.get('ts'), True)}] {one(it.get('c') or 'TikTok')} | {one(it.get('t') or '')} | {src}")
-    out += ["", "=" * 34, tx(lang, "act_txt_msg", n=len(evs)), ""]
-    for ts, ev in evs:
-        out.append(f"[{_when(ts, True)}] {ACT_ICONS.get(ev.get('k'), '❔')} {ACT_WORDS.get(ev.get('k'), 'other')} | {one(ev.get('x') or '')}")
-    return ("\ufeff" + "\n".join(out) + "\n").encode("utf-8")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# 9e · PREMIUM EMOJI (Bot API 9.4: custom emoji in texts + button icons) AND COLOURED BUTTONS
-#      Everything here is OFF until the owner switches it on in the panel (💎 ئیمۆجی و ڕەنگی دوگمە).
-#      Premium emoji only work when the bot's owner account has Telegram Premium (Telegram's rule).
-# ══════════════════════════════════════════════════════════════════════════════
-_PE = {"on": False, "map": {}, "rev": {}, "rx": None, "pack": ""}      # premium-emoji state
-_STY = {"on": False}                                                    # coloured buttons
-_HOOKS = {"installed": False, "orig": []}                               # wrapped PTB methods (for tests / undo)
-_RAW = {"v": False}                                                     # True → send without any of the extras
-_FAIL = {"ts": 0.0}
-_PE_CAP = 60                                                            # custom emoji per message (Telegram allows 100 entities)
-_TAG_SPLIT = re.compile(r"(<[^>]*>)")
-_SKIP_OPEN = re.compile(r"<(code|pre|a|tg-emoji)\b", re.I)
-_SKIP_CLOSE = re.compile(r"</(code|pre|a|tg-emoji)\s*>", re.I)
-
-
-def pe_set_map(emoji_map: dict, pack: str = "") -> None:
-    """Install the {emoji → custom_emoji_id} table and compile the matcher (longest emoji first)."""
-    clean = {str(k).replace("\ufe0f", ""): str(v) for k, v in (emoji_map or {}).items() if k and str(v).isdigit()}
-    _PE["map"], _PE["pack"] = clean, pack or ""
-    _PE["rev"] = {v: k for k, v in clean.items()}
-    keys = sorted(clean, key=len, reverse=True)
-    _PE["rx"] = re.compile("(?:" + "|".join(re.escape(k) for k in keys) + ")\ufe0f?") if keys else None
-
-
-def pe_text(text: str) -> str:
-    """HTML text → the same text with mapped emoji wrapped as <tg-emoji>. Skips <code>/<pre>/<a>, idempotent."""
-    if not (_PE["on"] and _PE["rx"]) or not isinstance(text, str) or "<tg-emoji" in text:
-        return text
-    out, skip, n = [], 0, 0
-
-    def swap(m):
-        nonlocal n
-        cid = _PE["map"].get(m.group(0).replace("\ufe0f", ""))
-        if not cid or n >= _PE_CAP:
-            return m.group(0)
-        n += 1
-        return f'<tg-emoji emoji-id="{cid}">{m.group(0)}</tg-emoji>'
-
-    for part in _TAG_SPLIT.split(text):
-        if part.startswith("<") and part.endswith(">"):
-            if _SKIP_OPEN.match(part):
-                skip += 1
-            elif _SKIP_CLOSE.match(part):
-                skip = max(0, skip - 1)
-            out.append(part)
-        else:
-            out.append(part if skip else _PE["rx"].sub(swap, part))
-    return "".join(out)
-
-
-def _pe_icon(label: str) -> tuple:
-    """'📥 Download' → ('Download', custom_emoji_id).  Emoji-only labels stay as they are."""
-    if not (_PE["on"] and _PE["rx"]):
-        return label, None
-    m = _PE["rx"].search(label)
-    if not m:
-        return label, None
-    rest = (label[:m.start()] + label[m.end():]).strip()
-    if not rest:
-        return label, None
-    return " ".join(rest.split()), _PE["map"].get(m.group(0).replace("\ufe0f", ""))
-
-
-_STY_DANGER = ("hist_clr", "ss_x_", "stk_del_", "stk_delyes_", "fwx_", "fwu_")
-_STY_SUCCESS = ("buy_", "stk_new", "fw_")
-_STY_PRIMARY = ("ss_round_", "ss_sq_", "ss_circle_")
-
-
-def _style_for(cbd: str | None) -> str | None:
-    if not cbd:
-        return None
-    if cbd == "close" or cbd.startswith(_STY_DANGER):
-        return "danger"
-    if cbd.startswith(_STY_SUCCESS):
-        return "success"
-    if cbd in ("ask_link", "show_vip", "show_ref") or cbd.startswith(_STY_PRIMARY):
-        return "primary"
-    return None
-
-
-def Btn(text: str, **kw):
-    """InlineKeyboardButton + (when switched on) a premium-emoji icon and a colour. Plain button otherwise."""
-    extra = dict(kw.pop("api_kwargs", None) or {})
-    icon_id = None
-    if _PE["on"] and "icon_custom_emoji_id" not in extra:
-        text, icon_id = _pe_icon(text)
-    if icon_id:
-        extra["icon_custom_emoji_id"] = icon_id
-    if _STY["on"] and "style" not in extra:
-        st = _style_for(kw.get("callback_data"))
-        if st:
-            extra["style"] = st
-    if extra:
-        kw["api_kwargs"] = extra
-    return InlineKeyboardButton(text, **kw)
-
-
-def _paint(rows):
-    """Colour for every button that has none yet: in a row with a ✅ the selected one is green and the others blue,
-    otherwise a blue/green checkerboard. Page counters, emoji-only buttons and `noop` stay as they are."""
-    try:
-        out = []
-        for ri, row in enumerate(rows):
-            marked = any(str(getattr(b, "text", "")).startswith("✅") for b in row)
-            new = []
-            for ci, b in enumerate(row):
-                ex = dict(getattr(b, "api_kwargs", None) or {})
-                cbd, text = getattr(b, "callback_data", None), str(getattr(b, "text", ""))
-                if "style" in ex or cbd == "noop" or not any(ch.isalnum() for ch in text):
-                    new.append(b)
-                    continue
-                ex["style"] = ("success" if text.startswith("✅") else "primary") if marked else ("primary" if (ri + ci) % 2 == 0 else "success")
-                new.append(InlineKeyboardButton(text, callback_data=cbd, api_kwargs=ex) if cbd
-                           else InlineKeyboardButton(text, url=b.url, api_kwargs=ex))
-            out.append(new)
-        return out
-    except Exception as e:                                              # noqa: BLE001 — colours are decoration, never an error
-        log.info("paint skipped: %s", e)
-        return rows
-
-
-def _markup_has_extras(rm) -> bool:
-    try:
-        return any(getattr(b, "api_kwargs", None) for row in rm.inline_keyboard for b in row)
-    except AttributeError:
-        return False
-
-
-def _strip_markup(rm):
-    """The same keyboard without icons/colours (the emoji goes back into the label)."""
-    try:
-        rows = []
-        for row in rm.inline_keyboard:
-            new = []
-            for b in row:
-                ex = dict(getattr(b, "api_kwargs", None) or {})
-                text = b.text
-                if ex.get("icon_custom_emoji_id") and _PE["rev"].get(str(ex["icon_custom_emoji_id"])):
-                    text = f"{_PE['rev'][str(ex['icon_custom_emoji_id'])]} {text}"
-                new.append(InlineKeyboardButton(text, callback_data=b.callback_data) if b.callback_data
-                           else InlineKeyboardButton(text, url=b.url))
-            rows.append(new)
-        return InlineKeyboardMarkup(rows)
-    except AttributeError:
-        return rm
-
-
-def _make_wrapper(orig, text_arg: str, text_pos):
-    @functools.wraps(orig)
-    async def wrapper(self, *args, **kwargs):
-        if _RAW["v"] or not (_PE["on"] or _STY["on"]):
-            return await orig(self, *args, **kwargs)
-        a, k, changed = list(args), dict(kwargs), False
-        try:
-            if _PE["on"] and k.get("parse_mode", "HTML") == "HTML" and "entities" not in k:
-                if isinstance(k.get(text_arg), str):
-                    new = pe_text(k[text_arg])
-                    changed, k[text_arg] = changed or new != k[text_arg], new
-                elif text_pos is not None and len(a) > text_pos and isinstance(a[text_pos], str):
-                    new = pe_text(a[text_pos])
-                    changed, a[text_pos] = changed or new != a[text_pos], new
-            changed = changed or _markup_has_extras(k.get("reply_markup"))
-        except Exception as e:                                          # noqa: BLE001 — a bug here must never block a message
-            log.info("premium-emoji transform skipped: %s", e)
-            a, k, changed = list(args), dict(kwargs), False
-        if not changed:
-            return await orig(self, *a, **k)
-        try:
-            return await orig(self, *a, **k)
-        except BadRequest as e:
-            if "not modified" in str(e).lower():
-                raise
-            plain = dict(kwargs)
-            if "reply_markup" in plain:
-                plain["reply_markup"] = _strip_markup(plain["reply_markup"])
-            result = await orig(self, *args, **plain)                   # still failing → the real error propagates
-            await _auto_disable(self, e)
-            return result
-    wrapper._jt = True
-    return wrapper
-
-
-async def _auto_disable(bot, err) -> None:
-    """Telegram refused the extras but accepted the plain message → switch the extras off, tell the owner once an hour."""
-    _PE["on"] = _STY["on"] = False
-    try:
-        await set_cfg(pe_on=False, btn_style=False)
-    except Exception as e:                                              # noqa: BLE001
-        log.info("could not save the auto-disable: %s", e)
-    if time.time() - _FAIL["ts"] > 3600:
-        _FAIL["ts"] = time.time()
-        _RAW["v"] = True
-        try:
-            await bot.send_message(OWNER_ID, tx("ku", "pe_autooff", err=esc(str(err)[:160])))
-        except Exception:                                               # noqa: BLE001
-            pass
-        finally:
-            _RAW["v"] = False
-
-
-def _install_hooks() -> bool:
-    """Wrap PTB's send/edit methods once. False when PTB looks different from what we expect (then nothing is switched on)."""
-    if _HOOKS["installed"]:
-        return True
-    try:
-        import telegram as _tg
-        from telegram.ext import ExtBot
-    except Exception as e:                                              # noqa: BLE001
-        log.info("hooks not installed: %s", e)
-        return False
-    specs = (("send_message", "text", 1), ("edit_message_text", "text", 0), ("send_photo", "caption", None),
-             ("send_video", "caption", None), ("send_audio", "caption", None), ("send_document", "caption", None),
-             ("send_animation", "caption", None), ("edit_message_caption", "caption", None))
-    done = set()
-    for name, arg, pos in specs:
-        target = ExtBot if name in vars(ExtBot) else _tg.Bot            # the class the application's bot really uses
-        orig = getattr(target, name, None)
-        if not callable(orig) or getattr(orig, "_jt", False):
-            continue
-        setattr(target, name, _make_wrapper(orig, arg, pos))
-        _HOOKS["orig"].append((target, name, orig))
-        done.add(name)
-    _HOOKS["installed"] = {"send_message", "edit_message_text"} <= done
-    return _HOOKS["installed"]
-
-
-def pe_apply_cfg(d: dict) -> None:
-    """Called after every config load: map, switches, hooks."""
-    pe = d.get("pemoji")
-    if isinstance(pe, dict) and isinstance(pe.get("map"), dict):
-        if pe["map"] != _PE["map"] and {k.replace("\ufe0f", ""): v for k, v in pe["map"].items()} != _PE["map"]:
-            pe_set_map(pe["map"], str(pe.get("pack") or ""))
-    elif _PE["map"] and not pe:
-        pe_set_map({}, "")
-    want_pe, want_sty = bool(CFG.get("pe_on")) and bool(_PE["map"]), bool(CFG.get("btn_style"))
-    if (want_pe or want_sty) and not _install_hooks():
-        want_pe = want_sty = False
-    _PE["on"], _STY["on"] = want_pe, want_sty
-
-
-async def pe_test(ctx, chat_id: int, kind: str) -> tuple:
-    """Send one test message straight to Telegram (no safety net) → (accepted?, error text)."""
-    _RAW["v"] = True
-    try:
-        if kind == "emoji":
-            emoji, cid = next(iter(_PE["map"].items()))
-            kb = Kb([[InlineKeyboardButton("Premium emoji", callback_data="noop", api_kwargs={"icon_custom_emoji_id": cid})]])
-            await ctx.bot.send_message(chat_id, f'<tg-emoji emoji-id="{cid}">{emoji}</tg-emoji> premium emoji', reply_markup=kb)
-        else:
-            kb = Kb([[InlineKeyboardButton(n, callback_data="noop", api_kwargs={"style": n}) for n in ("primary", "success", "danger")]])
-            await ctx.bot.send_message(chat_id, "🎨 button colours", reply_markup=kb)
-        return True, ""
-    except TelegramError as e:
-        return False, str(e)[:160]
-    finally:
-        _RAW["v"] = False
-
-
-async def pe_import_pack(ctx, raw: str) -> tuple:
-    """A custom-emoji pack link/name → the emoji table (each pack emoji is paired with its normal emoji). → (ok, text key, kwargs)"""
-    raw = (raw or "").strip()
-    m = re.search(r"(?:addemoji|addstickers)/([A-Za-z0-9_]+)", raw) or re.fullmatch(r"([A-Za-z0-9_]{3,64})", raw)
-    if not m:
-        return False, "pe_why_link", {}
-    name = m.group(1)
-    try:
-        st = await ctx.bot.get_sticker_set(name)
-    except TelegramError as e:
-        return False, "pe_why_find", {"err": esc(str(e)[:120])}
-    if str(getattr(st, "sticker_type", "") or "").lower() != "custom_emoji":
-        return False, "pe_why_type", {}
-    table: dict = {}
-    for s in st.stickers:
-        key, cid = (getattr(s, "emoji", "") or "").replace("\ufe0f", ""), getattr(s, "custom_emoji_id", None)
-        if key and cid and key not in table:
-            table[key] = str(cid)
-    if not table:
-        return False, "pe_why_type", {}
-    await db_put("sys/pemoji", {"pack": name, "map": table})
-    pe_set_map(table, name)
-    return True, "pe_pack_ok", {"pack": esc(name), "n": len(table)}
-
-
-async def pe_admin_view(cb: "CB", note: str = "") -> None:
-    pe_on, st_on = bool(CFG.get("pe_on")), bool(CFG.get("btn_style"))
-    text = cb.t("pe_title", pe=status_word(cb.lang, pe_on), st=status_word(cb.lang, st_on),
-                pack=esc(_PE["pack"] or "—"), n=len(_PE["map"]))
-    rows = [[Btn(cb.t("b_pe_emoji", status=status_word(cb.lang, pe_on)), callback_data="sup_pe_emoji")],
-            [Btn(cb.t("b_pe_style", status=status_word(cb.lang, st_on)), callback_data="sup_pe_style")],
-            [Btn(cb.t("b_pe_pack"), callback_data="sup_pe_pack"), Btn(cb.t("b_pe_test"), callback_data="sup_pe_test")]]
-    if _PE["map"]:
-        rows.append([Btn(cb.t("b_pe_del"), callback_data="sup_pe_del")])
-    rows.append(back_row(cb.lang, "panel_unified"))
-    await cb.edit(text + (f"\n\n{note}" if note else ""), Kb(rows))
-
-
-async def route_pe_admin(cb: "CB", data: str) -> None:
-    chat_id = cb.q.message.chat_id
-    if data == "sup_pe":
-        await cb.answer()
-        return await pe_admin_view(cb)
-    if data == "sup_pe_pack":
-        return await ask_input(cb, "pemoji", cb.t("pe_ask_pack"), "sup_pe")
-    if data == "sup_pe_del":
-        await db_del("sys/pemoji")
-        await set_cfg(pe_on=False)
-        pe_set_map({}, "")
-        _PE["on"] = False
-        await cb.answer()
-        return await pe_admin_view(cb)
-    if data in ("sup_pe_emoji", "sup_pe_style"):
-        key, kind = ("pe_on", "emoji") if data == "sup_pe_emoji" else ("btn_style", "style")
-        if CFG.get(key):                                                # switching off needs no checks
-            await set_cfg(**{key: False})
-            (_PE if kind == "emoji" else _STY)["on"] = False
-            await cb.answer()
-            return await pe_admin_view(cb)
-        if kind == "emoji" and not _PE["map"]:
-            return await cb.answer(cb.t("pe_not_ready"), True)
-        if not _install_hooks():
-            return await cb.answer(cb.t("pe_no_hooks"), True)
-        ok, err = await pe_test(cb.ctx, chat_id, kind)
-        if not ok:
-            return await cb.answer(cb.t("pe_test_fail", err=err), True)
-        await set_cfg(**{key: True})
-        (_PE if kind == "emoji" else _STY)["on"] = True
-        await cb.answer()
-        return await pe_admin_view(cb, cb.t("pe_test_ok"))
-    if data == "sup_pe_test":
-        res = []
-        for kind in (("emoji",) if _PE["map"] else ()) + ("style",):
-            ok, err = await pe_test(cb.ctx, chat_id, kind)
-            res.append(f"{'💎' if kind == 'emoji' else '🎨'} " + (cb.t("pe_test_ok") if ok else cb.t("pe_test_fail", err=err)))
-        await cb.answer()
-        return await pe_admin_view(cb, "\n".join(res))
-
-
-def _photo_file(msg) -> tuple[str, int] | None:
-    """(file_id, size) of a gallery photo, or of an image sent as a file; None otherwise."""
-    if getattr(msg, "photo", None):
-        ph = msg.photo[-1]
-        return ph.file_id, ph.file_size or 0
-    d = getattr(msg, "document", None)
-    mime = (getattr(d, "mime_type", None) or "").lower()
-    if d and mime.startswith("image/") and mime != "image/gif":
-        return d.file_id, d.file_size or 0
-    return None
-
-
-# ── 🎨 sticker shape: ask first (rounded · square · circle), then build ──────
-SHAPES = ("round", "sq", "circle")
-
-
-def _shape_kb(lang: str, mid: int, with_font: bool, ft: str, cl: str = "w") -> Kb:
-    rows = [[Btn(tx(lang, "b_shape_round"), callback_data=f"ss_round_{mid}"),
-             Btn(tx(lang, "b_shape_sq"), callback_data=f"ss_sq_{mid}"),
-             Btn(tx(lang, "b_shape_circle"), callback_data=f"ss_circle_{mid}")]]
-    if with_font:                                                      # which font draws the caption?
-        rows.append([Btn(("✅ " if ft == code else "") + tx(lang, key), callback_data=f"ss_f{code}_{mid}")
-                     for code, key in (("auto", "b_font_auto"), ("ku", "b_font_ku"), ("en", "b_font_en"))])
-        rows.append([Btn(("✅" if cl == code else "") + COLOR_DOTS[code], callback_data=f"ss_c{code}_{mid}") for code in COLORS])
-    rows.append([Btn(tx(lang, "b_shape_cancel"), callback_data=f"ss_x_{mid}")])
-    return Kb(rows)
-
-
-async def ask_sticker_shape(update: Update, ctx, lang: str, kind: str) -> None:
-    """A photo / video arrived → remember it and ask which shape the sticker should have."""
-    msg, uid = update.effective_message, update.effective_user.id
-    if not await gate_message(update, ctx, uid, lang):
-        return
-    seconds = 0
-    if kind == "video":
-        fid, size, seconds = _video_file(msg)
-        if not ffmpeg_path():
-            return await msg.reply_text(tx(lang, "vstk_noffmpeg"))
-    else:
-        fid, size = _photo_file(msg)
-    if size > 20_000_000:                                              # bots can download up to 20 MB
-        return await msg.reply_text(tx(lang, "mkstk_big"))
-    mid = int(getattr(msg, "message_id", 0) or 0)
-    old = await db_get(f"stkq/{uid}")                                  # forget questions nobody answered for an hour
-    if isinstance(old, dict):
-        for k, v in list(old.items()):
-            if not isinstance(v, dict) or int(v.get("ts", 0)) < int(time.time()) - 3600:
-                await db_del(f"stkq/{uid}/{k}")
-    caption = clip((getattr(msg, "caption", None) or "").strip(), 80)
-    await db_put(f"stkq/{uid}/{mid}", {"k": kind, "f": fid, "s": seconds, "ts": int(time.time()), "c": caption,
-                                       "ft": "auto", "cl": "w"})
-    text = tx(lang, "ss_ask") + (("\n\n" + tx(lang, "ss_font_hint")) if caption else "")
-    await msg.reply_text(text, reply_markup=_shape_kb(lang, mid, bool(caption), "auto", "w"))
-
-
-async def process_photo_sticker(update: Update, ctx, lang: str) -> None:
-    await ask_sticker_shape(update, ctx, lang, "photo")
-
-
-async def process_video_sticker(update: Update, ctx, lang: str) -> None:
-    await ask_sticker_shape(update, ctx, lang, "video")
-
-
-async def _build_sticker(ctx, uid: int, chat_id: int, lang: str, rec: dict, shape: str) -> str | None:
-    """Download the user's media, render it in the chosen shape, deliver it. → None, or the key of an error text."""
-    video = rec.get("k") == "video"
-    await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO if video else ChatAction.UPLOAD_PHOTO)
-    if not video and not importlib.util.find_spec("PIL"):
-        raise RuntimeError("Pillow is missing — add `Pillow` to requirements.txt")
-    tg_file = await ctx.bot.get_file(rec["f"])
-    raw = bytes(await tg_file.download_as_bytearray())
-    caption = (rec.get("c") or "").strip()
-    font_choice = rec.get("ft") if rec.get("ft") in ("auto", "ku", "en") else "auto"
-    color = rec.get("cl") if rec.get("cl") in COLORS else "w"
-    if video:
-        webm = await to_sticker_webm(raw, shape, caption, font_choice, color)
-        if not webm:
-            return "stk_fail"
-        await deliver_sticker(ctx, uid, chat_id, lang, webm, "video")
-        if int(rec.get("s", 0)) > 3:
-            await ctx.bot.send_message(chat_id, tx(lang, "vstk_trim"))
-        if caption and not text_supported(caption):
-            await ctx.bot.send_message(chat_id, tx(lang, "stk_text_unsupported"))
-        elif caption and font_fallback(caption, font_choice):
-            note = tx(lang, "stk_font_missing") + (f"\n\n{font_diag(caption, font_choice)}" if is_super(uid) else "")
-            await ctx.bot.send_message(chat_id, note)
-        return None
-    webp = await asyncio.to_thread(_static_sticker, raw, shape, caption, font_choice, color)
-    if not webp:
-        return "mkstk_fail"
-    await deliver_sticker(ctx, uid, chat_id, lang, webp)
-    if caption and not text_supported(caption):
-        await ctx.bot.send_message(chat_id, tx(lang, "stk_text_unsupported"))
-    elif caption and font_fallback(caption, font_choice):               # their font lacks some letters → say so
-        note = tx(lang, "stk_font_missing") + (f"\n\n{font_diag(caption, font_choice)}" if is_super(uid) else "")
-        await ctx.bot.send_message(chat_id, note)
-    return None
-
-
-async def choose_shape(cb: "CB", data: str) -> None:
-    """ss_<round|sq|circle|x>_<message id> — the user answered the shape question."""
-    parts = data.split("_", 2)
-    if len(parts) != 3 or parts[1] not in SHAPES + ("x", "fauto", "fku", "fen") + tuple("c" + k for k in COLORS) or not parts[2].isdigit():
-        return await cb.answer()
-    shape, mid, uid, lang = parts[1], parts[2], cb.uid, cb.lang
-    path, msg = f"stkq/{uid}/{mid}", cb.q.message
-    if shape.startswith("f") or (len(shape) == 2 and shape[0] == "c"):  # 🔤 font / 🎨 colour row: remember it, mark it ✅
-        cur = await db_get(path)
-        if not isinstance(cur, dict):
-            return await cb.answer(cb.t("ss_expired"), True)
-        ft, cl = cur.get("ft", "auto"), cur.get("cl", "w")
-        if shape.startswith("f"):
-            ft = shape[1:]
-            await db_put(f"{path}/ft", ft)
-        else:
-            cl = shape[1]
-            await db_put(f"{path}/cl", cl)
-        await cb.answer()
-        try:
-            await msg.edit_reply_markup(reply_markup=_shape_kb(lang, int(mid), True, ft, cl))
-        except TelegramError:                                          # same choice tapped again → nothing changes
-            pass
-        return
-    if shape == "x":                                                   # cancelled
-        await db_del(path)
-        await cb.answer()
-        try:
-            await msg.delete()
-        except TelegramError:
-            pass
-        return
-    rec = await db_get(path)
-    if not isinstance(rec, dict):
-        return await cb.answer(cb.t("ss_expired"), True)
-    if not await acquire_lock(uid):
-        return await cb.answer(cb.t("busy_msg"), True)
-    err = None
-    try:
-        await cb.answer()
-        await safe_edit(msg, tx(lang, "st_mkstk"))                    # replaces the question (buttons disappear)
-        err = await _build_sticker(cb.ctx, uid, msg.chat_id, lang, rec, shape)
-    except Exception as e:                                              # noqa: BLE001 — user gets a clean message
-        await report_error(cb.ctx, e, "sticker_shape")
-        err = "stk_fail" if rec.get("k") == "video" else "mkstk_fail"
-    finally:
-        await release_lock(uid)
-    await db_del(path)
-    if err:
-        return await safe_edit(msg, tx(lang, err))
-    try:
-        await msg.delete()
-    except TelegramError:
-        pass
-
-
-async def send_extra(cb: "CB", data: str) -> None:
-    """dl_gif_<key> · dl_stk_<key> · dl_cmt_<key>"""
-    parts = data.split("_", 2)
-    if len(parts) != 3 or parts[1] not in ("gif", "stk", "cmt") or not safe_key(parts[2]):
-        return await cb.answer()
-    kind, key = parts[1], parts[2]
-    src = await _src_for(cb, key)
-    if not src:
-        return await cb.answer(cb.t("session_expired"), True)
-    if not await acquire_lock(cb.uid):
-        return await cb.answer(cb.t("busy_msg"), True)
-    chat_id = cb.q.message.chat_id
-    try:
-        await cb.answer(plain(cb.t(f"st_{kind}", bar="")).strip())
-        if kind == "stk":
-            await _extra_sticker(cb.ctx, chat_id, cb.lang, key, src, cb.uid)
-        else:
-            await {"gif": _extra_gif, "cmt": _extra_comments}[kind](cb.ctx, chat_id, cb.lang, key, src)
-    except Exception as e:                                              # noqa: BLE001 — user gets a clean message
-        await report_error(cb.ctx, e, f"extra_{kind}")
-        try:
-            await cb.ctx.bot.send_message(chat_id, cb.t(f"{kind}_fail"))
-        except TelegramError:
-            pass
-    finally:
-        await release_lock(cb.uid)
-
-
 # ── audio on demand ──────────────────────────────────────────────────────────
 async def send_audio_from_session(cb: CB, key: str):
-    chat_id = cb.q.message.chat_id
-    if not safe_key(key):
-        return await cb.answer()
-    fid = await db_get(f"fc/{key}/fid_a")                               # sent before → instant
-    if isinstance(fid, str) and fid:
-        await cb.answer()
-        try:
-            return await cb.ctx.bot.send_audio(chat_id, fid, caption=f"🎵 {bot_tag()}",
-                                               reply_markup=audio_kb(cb.lang), **_UP)
-        except TelegramError as e:
-            log.info("cached audio failed (%s) → rebuild", e)
+    started = time.monotonic()
     s = await session_get(key)
-    if not s or not s.get("audio"):                                     # session gone → rebuild from the link
-        src = await _src_for(cb, key)
-        m = await fetch_tiktok(src) if src else None
-        if m and m["audio"]:
-            s = {k: m[k] for k in ("audio", "a_title", "a_author", "title", "creator", "src")}
     if not s or not s.get("audio"):
         return await cb.answer(cb.t("session_expired"), True)
     await cb.answer(plain(cb.t("st_audio", bar="")).strip())
+    chat_id = cb.q.message.chat_id
     await chat_action(cb.ctx, chat_id, ChatAction.UPLOAD_VOICE)
     try:
         res = await download_bytes(s["audio"])
@@ -5344,8 +2692,7 @@ async def send_audio_from_session(cb: CB, key: str):
         res = None
     if not res:
         return await cb.ctx.bot.send_message(chat_id, cb.t("no_audio"))
-    sent = await send_audio_file(cb.ctx, chat_id, s, res[0], res[1], audio_kb(cb.lang))
-    await save_fid(key, "fid_a", sent, "audio")
+    await send_audio_file(cb.ctx, chat_id, s, res[0], res[1], audio_kb(cb.lang))
 
 
 # ── shared admin helpers ─────────────────────────────────────────────────────
@@ -5357,9 +2704,6 @@ async def grant_vip(tid: int, on: bool) -> None:
     await load_cfg(force=True)
     (vip_set.add if on else vip_set.discard)(tid)
     await save_sys("vips")
-    if not on:                                                    # removing VIP also ends a referral VIP
-        vip_until.pop(tid, None)
-        await db_del(f"sys/vip_until/{tid}")
     if await user_exists(tid):
         await db_put(f"users/{tid}/vip", on)
 
@@ -5368,32 +2712,12 @@ async def userinfo_text(lang: str, tid: int) -> str:
     ud = await db_get(f"users/{tid}")
     if not isinstance(ud, dict):
         return tx(lang, "user_not_found")
-    return tx(lang, "userinfo", name=esc(ud.get("name") or "—"),
+    return tx(lang, "userinfo", name=esc(ud.get("name", "—")),
               user=f"@{esc(ud['user'])}" if ud.get("user") else "—", id=tid,
               rank=tx(lang, f"rank_{rank_key(tid)}"),
               blocked=tx(lang, "yes") if tid in blocked_set else tx(lang, "no"),
-              lang=LANG_NAMES.get(user_lang(ud), "—"), al=esc(ud.get("al") or "—"), plink=profile_link(lang, tid),
-              dl=fmt_num(ud.get("dl", 0)), date=esc(ud.get("date") or "—"))
-
-
-async def export_users_txt(lang: str) -> tuple:
-    """Every user, complete, as one UTF-8 text file. → (bytes, count)"""
-    users = await all_users()
-    ids = sorted((int(k) for k in users if str(k).isdigit()),
-                 key=lambda i: ((users.get(str(i)) or {}).get("date") if isinstance(users.get(str(i)), dict) else "") or "", reverse=False)
-    out = [tx(lang, "ul_header", n=len(ids), date=now_str()), "=" * 34, ""]
-    for n, tid in enumerate(ids, 1):
-        ud = users.get(str(tid))
-        ud = ud if isinstance(ud, dict) else {}
-        clean = lambda v: " ".join(str(v).split()) or "—"          # noqa: E731 — one line per field, never empty
-        out.append(tx(lang, "ul_block", n=n, name=clean(ud.get("name") or ""),
-                      user=f"@{ud['user']}" if ud.get("user") else "—", id=tid, al=clean(ud.get("al") or ""),
-                      date=clean(ud.get("date") or ""), dl=int(ud.get("dl", 0) or 0),
-                      rank=tx(lang, f"rank_{rank_key(tid)}"),
-                      blocked=tx(lang, "yes") if tid in blocked_set else tx(lang, "no"),
-                      botlang=LANG_NAMES.get(user_lang(ud), "—")))
-        out.append("-" * 34)
-    return ("\ufeff" + "\n".join(out) + "\n").encode("utf-8"), len(ids)
+              lang=LANG_NAMES.get(ud.get("lang"), ud.get("lang", "—")),
+              dl=fmt_num(ud.get("dl", 0)), date=esc(ud.get("date", "—")))
 
 
 def confirm_kb(lang: str, yes_cb: str, no_cb: str) -> Kb:
@@ -5428,15 +2752,7 @@ async def show_panel(cb: CB):
                          callback_data="sup_toggle_maint")])
         rows.append([Btn(cb.t("b_sup_audio", status=status_word(lang, CFG.get("auto_audio", False))),
                          callback_data="sup_toggle_audio")])
-        rows.append([Btn(cb.t("b_sup_ref"), callback_data="sup_ref"),
-                     Btn(cb.t("b_sup_groups", status=status_word(lang, CFG.get("groups_on", True))),
-                         callback_data="sup_toggle_groups")])
-        rows.append([Btn(cb.t("b_sup_stars", status=status_word(lang, CFG.get("stars_on", False))),
-                         callback_data="sup_stars")])
         rows.append([Btn(cb.t("b_sup_botlang"), callback_data="sup_bot_lang")])
-        rows.append([Btn(cb.t("b_sup_users"), callback_data="sup_users_txt"),
-                     Btn(cb.t("b_sup_activity"), callback_data="sup_activity")])
-        rows.append([Btn(cb.t("b_sup_pe"), callback_data="sup_pe")])
     if is_owner(uid):
         rows.append([Btn("▬▬▬  👑  ▬▬▬", callback_data="noop")])
         rows.append([Btn(cb.t("b_own_super"), callback_data="own_super_adms"),
@@ -5487,40 +2803,6 @@ async def route_super(cb: CB, data: str):
     if data == "sup_toggle_maint":
         await set_cfg(maintenance=not CFG.get("maintenance", False))
         return await show_panel(cb)
-
-    if data == "sup_toggle_groups":
-        await set_cfg(groups_on=not CFG.get("groups_on", True))
-        return await show_panel(cb)
-
-    if data == "sup_pe" or data.startswith("sup_pe_"):                   # 💎 premium emoji + button colours
-        return await route_pe_admin(cb, data)
-
-    if data == "sup_activity":                                           # 🕵️ ask for a user ID
-        return await ask_input(cb, "activity", cb.t("act_ask", write_id=cb.t("write_id")), "panel_unified")
-    if data.startswith("sup_act_") and data[len("sup_act_"):].isdigit():   # refresh
-        text, kb = await activity_view(lang, int(data[len("sup_act_"):]))
-        return await cb.edit(text, kb)
-    if data.startswith("sup_actt_") and data[len("sup_actt_"):].isdigit():  # the full log as a .txt file
-        tid = int(data[len("sup_actt_"):])
-        await cb.answer(cb.t("users_preparing"))
-        return await cb.ctx.bot.send_document(
-            cb.q.message.chat_id, InputFile(await activity_txt(lang, tid), filename=f"activity_{tid}.txt"), **_UP)
-
-    if data == "sup_users_txt":                                          # 📄 every user, complete, as a .txt file
-        await cb.answer(cb.t("users_preparing"))
-        blob, n = await export_users_txt(lang)
-        return await cb.ctx.bot.send_document(
-            cb.q.message.chat_id, InputFile(blob, filename=f"users_{time.strftime('%Y-%m-%d')}.txt"),
-            caption=cb.t("users_file_caption", n=n), **_UP)
-
-    if data == "sup_ref":
-        return await ref_admin_view(cb)
-    if data == "sup_stars":
-        return await stars_admin_view(cb)
-    if data.startswith("sup_stars_"):
-        return await route_stars_admin(cb, data)
-    if data.startswith("sup_ref_"):
-        return await route_ref_admin(cb, data)
 
     if data == "sup_toggle_audio":
         await set_cfg(auto_audio=not CFG.get("auto_audio", False))
@@ -5705,7 +2987,7 @@ async def route_owner(cb: CB, data: str):
 _NEEDS = {  # prompt → minimum role
     "broadcast": is_admin, "blk_add": is_admin, "blk_rm": is_admin, "info": is_admin,
     "adm_add": is_super, "vip_add": is_super, "add_ch": is_super,
-    "sup_add": is_owner, "set_welcome": is_owner, "activity": is_super, "pemoji": is_super,
+    "sup_add": is_owner, "set_welcome": is_owner,
 }
 
 
@@ -5752,10 +3034,6 @@ async def handle_prompt(update: Update, ctx, state: str, lang: str, started: flo
         await set_cfg(welcome_msg=msg.text_html or "")
         return await msg.reply_text(tx(lang, "welcome_set"))
 
-    if state == "pemoji":                                                # 💎 an emoji pack link
-        ok, key, kw = await pe_import_pack(ctx, txt)
-        return await msg.reply_text(tx(lang, key, **kw) if ok else tx(lang, "pe_pack_bad", why=tx(lang, key, **kw)))
-
     if state == "add_ch":
         ch = txt if txt.startswith("@") else ""
         if not re.fullmatch(r"@[A-Za-z][A-Za-z0-9_]{3,31}", ch):
@@ -5788,9 +3066,6 @@ async def handle_prompt(update: Update, ctx, state: str, lang: str, started: flo
         return await msg.reply_text(tx(lang, "act_unblocked", id=tid))
     if state == "info":
         return await msg.reply_text(await userinfo_text(lang, tid))
-    if state == "activity":
-        text, kb = await activity_view(lang, tid)
-        return await msg.reply_text(text, reply_markup=kb)
     if state == "adm_add":
         admins_set.add(tid); await save_sys("admins")
         return await msg.reply_text(tx(lang, "act_adm_added", id=tid))
@@ -5830,62 +3105,23 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
     if not await acquire_lock(uid):
         return await msg.reply_text(tx(lang, "busy_msg"))
 
-    if update.effective_chat.type != "private":                       # groups: answer as a reply to the link
-        ctx = _ReplyCtx(ctx, chat_id, msg.message_id)
-
     status = None
     try:
-        quality = await user_quality(uid)
         status = await msg.reply_text(tx(lang, "st_search", bar=bar(1)))
-
-        # ⚡ repeated link → Telegram already holds the file: send it by file_id (no API call / download / upload)
-        cached = await send_from_cache(ctx, chat_id, lang, url, quality)
-        if cached:
-            await count_download(uid, ctx)
-            await hist_add(uid, cached)
-            try:
-                await status.delete()
-            except TelegramError:
-                pass
-            return
-
         media = await fetch_tiktok(url)
         if not media:
             return await safe_edit(status, tx(lang, "invalid_link"))
 
-        try:                                                           # metadata + link map for the cache
-            await remember_media(media, url)
-        except Exception as e:                                         # noqa: BLE001 — never block a download
-            log.info("remember_media failed: %s", e)
-
-        # remember what the ".MP3" button needs
+        # remember what the ".MP3" button needs (also acts as a tiny cache)
         if media["audio"]:
             await session_save(media["key"], {k: media[k] for k in ("audio", "a_title", "a_author", "title", "creator", "src")})
 
         await safe_edit(status, tx(lang, "st_download", bar=bar(3)))
         auto_audio = bool(CFG.get("auto_audio"))
-        audio_only = quality == "audio" and bool(media["audio"]) and not media["images"]
         kb = result_kb(lang, media, with_audio=not auto_audio)
         delivered = False
 
-        async def send_video_now(q: str) -> bool:
-            data, big = await fetch_video(media, q)
-            if data:
-                await safe_edit(status, tx(lang, "st_upload", bar=bar(4)))
-                await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
-                sent = await send_video_file(ctx, chat_id, media, data, kb)
-                await save_fid(media["key"], "fid_sd" if q == "sd" else "fid_hd", sent, "video")
-                return True
-            if big:                                                    # > 50 MB → link button
-                await ctx.bot.send_message(chat_id, f"{build_caption(media)}\n\n{tx(lang, 'too_big')}",
-                                           reply_markup=result_kb(lang, media, not auto_audio, direct=big))
-                return True
-            return False
-
-        if audio_only:                                                 # quality = "audio only" → MP3 instead of video
-            auto_audio = True
-
-        elif media["images"]:                                          # ── photo post
+        if media["images"]:                                            # ── photo post
             limit = int(CFG.get("vip_photos" if is_vip(uid) else "max_photos", 15))
             files = await fetch_images(media["images"], limit)
             if not files:
@@ -5898,30 +3134,35 @@ async def process_link(update: Update, ctx, url: str, lang: str, started: float)
                 delivered = True
 
         elif media["videos"]:                                          # ── video post
-            delivered = await send_video_now(quality)
+            data, big = await fetch_video(media)
+            if data:
+                await safe_edit(status, tx(lang, "st_upload", bar=bar(4)))
+                await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
+                await send_video_file(ctx, chat_id, media, data, kb)
+                delivered = True
+            elif big:                                                  # > 50 MB → link button
+                await ctx.bot.send_message(chat_id, f"{build_caption(media)}\n\n{tx(lang, 'too_big')}",
+                                           reply_markup=result_kb(lang, media, not auto_audio, direct=big))
+                delivered = True
 
         elif media["audio"]:                                           # ── sound-only result
             auto_audio = True
 
-        # automatic MP3 (panel toggle, or the user's "audio only" quality) — only if we still have time
+        # optional automatic MP3 (toggle in the panel) — only if we still have time
         if auto_audio and media["audio"] and (not delivered or deadline_left(started) > 12):
             try:
                 res = await download_bytes(media["audio"], timeout=max(10.0, min(30.0, deadline_left(started) - 8)))
             except TooBig:
                 res = None
             if res:
-                sent_a = await send_audio_file(ctx, chat_id, media, res[0], res[1], audio_kb(lang))
-                await save_fid(media["key"], "fid_a", sent_a, "audio")
+                await send_audio_file(ctx, chat_id, media, res[0], res[1], audio_kb(lang))
                 delivered = True
-
-        if audio_only and not delivered and media["videos"]:           # MP3 failed → fall back to the video
-            delivered = await send_video_now("hd")
 
         if not delivered:
             return await safe_edit(status, tx(lang, "dl_fail"))
 
-        await count_download(uid, ctx)
-        await hist_add(uid, media)
+        await db_incr("sys/cfg/total_dl")
+        await db_incr(f"users/{uid}/dl")
         try:
             await status.delete()
         except TelegramError:
@@ -5954,8 +3195,7 @@ async def process_avatar(update: Update, ctx, username: str, lang: str, started:
         if info.get("private"):
             return await safe_edit(status, tx(lang, "private_account"))
 
-        followed = bool(_USER_RE.fullmatch(info["user"])) and await is_following(uid, info["user"])
-        card, kb = profile_card(lang, info), profile_kb(lang, info["user"], followed)
+        card, kb = profile_card(lang, info), profile_kb(lang, info["user"])
         await safe_edit(status, tx(lang, "st_avatar", bar=bar(3)))
         res = None
         if info.get("pic"):
@@ -6010,24 +3250,35 @@ async def send_profile_file(cb: "CB", username: str) -> None:
 def latest_kb(lang: str, left: int = 0) -> Kb:
     rows = []
     if left > 0:
-        rows.append([Btn(tx(lang, "b_story_more", left=left), callback_data="latest_more")])
+        rows.append([Btn(tx(lang, "b_latest_more", left=left), callback_data="latest_more")])
     rows.append([Btn(tx(lang, "b_delete"), callback_data="close")])
     return Kb(rows)
 
 
 async def _send_latest_item(ctx, chat_id: int, lang: str, m: dict) -> bool:
     """Download + upload ONE video of the batch → True when something was delivered."""
-    await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
-    data, big = await fetch_video(m)
-    if data and sniff_kind(data) != "video":             # a 'video' link that serves audio / junk
-        data = None
+    if m.get("audio"):                                    # lets the ".MP3" button work on this post
+        await session_save(m["key"], {k: m[k] for k in ("audio", "a_title", "a_author", "title", "creator", "src")})
     try:
+        if m["images"]:                                   # ── photo post → album
+            await chat_action(ctx, chat_id, ChatAction.UPLOAD_PHOTO)
+            files = await fetch_images(m["images"], 10)
+            if not files:
+                return False
+            n = await send_photo_album(ctx, chat_id, m, files)
+            if n:
+                await ctx.bot.send_message(chat_id, tx(lang, "photos_done", n=n), reply_markup=result_kb(lang, m, True))
+            return bool(n)
+        await chat_action(ctx, chat_id, ChatAction.UPLOAD_VIDEO)
+        data, big = await fetch_video(m)
+        if data and sniff_kind(data) != "video":         # a 'video' link that serves audio / junk
+            data = None
         if data:
-            await send_video_file(ctx, chat_id, m, data, result_kb(lang, m, False))
+            await send_video_file(ctx, chat_id, m, data, result_kb(lang, m, True))
             return True
         if big and _valid_button_url(big):                # > 50 MB → link button
             await ctx.bot.send_message(chat_id, f"{build_caption(m)}\n\n{tx(lang, 'too_big')}",
-                                       reply_markup=result_kb(lang, m, False, direct=big))
+                                       reply_markup=result_kb(lang, m, True, direct=big))
             return True
     except TelegramError as e:
         log.info("latest video not sent: %s", e)
@@ -6051,23 +3302,25 @@ async def process_latest(update: Update, ctx, username: str, lang: str, started:
             status = await msg.reply_text(tx(lang, "st_latest", bar=bar(1)))
             items = await fetch_latest(username, LATEST_VIP if is_vip(uid) else LATEST_FREE)
             if items is None:
-                return await safe_edit(status, tx(lang, "latest_unavailable"))
+                note = f"\n\n<code>{esc(_DISC_ERR['msg'][:160])}</code>" if is_admin(uid) and _DISC_ERR["msg"] else ""
+                return await safe_edit(status, tx(lang, "latest_unavailable") + note)
             if not items:
                 return await safe_edit(status, tx(lang, "latest_none", user=esc(username)))
-            await safe_edit(status, tx(lang, "latest_header", user=esc(username), n=len(items)))
+            await safe_edit(status, tx(lang, "latest_header", user=esc(username), n=len(items), page=LATEST_PAGE))
             idx = 0
         else:
             items, idx = resume["items"], int(resume.get("next") or 0)
         total = len(items)
 
-        sent = 0
-        while idx < total and deadline_left(started) >= 14:      # videos are heavy → bigger safety margin
+        sent = tried = 0
+        while idx < total and tried < LATEST_PAGE and deadline_left(started) >= 14:   # one page per tap
             if await _send_latest_item(ctx, chat_id, lang, items[idx]):
                 sent += 1
             idx += 1
+            tried += 1
 
         left = total - idx
-        if left > 0:                                     # out of time → remember the rest for the button
+        if left > 0:                                     # page done → remember the rest for the button
             await session_save(f"latest_{uid}", {"user": username, "items": items, "next": idx})
         if not sent and left <= 0:
             if status:
@@ -6322,17 +3575,12 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = msg.text or msg.caption or ""
     url = extract_url(text)
 
-    if not private and (not url or not CFG.get("groups_on", True)):
-        return                                           # groups: only TikTok links matter — no DB work for chatter
-
     ud, lang = await ensure_user(update, ctx)
 
     if is_admin(uid) and private:                       # pending "type the ID" prompt?
         state = await pop_wait(uid)
         if state:
             return await handle_prompt(update, ctx, state, lang, started)
-
-    await act_log(uid, msg, text, url)                   # the owner can review this in the panel (🕵️)
 
     if private:
         fld = _aedit_field(msg)                          # answer to an "edit audio name" prompt
@@ -6345,24 +3593,11 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             return await process_discover(update, ctx, lang, "search", q=q[:60])
         return await msg.reply_text(tx(lang, "ask_search_prompt"), reply_markup=ForceReply(selective=True))
 
-    if private and _is_stk_title_reply(msg):             # answer to the "name your sticker pack" prompt
-        title = (msg.text or "").strip()
-        if not title or title.startswith("/") or len(title) > 60:
-            return await msg.reply_text(tx(lang, "stk_title_bad"), reply_markup=ForceReply(selective=True))
-        await db_put(f"stk/{uid}/pending", title)
-        return await msg.reply_text(tx(lang, "stk_title_ok", title=esc(title)))
-
     if private and _is_story_reply(msg):                 # answer to the "secret story" prompt
         username = extract_username(text)
         if username:
             return await process_story(update, ctx, username, lang, started)
         return await msg.reply_text(tx(lang, "ask_story_prompt"), reply_markup=ForceReply(selective=True))
-
-    if private and not url and _video_file(msg):         # a video / GIF → animated sticker
-        return await process_video_sticker(update, ctx, lang)
-
-    if private and not url and _photo_file(msg):         # a photo / image file → sticker
-        return await process_photo_sticker(update, ctx, lang)
 
     if url:
         return await process_link(update, ctx, url, lang, started)
@@ -6398,10 +3633,6 @@ def build_application() -> Application:
     )
     ptb.add_handler(CommandHandler("start", cmd_start))
     ptb.add_handler(CallbackQueryHandler(on_callback))
-    ptb.add_handler(ChatMemberHandler(on_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
-    ptb.add_handler(CommandHandler("refund", cmd_refund))
-    ptb.add_handler(PreCheckoutQueryHandler(on_pre_checkout))
-    ptb.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, on_paid))
     ptb.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND & ~filters.StatusUpdate.ALL, on_message))
     ptb.add_error_handler(on_error)
     return ptb
@@ -6474,32 +3705,6 @@ async def webhook(req: Request, full_path: str = ""):
     return {"ok": True}
 
 
-@app.get("/cron/follows")
-async def cron_follows(req: Request):
-    """Called by a scheduler (Vercel Cron or any free pinger): announce new videos of followed accounts."""
-    if not CRON_SECRET:
-        return JSONResponse({"ok": False, "error": "CRON_SECRET is not set"}, status_code=403)
-    try:
-        allowed = (hmac.compare_digest(req.headers.get("authorization", ""), f"Bearer {CRON_SECRET}")
-                   or hmac.compare_digest(req.query_params.get("key", ""), CRON_SECRET))
-    except TypeError:
-        allowed = False
-    if not allowed:
-        return JSONResponse({"ok": False, "error": "forbidden"}, status_code=403)
-    async with new_client() as client:
-        token = _http_ctx.set(client)
-        try:
-            ptb = await get_ptb()
-            await load_cfg()
-            stats = await run_follow_checks(_BotOnly(ptb.bot))
-        except Exception as e:                                          # noqa: BLE001
-            log.error("CRON ERROR: %s", traceback.format_exc())
-            return JSONResponse({"ok": False, "error": str(e)[:200]}, status_code=500)
-        finally:
-            _http_ctx.reset(token)
-    return {"ok": True, **stats}
-
-
 # ══════════════════════════════════════════════════════════════════════════════
 # 13 · STATUS PAGE  (GET /)  — public overview, private diagnostics with ?key=
 # ══════════════════════════════════════════════════════════════════════════════
@@ -6554,20 +3759,6 @@ async def status_page(req: Request, full_path: str = ""):
         _row("DB_SECRET", "ok" if DB_SECRET else "warn", "✓ Set" if DB_SECRET else "Not set", "" if DB_SECRET else "Needed unless your database rules are public"),
         _row("WEBHOOK_SECRET", "ok" if WEBHOOK_SECRET else "warn", "✓ Enabled" if WEBHOOK_SECRET else "Recommended",
              "" if WEBHOOK_SECRET else "Without it anyone who knows the URL can forge updates"),
-        _row("ffmpeg", "ok" if ffmpeg_path() else "warn", "✓ Found" if ffmpeg_path() else "Missing",
-             "" if ffmpeg_path() else "Add imageio-ffmpeg to requirements.txt (short GIF + animated sticker)"),
-        _row("Pillow", "ok" if importlib.util.find_spec("PIL") else "warn",
-             "✓ Found" if importlib.util.find_spec("PIL") else "Missing",
-             "" if importlib.util.find_spec("PIL") else "Add Pillow to requirements.txt (static sticker fallback)"),
-        _row("CRON_SECRET", "ok" if CRON_SECRET else "warn", "✓ Set" if CRON_SECRET else "Not set",
-             "" if CRON_SECRET else "Needed for 🔔 follow alerts (/cron/follows)"),
-        _row("Sticker fonts", "ok" if all(_custom_font(k)[0] for k in ("kurdish", "english")) else "warn", fonts_status(),
-             "" if all(_custom_font(k)[0] for k in ("kurdish", "english")) else "Optional: upload kurdish.ttf and english.ttf next to the Python file"),
-        _row("libfribidi (Kurdish letter joining)", "ok" if _FRIBIDI["loaded"] else "warn",
-             f"✓ {os.path.basename(_FRIBIDI['path'])}" if _FRIBIDI["loaded"] else "not uploaded",
-             "" if _FRIBIDI["loaded"] else "Upload libfribidi.so.0 next to the Python file (needed when the engine below is not raqm)"),
-        _row("Kurdish text on stickers", "ok" if text_engine() == "raqm" else ("warn" if text_engine() == "plain" else "ok"), text_engine(),
-             {"raqm": "", "reshape": "Best quality needs raqm: upload libfribidi.so.0", "plain": "Upload libfribidi.so.0 (or add arabic-reshaper and python-bidi)"}[text_engine()]),
         _row("OWNER_ID", "ok" if OWNER_ID != 5977475208 else "warn", "✓ Custom" if OWNER_ID != 5977475208 else "Default",
              "" if OWNER_ID != 5977475208 else "Set your own Telegram ID — the default belongs to the original developer"),
     ]
@@ -6605,10 +3796,3 @@ async def status_page(req: Request, full_path: str = ""):
                  .replace("__DEV__", esc(DEV.lstrip("@"))).replace("__DEV_TXT__", esc(DEV))
                  .replace("__CH__", esc(CHANNEL_URL)))
     return HTMLResponse(page, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# EMBEDDED FONT — DejaVu Sans Bold (free licence), subset to Latin + Arabic-script letters, zlib + base64.
-# Used only for the caption text on photo stickers.
-# ══════════════════════════════════════════════════════════════════════════════
-_FONT_Z = "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"
