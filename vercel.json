@@ -1,4 +1,14 @@
 {
-  "functions": { "api/main.py": { "maxDuration": 60 } },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/main" }]
+  "functions": {
+    "api/main.py": {
+      "maxDuration": 60,
+      "includeFiles": "api/welcome.jpg"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/main"
+    }
+  ]
 }
